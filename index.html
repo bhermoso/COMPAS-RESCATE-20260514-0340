@@ -23081,10 +23081,12 @@ function generarDocumentoPlan() {
 
         ${(function(){
 
-            // P5-FIX: solo usar accionesAgenda si pertenece al municipio activo.
-            var _agendaMunOk = typeof accionesAgenda !== 'undefined' &&
-                               accionesAgenda._municipio === getMunicipioActual();
-            var _locActs = (_agendaMunOk ? accionesAgenda : []).filter(function(a){ return a && a.nombre; });
+            // Fuente longitudinal: agenda consolidada capturada en snapshot.
+            var _agendaDoc = (_snapshotPlan && _snapshotPlan.agendaEvaluacion && Array.isArray(_snapshotPlan.agendaEvaluacion.actuaciones))
+                ? _snapshotPlan.agendaEvaluacion.actuaciones
+                : [];
+
+            var _locActs = _agendaDoc.filter(function(a){ return a && a.nombre; });
 
             if (!_locActs.length) return '';
 
