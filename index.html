@@ -68633,25 +68633,33 @@ function eval_actualizarDashboard() {
 
     // Datos del proceso
 
-    var _agendaDashboardOk = typeof accionesAgenda !== 'undefined' &&
-                             accionesAgenda._municipio === getMunicipioActual();
-    var agenda   = _agendaDashboardOk ? accionesAgenda : [];
+    var _agendaEvalDashboard = (typeof COMPAS_obtenerAgendaEvaluacion === 'function')
+        ? COMPAS_obtenerAgendaEvaluacion()
+        : { actuaciones: [], total: 0, proyeccion: { porEstado: {} } };
 
-    var nTotal   = agenda.length;
+    var agenda = Array.isArray(_agendaEvalDashboard.actuaciones)
+        ? _agendaEvalDashboard.actuaciones
+        : [];
 
-    var nFin     = agenda.filter(function(a){ return a.estado === 'finalizada'; }).length;
+    var _estadoDashboard = (_agendaEvalDashboard.proyeccion && _agendaEvalDashboard.proyeccion.porEstado)
+        ? _agendaEvalDashboard.proyeccion.porEstado
+        : {};
 
-    var nEje     = agenda.filter(function(a){ return a.estado === 'en ejecucion'; }).length;
+    var nTotal = _agendaEvalDashboard.total || agenda.length;
 
-    var nSus     = agenda.filter(function(a){ return a.estado === 'suspendida'; }).length;
+    var nFin = _estadoDashboard.finalizada || 0;
 
-    var nPla     = nTotal - nFin - nEje - nSus;
+    var nEje = _estadoDashboard['en ejecucion'] || 0;
 
-    var pctFin   = nTotal > 0 ? Math.round(nFin / nTotal * 100) : 0;
+    var nSus = _estadoDashboard.suspendida || 0;
 
-    var pctEje   = nTotal > 0 ? Math.round(nEje / nTotal * 100) : 0;
+    var nPla = nTotal - nFin - nEje - nSus;
 
-    var pctPla   = nTotal > 0 ? Math.round(nPla / nTotal * 100) : 0;
+    var pctFin = nTotal > 0 ? Math.round(nFin / nTotal * 100) : 0;
+
+    var pctEje = nTotal > 0 ? Math.round(nEje / nTotal * 100) : 0;
+
+    var pctPla = nTotal > 0 ? Math.round(nPla / nTotal * 100) : 0;
 
 
 
