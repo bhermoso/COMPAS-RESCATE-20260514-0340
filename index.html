@@ -48961,6 +48961,7 @@ function renderizarSeccionEstudios() {
             '<button onclick="ibse_abrirCuestionario()" style="background:#00acd9;color:white;border:none;border-radius:7px;padding:0.36rem 0.7rem;font-size:0.74rem;font-weight:600;cursor:pointer;">Cuestionario utilizado</button>' +
             '<button onclick="window.open(\'https://redcap-fibao.granadasalud.es/DSGM/surveys/?s=4NWWRLPN94PJCKY8\',\'_blank\')" style="background:#94d40b;color:#1a1a1a;border:none;border-radius:7px;padding:0.36rem 0.7rem;font-size:0.74rem;font-weight:600;cursor:pointer;">REDCap</button>' +
             '<button onclick="ibseSM_abrir()" style="background:#ffb61b;color:#1a1a1a;border:none;border-radius:7px;padding:0.36rem 0.7rem;font-size:0.74rem;font-weight:600;cursor:pointer;">Monitor IBSE</button>' +
+            '<button onclick="toggleInformeIBSE()" style="background:#0074c8;color:white;border:none;border-radius:7px;padding:0.36rem 0.7rem;font-size:0.74rem;font-weight:600;cursor:pointer;">Informe IBSE</button>' +
             '<button onclick="togglePanelIBSEDashboard()" style="background:#ff6600;color:white;border:none;border-radius:7px;padding:0.36rem 0.7rem;font-size:0.74rem;font-weight:600;cursor:pointer;">Panel IBSE</button>' +
             '<button onclick="ibse_borrarDatos()" style="background:#dc143c;border:none;border-radius:7px;padding:0.36rem 0.55rem;font-size:0.72rem;color:white;cursor:pointer;" title="Borrar datos IBSE">&#128465;</button>';
         html += _renderTarjetaEstudio({
@@ -48990,6 +48991,7 @@ function renderizarSeccionEstudios() {
                 '<button onclick="ibse_abrirCuestionario()" style="background:#00acd9;color:white;border:none;border-radius:7px;padding:0.36rem 0.7rem;font-size:0.74rem;font-weight:600;cursor:pointer;">Cuestionario utilizado</button>' +
                 '<button onclick="window.open(\'https://redcap-fibao.granadasalud.es/DSGM/surveys/?s=4NWWRLPN94PJCKY8\',\'_blank\')" style="background:#94d40b;color:#1a1a1a;border:none;border-radius:7px;padding:0.36rem 0.7rem;font-size:0.74rem;font-weight:600;cursor:pointer;">REDCap</button>' +
                 '<button onclick="ibseSM_abrir()" style="background:#ffb61b;color:#1a1a1a;border:none;border-radius:7px;padding:0.36rem 0.7rem;font-size:0.74rem;font-weight:600;cursor:pointer;">Monitor IBSE</button>' +
+                '<button onclick="toggleInformeIBSE()" style="background:#0074c8;color:white;border:none;border-radius:7px;padding:0.36rem 0.7rem;font-size:0.74rem;font-weight:600;cursor:pointer;">Informe IBSE</button>' +
                 '<button onclick="togglePanelIBSEDashboard()" style="background:#ff6600;color:white;border:none;border-radius:7px;padding:0.36rem 0.7rem;font-size:0.74rem;font-weight:600;cursor:pointer;">Panel IBSE</button>',
             detalleHtml:'Factores: V\u00ednculo \u00b7 Situaci\u00f3n \u00b7 Control \u00b7 Persona.<br>' +
                 'Umbral \u00f3ptimo: \u226570 \u00b7 Riesgo moderado: 50\u201369 \u00b7 Riesgo elevado: &lt;50.<br>' +
@@ -63834,9 +63836,178 @@ function renderizarPanelIBSEVisual() {
     }
 }
 
-// ── Cuestionario ciudadano: abrir / cerrar ────────────────────────────
+function toggleInformeIBSE() {
+    var el = document.getElementById('panel-ibse-visual');
+    if (!el) return;
+    var isActive = el.dataset.panelSrc === 'informe-ibse' && el.style.display !== 'none';
+    if (isActive) {
+        el.style.display = 'none';
+        delete el.dataset.panelSrc;
+        el.innerHTML = '';
+        return;
+    }
+    el.dataset.panelSrc = 'informe-ibse';
+    renderizarInformeIBSE();
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderizarInformeIBSE() {
+    var el = document.getElementById('panel-ibse-visual');
+    if (!el) return;
+    var d = window.datosIBSE || {};
+    var v3 = window.__ibse_v3_resultado || {};
+    var seg = window.__ibse_v3_segmentos || {};
+    var sam = window.__ibse_v3_sam_muestra || null;
+    var tieneDatos = d && (d.n != null || d.n_valido != null);
+    var municipioId = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : '';
+    var municipio = (typeof getNombreMunicipio === 'function' && municipioId)
+        ? (getNombreMunicipio(municipioId) || municipioId)
+        : (municipioId || '—');
+    var anio = new Date().getFullYear();
+    var bruto = (v3.n_bruto != null) ? v3.n_bruto : (d.n != null ? d.n : null);
+    var valido = (v3.n_valido != null) ? v3.n_valido : (d.n_valido != null ? d.n_valido : (d.n != null ? d.n : null));
+    var ibseSimple = (v3.ibse_simple != null)
+        ? v3.ibse_simple
+        : (d.media != null ? d.media : (d.ibse != null ? d.ibse : null));
+    var ibseAdultos = (seg.adultos && seg.adultos.ibse != null) ? seg.adultos.ibse : null;
+    var ibseMenores = (seg.menores && seg.menores.ibse != null) ? seg.menores.ibse : null;
+    var ibseSAM = (v3.ibse_ponderado != null) ? v3.ibse_ponderado : null;
+    var factores = [
+        { label: 'Vínculo', value: d.factorVinculo },
+        { label: 'Situación', value: d.factorSituacion },
+        { label: 'Control', value: d.factorControl },
+        { label: 'Persona', value: d.factorPersona }
+    ];
+    function formatNumero(valor) {
+        return (valor == null || isNaN(valor)) ? '—' : Number(valor).toLocaleString('es-ES');
+    }
+    function formatDecimal(valor) {
+        return (valor == null || isNaN(valor)) ? '—' : Number(valor).toFixed(1);
+    }
+    function nivelTexto(valor) {
+        if (valor == null || isNaN(valor)) return 'Sin dato suficiente para una lectura clara.';
+        if (valor >= 70) return 'Perfil favorable: el bienestar socioemocional local se sitúa en un rango sólido.';
+        if (valor >= 50) return 'Situación intermedia: sin lectura alarmista, pero con margen de mejora comunitaria.';
+        return 'Señal de vulnerabilidad socioemocional: conviene atender factores de apoyo y cuidado comunitario.';
+    }
+    var lectura = nivelTexto(ibseSimple);
+    var html = '<div style="background:white;color:#1e293b;font-family:system-ui,sans-serif;max-width:980px;margin:0 auto;padding:1rem;">';
+    html += '<div style="background:linear-gradient(180deg,rgba(0,116,200,0.16),rgba(255,255,255,0));border:1px solid #e2e8f0;border-radius:16px 16px 12px 12px;padding:1.2rem 1.3rem 1rem;">';
+    html += '<div style="font-size:0.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#0074c8;margin-bottom:0.6rem;">Informe local de bienestar socioemocional</div>';
+    html += '<div style="font-size:1.7rem;font-weight:800;color:#0f172a;line-height:1.05;">Resultados de la encuesta IBSE · Índice de Bienestar Socioemocional</div>';
+    html += '<div style="margin-top:0.75rem;font-size:0.95rem;color:#475569;">' + municipio + ' · ' + anio + '</div>';
+    html += '<div style="margin-top:1rem;display:flex;gap:0.65rem;flex-wrap:wrap;">';
+    html += '<button onclick="window.print()" style="background:#0074c8;color:white;border:none;border-radius:8px;padding:0.7rem 1rem;font-size:0.9rem;font-weight:700;cursor:pointer;">Imprimir / PDF</button>';
+    html += '<button onclick="(function(){var e=document.getElementById(\'panel-ibse-visual\'); if(e){e.style.display=\'none\'; delete e.dataset.panelSrc; e.innerHTML=\'\';}})()" style="background:#f8fafc;color:#0f172a;border:1px solid #cbd5e1;border-radius:8px;padding:0.7rem 1rem;font-size:0.9rem;font-weight:700;cursor:pointer;">Cerrar</button>';
+    html += '</div></div>';
+    if (!tieneDatos) {
+        html += '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:2rem;margin-top:-1px;">';
+        html += '<div style="font-size:1rem;font-weight:700;color:#0f172a;margin-bottom:0.75rem;">No hay datos IBSE disponibles</div>';
+        html += '<div style="font-size:0.95rem;color:#334155;line-height:1.8;">La encuesta no ha registrado suficientes respuestas en este municipio para generar un informe local. Cargue datos IBSE o seleccione otro municipio para visualizar el informe.</div>';
+        html += '</div>';
+        html += '</div>';
+        el.innerHTML = html;
+        return;
+    }
+    html += '<div style="display:grid;grid-template-columns:1.45fr 1fr;gap:1rem;margin-top:1rem;">';
+    html += '<div style="display:grid;gap:1rem;">';
+    html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:1rem;">';
+    html += '<div style="font-size:0.92rem;font-weight:700;color:#0074c8;margin-bottom:0.75rem;">Resumen ejecutivo</div>';
+    html += '<p style="margin:0 0 0.75rem;color:#334155;line-height:1.75;">Los resultados locales muestran el estado general del bienestar socioemocional en la población encuestada.</p>';
+    html += '<p style="margin:0 0 0.75rem;color:#334155;line-height:1.75;">Los cuatro factores de análisis permiten identificar fortalezas y áreas donde puede ser útil reforzar el apoyo comunitario.</p>';
+    html += '<p style="margin:0;color:#334155;line-height:1.75;">Este informe orienta intervenciones de salud pública sin sustituir el juicio clínico ni diagnóstico profesional.</p>';
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0.8rem;">';
+    function tarjeta(titulo, valor, detalle, color) {
+        html += '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:0.95rem;">';
+        html += '<div style="font-size:0.75rem;font-weight:700;color:' + color + ';margin-bottom:0.4rem;">' + titulo + '</div>';
+        html += '<div style="font-size:1.3rem;font-weight:800;color:#0f172a;">' + valor + '</div>';
+        html += '<div style="margin-top:0.35rem;font-size:0.78rem;color:#475569;">' + detalle + '</div>';
+        html += '</div>';
+    }
+    tarjeta('Respuestas totales', formatNumero(bruto), 'Registro bruto de respuestas', '#0074c8');
+    tarjeta('Muestra válida', formatNumero(valido), 'Respuestas con IBSE calculado', '#00acd9');
+    tarjeta('IBSE global', formatDecimal(ibseSimple), 'Índice promedio 0–100', '#ff6600');
+    tarjeta('IBSE ≥16', formatDecimal(ibseAdultos), 'Adultos 16+ en la muestra', '#94d40b');
+    tarjeta('IBSE ≤15', formatDecimal(ibseMenores), 'Menores de 16 en la muestra', '#ffb61b');
+    if (ibseSAM != null) {
+        tarjeta('IBSE SAM', formatDecimal(ibseSAM), 'Ponderación poblacional ≥16', '#dc143c');
+    }
+    html += '</div>';
+    html += '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:1rem;">';
+    html += '<div style="font-size:0.92rem;font-weight:700;color:#0074c8;margin-bottom:0.75rem;">Factores de bienestar</div>';
+    factores.forEach(function(factor) {
+        var valor = (factor.value != null && !isNaN(factor.value)) ? Number(factor.value) : 0;
+        var ancho = Math.max(0, Math.min(100, valor));
+        html += '<div style="margin-bottom:0.9rem;">';
+        html += '<div style="display:flex;justify-content:space-between;font-size:0.78rem;font-weight:700;color:#0f172a;">';
+        html += '<span>' + factor.label + '</span><span>' + (factor.value != null ? factor.value.toFixed(1) : '—') + '</span>';
+        html += '</div>';
+        html += '<div style="background:#e2efff;border-radius:999px;height:12px;margin-top:0.45rem;overflow:hidden;">';
+        html += '<div style="width:' + ancho + '%;background:#0074c8;height:100%;border-radius:999px;"></div>';
+        html += '</div>';
+        html += '</div>';
+    });
+    html += '</div>';
+    html += '</div>';
+    var factoresValores = factores.map(function(f) { return f.value; }).filter(function(v) { return v != null && !isNaN(v); });
+    var maxFactor = Math.max.apply(null, factoresValores);
+    var minFactor = Math.min.apply(null, factoresValores);
+    var maxFactorLabel = factores.find(function(f) { return f.value === maxFactor; }).label || '—';
+    var minFactorLabel = factores.find(function(f) { return f.value === minFactor; }).label || '—';
+    var fraseSignificado = '';
+    if (ibseSimple >= 70) {
+        fraseSignificado = 'Esto refleja un tejido comunitario con bases sólidas para el apoyo socioemocional y la coexistencia.';
+    } else if (ibseSimple >= 50) {
+        fraseSignificado = 'Esto señala una comunidad con recursos internos, aunque con áreas donde el apoyo comunitario puede mejorarse.';
+    } else {
+        fraseSignificado = 'Esto requiere atención comunitaria inmediata en espacios de diálogo, cuidado y apoyo mutuo.';
+    }
+    var fraseFactores = 'El análisis identifica una fortaleza en ' + maxFactorLabel.toLowerCase() + ' (' + maxFactor.toFixed(1) + ') y una debilidad relativa en ' + minFactorLabel.toLowerCase() + ' (' + minFactor.toFixed(1) + ').';
+    html += '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:1rem;">';
+    html += '<div style="font-size:0.92rem;font-weight:700;color:#0074c8;margin-bottom:0.75rem;">Lectura de resultados</div>';
+    html += '<div style="font-size:0.95rem;color:#334155;line-height:1.8;">' + lectura + '</div>';
+    html += '<div style="margin-top:0.75rem;font-size:0.95rem;color:#334155;line-height:1.8;">' + fraseSignificado + '</div>';
+    html += '<div style="margin-top:0.75rem;font-size:0.95rem;color:#334155;line-height:1.8;">' + fraseFactores + '</div>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:1.1fr 0.95fr;gap:1rem;margin-top:1rem;">';
+    html += '<div style="display:grid;gap:0.75rem;">';
+    html += '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:1rem;">';
+    html += '<div style="font-size:0.9rem;font-weight:700;color:#0074c8;margin-bottom:0.65rem;">Qué nos dice la encuesta IBSE</div>';
+    html += '<p style="margin:0 0 0.75rem;color:#334155;line-height:1.75;">La encuesta mide el bienestar socioemocional percibido, centrado en vínculo, situación, control y valoración personal.</p>';
+    html += '<p style="margin:0 0 0.75rem;color:#334155;line-height:1.75;">No es un diagnóstico clínico: es una medida de percepción social que orienta acciones comunitarias.</p>';
+    html += '<p style="margin:0;color:#334155;line-height:1.75;">Su uso sirve para priorizar decisiones de salud comunitaria basadas en la experiencia local.</p>';
+    html += '</div>';
+    html += '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:1rem;">';
+    html += '<div style="font-size:0.9rem;font-weight:700;color:#0074c8;margin-bottom:0.65rem;">Metodología y referencias</div>';
+    html += '<p style="margin:0 0 0.75rem;color:#334155;line-height:1.75;">Se apoya en la tradición de medición del bienestar subjetivo y socioemocional presente en encuestas sociales y de salud como EAS/ESS.</p>';
+    html += '<p style="margin:0 0 0.75rem;color:#334155;line-height:1.75;">Incluye marcos de sociología de las emociones y referencias de Bericat para interpretar bienestar en contextos territoriales.</p>';
+    html += '<p style="margin:0;color:#334155;line-height:1.75;">Ofrece una lectura comparativa prudente sin exceder los límites de la interpretación local.</p>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:1rem;">';
+    html += '<div style="font-size:0.9rem;font-weight:700;color:#dc143c;margin-bottom:0.65rem;">Cautelas</div>';
+    html += '<ul style="margin:0;padding-left:1.2rem;color:#334155;line-height:1.75;">';
+    html += '<li>Los valores para menores ≤15 son descriptivos y no equivalen a diagnóstico.</li>';
+    html += '<li>El IBSE SAM se interpreta solo para población ≥16 años.</li>';
+    html += '<li>No se establece causalidad entre los resultados y factores externos.</li>';
+    html += '<li>No se asume significación estadística si no se ha calculado explícitamente.</li>';
+    html += '<li>Es una lectura local orientativa basada en la muestra disponible.</li>';
+    html += '</ul>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    el.innerHTML = html;
+}
+
+window.toggleInformeIBSE = toggleInformeIBSE;
+window.renderizarInformeIBSE = renderizarInformeIBSE;
 
 function ibse_abrirCuestionario() {
+
 
     var municipio = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
 
