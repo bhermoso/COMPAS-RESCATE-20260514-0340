@@ -27508,15 +27508,13 @@ function generarContenidoPLSPreview(nombre) {
 
                     <div class="pls-sub-body">
 
-                        <p>Este informe ha sido elaborado por profesionales de la <strong>Unidad de Prevención, Promoción y Vigilancia de la Salud</strong> del <strong>${config.distrito}</strong>, en el marco de la <strong>Estrategia de promoción de una vida saludable en Andalucía</strong> (EPVSA).</p>
-
-                        <div class="pls-dest azul">
-
-                            <strong>La Estrategia pretende promover los hábitos saludables en toda la población</strong>, mediante intervenciones en el ámbito local, en todos los entornos de vida y en todas las políticas sobre los determinantes que generan desigualdades en salud.
-
-                        </div>
-
-                        <p>El <strong>Informe sobre la situación de salud de ${nombre} (${config.anioInforme})</strong>, junto con <strong>el Perfil de salud local</strong>, las referencias de la Encuesta Andaluza de Salud y el Cuadro de Mandos Integral, constituye la base técnica para orientar el Plan Local de Salud. La adaptación al marco de la EPVSA debe derivarse de los datos disponibles, del análisis territorial y de la validación técnica y participativa correspondiente, sin incorporar prioridades no justificadas por las fuentes cargadas.</p>
+                        ${typeof generarMarcoEstrategico === 'function'
+                            ? generarMarcoEstrategico(config)
+                                .replace(/acordeon-item/g,'')
+                                .replace(/<div class="acordeon-header"[\s\S]*?<\/div>/,'')
+                                .replace(/<div class="acordeon-contenido">/,'')
+                                .replace(/<\/div>\s*$/,'')
+                            : '<p>Marco estratégico no disponible.</p>'}
 
                     </div>
 
