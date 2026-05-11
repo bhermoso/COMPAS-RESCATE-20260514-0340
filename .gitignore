@@ -9,3 +9,8 @@ data/raw/
 *.xlsx
 *.pdf
 *.csv
+
+# Cuarentena local de backups y temporales
+_fuera_repo_20260511/
+backups/
+data/raw/
