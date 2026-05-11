@@ -25110,13 +25110,13 @@ function COMPAS_obtenerAgendaEvaluacion() {
     var fuente = 'ninguna';
     var actuaciones = [];
 
-    // Intentar accionesAgenda primero
-    if (typeof accionesAgenda !== 'undefined' && accionesAgenda && accionesAgenda.length > 0 && accionesAgenda._municipio === municipio) {
-        fuente = 'accionesAgenda';
-        actuaciones = _clonarActuaciones(accionesAgenda);
-    } else if (typeof planLocalSalud !== 'undefined' && planLocalSalud && planLocalSalud.agenda && planLocalSalud.agenda.completado === true && planLocalSalud.agenda.actuaciones && planLocalSalud.agenda.actuaciones.length > 0) {
+    // Fuente longitudinal preferente: agenda consolidada del plan local.
+    if (typeof planLocalSalud !== 'undefined' && planLocalSalud && planLocalSalud.agenda && planLocalSalud.agenda.completado === true && planLocalSalud.agenda.actuaciones && planLocalSalud.agenda.actuaciones.length > 0) {
         fuente = 'planLocalSalud.agenda.actuaciones';
         actuaciones = _clonarActuaciones(planLocalSalud.agenda.actuaciones);
+    } else if (typeof accionesAgenda !== 'undefined' && accionesAgenda && accionesAgenda.length > 0 && accionesAgenda._municipio === municipio) {
+        fuente = 'accionesAgenda';
+        actuaciones = _clonarActuaciones(accionesAgenda);
     }
 
     var total = actuaciones.length;
@@ -69550,12 +69550,13 @@ function eval_actualizarJornada() {
 
 
 
-    // Guardia de municipio (mismo patrón que P5 en generarDocumentoPlan).
+    // Fuente consolidada de agenda evaluativa: evita depender de accionesAgenda/UI viva.
 
-    var _agendaJornadaOk = typeof accionesAgenda !== 'undefined' &&
-                           accionesAgenda._municipio === getMunicipioActual();
+    var _agendaEval = (typeof COMPAS_obtenerAgendaEvaluacion === 'function')
+        ? COMPAS_obtenerAgendaEvaluacion()
+        : { actuaciones: [] };
 
-    var agenda    = _agendaJornadaOk ? accionesAgenda : [];
+    var agenda = Array.isArray(_agendaEval.actuaciones) ? _agendaEval.actuaciones : [];
 
     var nTotal    = agenda.length;
 
