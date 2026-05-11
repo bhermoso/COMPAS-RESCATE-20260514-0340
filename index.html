@@ -73276,11 +73276,8 @@ window.ibse_v3_renderSegmentos = function(data) {
     window.__ibse_v3_sam_muestra = _samMue;
     if (!_samPob && _samHost) {
       _samHost.innerHTML = '<div style="font-size:12px;color:#94a3b8;margin-top:10px;">Población SAM no disponible para este municipio.</div>';
-    } else if (typeof ibse_v3_animarSAMMuestra === 'function') {
-      // Animación dinámica ~60 s
-      ibse_v3_animarSAMMuestra('ibse-v3-sam-muestra', _samPob, _samMue, _samN, _samEsDemo, 60000);
     } else {
-      // Fallback estático si la función de animación no está disponible
+      // IBSE v3: render final estático de la muestra real adulta obtenida frente a la n teórica; no usar animación incremental.
       sam_renderMonitorMuestra('ibse-v3-sam-muestra', _samPob,
                                _samMue, _samN, _samEsDemo, resultado.adultos.n);
     }
