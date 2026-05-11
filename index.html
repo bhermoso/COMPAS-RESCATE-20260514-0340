@@ -9207,15 +9207,33 @@ function guardarPlanAccionParaCompilador(html, seleccion) {
 
 function guardarAgendaParaCompilador(actuaciones) {
 
-    planLocalSalud.agenda.completado = actuaciones && actuaciones.length > 0;
+    var _acts = Array.isArray(actuaciones) ? actuaciones : [];
 
-    planLocalSalud.agenda.actuaciones = actuaciones || [];
+    var _normalizadas = _acts.map(function(a) {
+        var _n = (typeof normalizarActuacion === 'function') ? normalizarActuacion(a) : a;
+        try {
+            if (typeof structuredClone === 'function') return structuredClone(_n);
+        } catch(e) {}
+        try {
+            return JSON.parse(JSON.stringify(_n));
+        } catch(e2) {
+            return _n;
+        }
+    });
+
+    planLocalSalud.agenda.completado = _normalizadas.length > 0;
+
+    planLocalSalud.agenda.actuaciones = _normalizadas;
+
+    planLocalSalud.agenda.año = new Date().getFullYear();
+
+    planLocalSalud.agenda.municipio = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
 
     planLocalSalud.agenda.fecha = new Date().toISOString();
 
     actualizarEstadoCompilador();
 
-    console.log('✅ Agenda guardada para el compilador:', actuaciones ? actuaciones.length : 0, 'actuaciones');
+    console.log('✅ Agenda guardada para el compilador:', _normalizadas.length, 'actuaciones');
 
 }
 
