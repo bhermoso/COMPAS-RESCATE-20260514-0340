@@ -25090,6 +25090,55 @@ function actuacion_proyectarEvaluacion(actuaciones) {
 
 }
 
+function COMPAS_obtenerAgendaEvaluacion() {
+    function _clonarActuaciones(arr) {
+        if (!Array.isArray(arr)) return [];
+        try {
+            if (typeof structuredClone === 'function') return structuredClone(arr);
+        } catch(e) {
+            console.warn('[COMPÁS AGENDA EVALUACIÓN] structuredClone falló, intentando JSON:', e);
+        }
+        try {
+            return JSON.parse(JSON.stringify(arr));
+        } catch(e2) {
+            console.warn('[COMPÁS AGENDA EVALUACIÓN] JSON clone falló, devuelve []:', e2);
+            return [];
+        }
+    }
+
+    var municipio = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
+    var fuente = 'ninguna';
+    var actuaciones = [];
+
+    // Intentar accionesAgenda primero
+    if (typeof accionesAgenda !== 'undefined' && accionesAgenda && accionesAgenda.length > 0 && accionesAgenda._municipio === municipio) {
+        fuente = 'accionesAgenda';
+        actuaciones = _clonarActuaciones(accionesAgenda);
+    } else if (typeof planLocalSalud !== 'undefined' && planLocalSalud && planLocalSalud.agenda && planLocalSalud.agenda.completado === true && planLocalSalud.agenda.actuaciones && planLocalSalud.agenda.actuaciones.length > 0) {
+        fuente = 'planLocalSalud.agenda.actuaciones';
+        actuaciones = _clonarActuaciones(planLocalSalud.agenda.actuaciones);
+    }
+
+    var total = actuaciones.length;
+
+    var proyeccion = { total: 0, porEstado: {}, porEstrategia: {}, porEntorno: {}, porPrograma: {} };
+    try {
+        if (typeof actuacion_proyectarEvaluacion === 'function' && actuaciones.length > 0) {
+            proyeccion = actuacion_proyectarEvaluacion(actuaciones);
+        }
+    } catch(e) {
+        console.warn('[COMPÁS AGENDA EVALUACIÓN] actuacion_proyectarEvaluacion falló:', e);
+    }
+
+    return {
+        fuente: fuente,
+        municipio: municipio,
+        actuaciones: actuaciones,
+        total: total,
+        proyeccion: proyeccion
+    };
+}
+
 
 
 // ── Fin módulo Ficha de Actuación v2 ────────────────────────────────
@@ -68465,6 +68514,109 @@ function eval_calcularISS() {
 
              nFav: nFav, nMej: nMej, nFor: nFor, nOp: nOp, ibseMedia: ibseMedia };
 
+}
+
+function COMPAS_crearSnapshotEvaluacion() {
+    function _clonar(obj) {
+        if (obj === null || obj === undefined) return null;
+        try {
+            if (typeof structuredClone === 'function') return structuredClone(obj);
+        } catch(e) {
+            console.warn('[COMPÁS SNAPSHOT EVALUACIÓN] structuredClone falló, intentando JSON:', e);
+        }
+        try {
+            return JSON.parse(JSON.stringify(obj));
+        } catch(e2) {
+            console.warn('[COMPÁS SNAPSHOT EVALUACIÓN] JSON clone falló, devuelve null:', e2);
+            return null;
+        }
+    }
+
+    var municipio = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
+
+    var agendaEvaluacion = null;
+    try {
+        if (typeof COMPAS_obtenerAgendaEvaluacion === 'function') {
+            agendaEvaluacion = _clonar(COMPAS_obtenerAgendaEvaluacion());
+        }
+    } catch(e) {
+        console.warn('[COMPÁS SNAPSHOT EVALUACIÓN] COMPAS_obtenerAgendaEvaluacion falló:', e);
+    }
+
+    var accionesAgendaSnapshot = agendaEvaluacion ? agendaEvaluacion.actuaciones : null;
+
+    var resumenAgenda = null;
+    if (agendaEvaluacion && agendaEvaluacion.total > 0) {
+        var porEstado = agendaEvaluacion.proyeccion.porEstado || {};
+        var total = agendaEvaluacion.total;
+        var finalizadas = porEstado['finalizada'] || 0;
+        var enEjecucion = porEstado['en ejecucion'] || 0;
+        var suspendidas = porEstado['suspendida'] || 0;
+        var planificadas = total - finalizadas - enEjecucion - suspendidas;
+        var pctFinalizadas = total > 0 ? Math.round(finalizadas / total * 100) : 0;
+        resumenAgenda = { total: total, finalizadas: finalizadas, enEjecucion: enEjecucion, suspendidas: suspendidas, planificadas: planificadas, pctFinalizadas: pctFinalizadas };
+    }
+
+    var iss = null;
+    try {
+        iss = _clonar(eval_calcularISS());
+    } catch(e) {
+        console.warn('[COMPÁS SNAPSHOT EVALUACIÓN] eval_calcularISS falló:', e);
+    }
+
+    var analisisActual = _clonar(window.analisisActual);
+    var analisisActualV3 = _clonar(window.analisisActualV3);
+
+    var datosIBSE = _clonar(window.datosIBSE);
+
+    var prioridades = null;
+    try {
+        if (typeof COMPAS_getPrioridades === 'function') {
+            prioridades = _clonar(COMPAS_getPrioridades());
+        }
+    } catch(e) {
+        console.warn('[COMPÁS SNAPSHOT EVALUACIÓN] COMPAS_getPrioridades falló:', e);
+    }
+
+    var resumenPrioridades = null;
+    try {
+        if (typeof COMPAS_resumenPrioridades === 'function') {
+            resumenPrioridades = _clonar(COMPAS_resumenPrioridades());
+        }
+    } catch(e) {
+        console.warn('[COMPÁS SNAPSHOT EVALUACIÓN] COMPAS_resumenPrioridades falló:', e);
+    }
+
+    var arbolTrazabilidad = null;
+    try {
+        if (typeof COMPAS_construirArbolTrazabilidad === 'function') {
+            arbolTrazabilidad = _clonar(COMPAS_construirArbolTrazabilidad());
+        }
+    } catch(e) {
+        console.warn('[COMPÁS SNAPSHOT EVALUACIÓN] COMPAS_construirArbolTrazabilidad falló:', e);
+    }
+
+    var planAccionFirebase = _clonar(window.COMPAS && window.COMPAS.state && window.COMPAS.state.planAccionFirebase);
+    var seleccionEPVSA = _clonar(window.COMPAS && window.COMPAS.state && window.COMPAS.state.seleccionEPVSA);
+
+    return {
+        version: 'snapshot_evaluacion_v0',
+        fechaISO: new Date().toISOString(),
+        municipio: municipio,
+        accionesAgenda: accionesAgendaSnapshot,
+        resumenAgenda: resumenAgenda,
+        agendaEvaluacionFuente: agendaEvaluacion ? agendaEvaluacion.fuente : 'ninguna',
+        agendaEvaluacion: agendaEvaluacion,
+        iss: iss,
+        analisisActual: analisisActual,
+        analisisActualV3: analisisActualV3,
+        datosIBSE: datosIBSE,
+        prioridades: prioridades,
+        resumenPrioridades: resumenPrioridades,
+        arbolTrazabilidad: arbolTrazabilidad,
+        planAccionFirebase: planAccionFirebase,
+        seleccionEPVSA: seleccionEPVSA
+    };
 }
 
 
