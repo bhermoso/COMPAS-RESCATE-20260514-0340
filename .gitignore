@@ -2,3 +2,10 @@
 Thumbs.db
 *.log
 node_modules/
+
+backups/
+data/raw/
+*.sav
+*.xlsx
+*.pdf
+*.csv

@@ -219,6 +219,99 @@ function _calcularAnalisisModular(contextoIA) {
         }
     }
 
+    // ── PATH 3 — Análisis textual salutogénico (sin CMI ni decisión) ─────
+    // Se activa cuando los paths CMI y decisionPriorizacion no produjeron datos.
+    // Llama a window.COMPAS_analizarTextoInforme / COMPAS_analizarTextoEstudio
+    // (funciones del monolito, disponibles en window cuando este módulo ejecuta).
+    // No inventa datos: solo extrae señales de área presentes en el texto.
+    if ((hayInforme || nEst > 0)
+            && typeof window !== 'undefined'
+            && typeof window.COMPAS_analizarTextoInforme === 'function') {
+
+        const _modoCompl = priorizacion.length > 0;
+        const _mapeoLE3 = (typeof window !== 'undefined') && window.COMPAS_MAPEO_AREA_LE;
+
+        // Analizar informe
+        const _infA = hayInforme
+            ? window.COMPAS_analizarTextoInforme(contextoIA.informe.htmlCompleto)
+            : null;
+
+        // Analizar estudios complementarios que tengan texto
+        const _estA = [];
+        (contextoIA.estudiosComplementarios || []).forEach(function(e) {
+            if (e && e.texto && typeof window.COMPAS_analizarTextoEstudio === 'function') {
+                var a = window.COMPAS_analizarTextoEstudio(e.texto, e.nombre || 'Estudio');
+                if (a) _estA.push(a);
+            }
+        });
+
+        // Pesos: si hay estudios el informe cede parte de su peso
+        var _wI = _estA.length > 0 ? 0.55 : 0.70;
+        var _wE = _estA.length > 0 ? 0.45 / _estA.length : 0;
+
+        // Fusionar areasDetectadas de todas las fuentes
+        var _aMap = {};
+        function _mergeArea(ad, peso) {
+            if (!ad || !ad.area) return;
+            if (!_aMap[ad.area]) _aMap[ad.area] = { score: 0, hits: 0 };
+            _aMap[ad.area].score += (ad.confianza || 0) * peso;
+            _aMap[ad.area].hits  += (ad.hits || 0);
+        }
+        if (_infA) {
+            (_infA.areasDetectadas || []).forEach(function(ad) { _mergeArea(ad, _wI); });
+        }
+        _estA.forEach(function(est) {
+            (est.areasDetectadas || []).forEach(function(ad) { _mergeArea(ad, _wE); });
+        });
+
+        // Construir priorizacion desde el mapa fusionado
+        Object.entries(_aMap)
+            .filter(function(entry) { var _umbral = _modoCompl ? 0.25 : 0.10; return entry[1].score >= _umbral; })
+            .sort(function(a, b) { return b[1].score - a[1].score; })
+            .forEach(function(entry, idx) {
+                var areaKey = entry[0];
+                var v       = entry[1];
+
+                var _AMORT     = _modoCompl ? 0.60 : 1.0;
+                var scoreFinal = parseFloat(Math.min(1, v.score * _AMORT).toFixed(3));
+
+                // En modo complementario: reforzar área si ya existe en priorizacion CMI
+                var _idxExist = _modoCompl
+                    ? priorizacion.findIndex(function(p) { return p.area === areaKey; })
+                    : -1;
+
+                if (_idxExist >= 0) {
+                    var _refuerzo = parseFloat((v.score * 0.25).toFixed(3));
+                    priorizacion[_idxExist].score = parseFloat(
+                        Math.min(1, priorizacion[_idxExist].score + _refuerzo).toFixed(3)
+                    );
+                    priorizacion[_idxExist].justificacion +=
+                        ' + Evidencia textual complementaria (' + Math.round(v.score * 100) + '%).';
+                    return;
+                }
+
+                priorizacion.push({
+                    area:         areaKey,
+                    label:        (_mapeoLE3 && _mapeoLE3[areaKey])
+                                  ? _mapeoLE3[areaKey].desc
+                                  : areaKey,
+                    score:        scoreFinal,
+                    nAMejorar:    0,
+                    nFavorables:  0,
+                    nConDatos:    v.hits,
+                    fuente:       _modoCompl ? 'texto_salutogenico_complementario' : 'texto_salutogenico',
+                    areaKey:      areaKey,
+                    orden:        priorizacion.length + 1,
+                    justificacion: 'Señal en informe/estudios (confianza: '
+                                  + Math.round(v.score * 100)
+                                  + (_modoCompl ? '%, amortiguada al 60%).' : '%).'),
+                });
+            });
+
+        console.log('[motorSintesisPerfil] PATH 3 texto salutogénico: '
+            + priorizacion.length + ' áreas desde informe/estudios.');
+    }
+
     // ── Alertas de inequidad (desde SFA D4 o CMI determinantes) ───────────
     const alertasInequidad = [];
     const d4Score = perfilSFA.scorePorDimension['d4_inequidad'];
@@ -370,37 +463,146 @@ function _calcularAnalisisModular(contextoIA) {
         const mapeoLE = (typeof window !== 'undefined') && window.COMPAS_MAPEO_AREA_LE;
         if (!mapeoLE || !priorizacion.length) return [];
 
+        // [2026-05-07] Traducción CMI cat.id → COMPAS_MAPEO_AREA_LE keys.
+        // Las categorías CMI ('determinantes', 'eventos_no_transmisibles', 'prevencion')
+        // no coinciden con las claves de COMPAS_MAPEO_AREA_LE (bienestarEmocional, vidaActiva…).
+        // Este mapeo conservador cubre solo relaciones semánticamente inequívocas.
+        const _CMI_A_AREAS = {
+            determinantes:            ['vidaActiva', 'alimentacionSaludable', 'consumoResponsable'],
+            eventos_no_transmisibles: ['bienestarEmocional', 'vidaActiva', 'alimentacionSaludable'],
+            prevencion:               ['entornoSaludable'],
+        };
+
+        // Umbral 0.25: evita que una categoría CMI con señal trivial arrastre varias áreas EPVSA.
+        const priorizacionConScore = priorizacion.filter(function(item) {
+            return item && typeof item.score === 'number' && !isNaN(item.score) && item.score >= 0.25;
+        });
+        if (!priorizacionConScore.length) {
+            console.warn('[motorSintesisPerfil] propuestaEPVSA no generada: priorizacion sin score válido (>= 0.25).');
+            return [];
+        }
+
         const lineasMap = {};
-        priorizacion.forEach(function(item) {
-            const mapeo = mapeoLE[item.area];
-            if (!mapeo || !mapeo.le) return;
-            mapeo.le.forEach(function(leNum) {
-                if (!lineasMap[leNum]) {
-                    lineasMap[leNum] = { lineaId: leNum, relevancia: 0, areas: [], objetivos: new Set() };
-                }
-                lineasMap[leNum].relevancia += Math.round((item.score || 0) * 100);
-                lineasMap[leNum].areas.push(item.label || item.area);
-                (mapeo.obj || []).forEach(function(o) { lineasMap[leNum].objetivos.add(o); });
+        priorizacionConScore.forEach(function(item) {
+            const areaKeys = _CMI_A_AREAS[item.area]
+                             || (mapeoLE[item.area] ? [item.area] : []);
+            areaKeys.forEach(function(areaKey) {
+                const mapeo = mapeoLE[areaKey];
+                if (!mapeo || !mapeo.le) return;
+                mapeo.le.forEach(function(leNum) {
+                    if (!lineasMap[leNum]) {
+                        lineasMap[leNum] = { lineaId: leNum, relevancia: 0, areas: [], objetivos: new Set() };
+                    }
+                    lineasMap[leNum].relevancia += Math.round((item.score || 0) * 100);
+                    lineasMap[leNum].areas.push(item.label || areaKey);
+                    (mapeo.obj || []).forEach(function(o) { lineasMap[leNum].objetivos.add(o); });
+                });
             });
         });
 
         const vals = Object.values(lineasMap);
-        const maxRel = vals.reduce(function(m, l) { return Math.max(m, l.relevancia); }, 1);
+
+        // [COMPÁS 2026-05-10] Líneas EPVSA de soporte transversal.
+        // LE3 y LE4 no suelen emerger desde el mapeo área→línea porque actúan como
+        // condiciones de posibilidad: comunicación/educación y gestión del conocimiento.
+        // Se incorporan con señal baja y trazada cuando existe base mínima de análisis,
+        // sin competir con las líneas principales derivadas de áreas de salud.
+        // LE3 → comunicación y educación para la salud
+        if ((hayInforme || hayParticipacion) && !lineasMap[3]) {
+            lineasMap[3] = {
+                lineaId: 3,
+                relevancia: 18,
+                areas: ['Comunicación y educación para la salud'],
+                objetivos: new Set(),
+                _soporteTransversal: true
+            };
+        }
+
+        // LE4 → formación, investigación y evaluación (IBSE, estudios)
+        if ((nEst > 0 || hayInforme) && !lineasMap[4]) {
+            lineasMap[4] = {
+                lineaId: 4,
+                relevancia: 15,
+                areas: ['Gestión del conocimiento, formación y mapeo de activos'],
+                objetivos: new Set(),
+                _soporteTransversal: true
+            };
+        }
+
+        const valsFinal = Object.values(lineasMap);
+        const maxRel = valsFinal.reduce(function(m, l) { return Math.max(m, l.relevancia); }, 1);
+
+        var f = contextoIA.fuentes || {};
+        var _nFp = [f.tieneInforme, f.tieneEstudios, f.tienePopular, f.tieneDet, f.tieneIndicadores].filter(Boolean).length;
+        var _factorC = Math.min(0.85, _nFp * 0.17);
+
         const etiquetaFuentes = [
             hayParticipacion ? '🗳️ Prioridad ciudadana'   : null,
             hayInforme       ? '📄 Informe de situación'   : null,
             nEst > 0         ? 'Estudios complementarios' : null,
         ].filter(Boolean).join(' · ') || 'Análisis CMI';
 
-        return vals.map(function(l) {
+        // Mapa per-línea: qué líneas EPVSA tienen temas votados por ciudadanos
+        var _temasVotadosPorLinea = {};
+        var _temaAEpvsaMap = (typeof window !== 'undefined' && window._TEMA_A_EPVSA) || null;
+
+        if (hayParticipacion && contextoIA.participacion && _temaAEpvsaMap) {
+            var _pop = contextoIA.participacion;
+
+            // Path VRELAS: temasFreq es {temaId: votos}
+            if (_pop.temasFreq && typeof _pop.temasFreq === 'object') {
+                Object.keys(_pop.temasFreq).forEach(function(temaId) {
+                    var _mapa = _temaAEpvsaMap[parseInt(temaId, 10)];
+                    if (_mapa && _mapa.linea) {
+                        var _leNum = parseInt(String(_mapa.linea).split('—')[0].trim(), 10);
+                        if (_leNum) _temasVotadosPorLinea[_leNum] = true;
+                    }
+                });
+            }
+
+            // Path EPVSA legacy: rankingObjetivos es [{id, ...}]
+            if (_pop.rankingObjetivos && Array.isArray(_pop.rankingObjetivos)) {
+                _pop.rankingObjetivos.forEach(function(obj) {
+                    var _mapa = _temaAEpvsaMap[obj.id];
+                    if (_mapa && _mapa.linea) {
+                        var _leNum = parseInt(String(_mapa.linea).split('—')[0].trim(), 10);
+                        if (_leNum) _temasVotadosPorLinea[_leNum] = true;
+                    }
+                });
+            }
+        }
+
+        return valsFinal.map(function(l) {
+
+            var esSoporte = !!l._soporteTransversal;
+            var tieneCiudadano = !!_temasVotadosPorLinea[l.lineaId];
+
+            var fuentesLinea;
+
+            if (esSoporte) {
+                // LE3 / LE4 → soporte estructural
+                fuentesLinea = [
+                    hayInforme ? '📄 Informe de situación' : null,
+                    nEst > 0 ? '🔬 Estudios / evaluación local' : null,
+                    'Soporte transversal EPVSA'
+                ].filter(Boolean).join(' · ');
+            } else {
+                // LE1 / LE2 → lógica habitual
+                fuentesLinea = [
+                    tieneCiudadano ? '🗳️ Prioridad ciudadana' : null,
+                    hayInforme ? '📄 Informe de situación' : null,
+                    nEst > 0 ? 'Estudios complementarios' : null,
+                ].filter(Boolean).join(' · ') || 'Análisis CMI';
+            }
+
             return {
                 lineaId:         l.lineaId,
-                relevancia:      Math.round((l.relevancia / maxRel) * 100),
+                relevancia:      Math.round((l.relevancia / maxRel) * 100 * _factorC),
                 objetivos:       [...l.objetivos],
                 programas:       [],
                 justificacion:   'Áreas relacionadas: ' + l.areas.join(', '),
-                origenCiudadano: hayParticipacion,
-                fuentes:         etiquetaFuentes,
+                origenCiudadano: tieneCiudadano,
+                fuentes:         fuentesLinea,
                 conclusion_ids:  ['marco_salutogenico'],
             };
         }).sort(function(a, b) { return b.relevancia - a.relevancia; });
@@ -424,6 +626,10 @@ function _calcularAnalisisModular(contextoIA) {
         perfilSOC:             null, // sin lógica SOC en ruta modular
         datosAnalisis,
         patronesTransversales: [],
+
+        // ── Enriquecimiento territorial externo ────────────────────────────
+        //    Campo contractual pasivo: no calcula, no busca, no persiste.
+        enriquecimientoTerritorial: contextoIA.enriquecimientoTerritorial || null,
 
         // ── Metadatos de la ruta modular ───────────────────────────────────
         sinDatos:          false,
@@ -673,6 +879,12 @@ export function adaptarSalidaMotorAAnalisisActual(salidaMotor, contextoIA) {
         _fechaGeneracion:   salidaMotor.fechaGeneracion,
         _fuentesUsadas:     salidaMotor.fuentesUsadas,
         _origenCalculo:     analisis.origenCalculo || 'motor_heredado',
+
+        // Referencias EAS 2023 disponibles para motores/lecturas posteriores.
+        // No calcula ni persiste datos locales; solo expone Andalucía/Granada ya cargadas en runtime.
+        eas: (typeof window !== 'undefined' && window.referenciasEAS)
+            ? window.referenciasEAS
+            : {},
     };
 }
 

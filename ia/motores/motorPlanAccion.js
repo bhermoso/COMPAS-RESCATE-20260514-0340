@@ -354,15 +354,10 @@ function _normalizarPropuesta(resultado, contextoIA, fuentesUsadas, aa) {
         return { sinDatos: true, mensaje: 'La propuesta está vacía. Puede que falten datos o la estructura EPVSA no esté disponible.' };
     }
 
-    // Capturar IDs de la propuesta upstream real (síntesis) antes de cualquier transformación de plan
+    // [FIX COMPÁS] La entrada canónica del plan es analisisPrevio.propuestaEPVSA.
+    // __ultimaSalidaMotorSintesis queda solo como fallback, no como fuente preferente.
     const _propuestaUpstream =
-        (typeof window !== 'undefined' &&
-         window.__ultimaSalidaMotorSintesis &&
-         window.__ultimaSalidaMotorSintesis.datos &&
-         Array.isArray(window.__ultimaSalidaMotorSintesis.datos.propuestaEPVSA) &&
-         window.__ultimaSalidaMotorSintesis.datos.propuestaEPVSA.length > 0)
-            ? window.__ultimaSalidaMotorSintesis.datos.propuestaEPVSA
-        : (contextoIA && contextoIA.analisisPrevio &&
+        (contextoIA && contextoIA.analisisPrevio &&
            Array.isArray(contextoIA.analisisPrevio.propuestaEPVSA) &&
            contextoIA.analisisPrevio.propuestaEPVSA.length > 0)
             ? contextoIA.analisisPrevio.propuestaEPVSA
@@ -370,6 +365,12 @@ function _normalizarPropuesta(resultado, contextoIA, fuentesUsadas, aa) {
            Array.isArray(contextoIA.propuestaEPVSA) &&
            contextoIA.propuestaEPVSA.length > 0)
             ? contextoIA.propuestaEPVSA
+        : (typeof window !== 'undefined' &&
+           window.__ultimaSalidaMotorSintesis &&
+           window.__ultimaSalidaMotorSintesis.datos &&
+           Array.isArray(window.__ultimaSalidaMotorSintesis.datos.propuestaEPVSA) &&
+           window.__ultimaSalidaMotorSintesis.datos.propuestaEPVSA.length > 0)
+            ? window.__ultimaSalidaMotorSintesis.datos.propuestaEPVSA
         : propuestaEPVSA;
     const _lineaIdsEntrada = _propuestaUpstream.map(p => p.lineaId);
 

@@ -91,6 +91,9 @@ export function crearContextoIA({
     participacion       = null,
     estudiosComplementarios = [],
 
+    // Enriquecimiento territorial externo (no persistente, no oficial)
+    enriquecimientoTerritorial = null,
+
     // Fuentes (se infiere si no se da)
     fuentes             = null,
 } = {}) {
@@ -112,6 +115,7 @@ export function crearContextoIA({
         informe,
         participacion,
         estudiosComplementarios,
+        enriquecimientoTerritorial,
     });
 
     return Object.freeze({
@@ -139,6 +143,11 @@ export function crearContextoIA({
         participacion,
         estudiosComplementarios: Object.freeze([...(estudiosComplementarios || [])]),
 
+        // ── Enriquecimiento territorial externo ────────────────────────────
+        //    Información contextual externa, auditable y no persistente.
+        //    No sustituye diagnóstico, EAS, BDU/SAS, escalas ni participación.
+        enriquecimientoTerritorial,
+
         // ── Inventario de fuentes ──────────────────────────────────────────
         //    Los motores deben consultar esto para saber con qué pueden trabajar.
         fuentes: Object.freeze(fuentesEfectivas),
@@ -159,7 +168,7 @@ export function crearContextoIA({
  * Equivalente modular de la detección de fuentes en analizarDatosMunicipio() (HTML l.24528).
  * @private
  */
-function _inferirFuentes({ datosMunicipio = {}, determinantes = {}, indicadores = {}, informe, participacion, estudiosComplementarios = [] }) {
+function _inferirFuentes({ datosMunicipio = {}, determinantes = {}, indicadores = {}, informe, participacion, estudiosComplementarios = [], enriquecimientoTerritorial = null }) {
     const tieneInforme   = !!(informe && informe.htmlCompleto)
                         || !!(datosMunicipio.informe && datosMunicipio.informe.htmlCompleto);
     const tieneEstudios  = Array.isArray(estudiosComplementarios) && estudiosComplementarios.length > 0;
@@ -168,6 +177,7 @@ function _inferirFuentes({ datosMunicipio = {}, determinantes = {}, indicadores 
     const tieneDet       = Object.keys(detData).length > 0;
     const indData        = indicadores  || datosMunicipio.indicadores  || {};
     const tieneIndicadores = Object.keys(indData).length > 0;
+    const tieneEnriquecimientoTerritorial = !!enriquecimientoTerritorial;
 
     const nParticipantes = participacion
         ? (participacion.totalParticipantes || participacion.n || 0)
@@ -179,6 +189,7 @@ function _inferirFuentes({ datosMunicipio = {}, determinantes = {}, indicadores 
         tienePopular,
         tieneDet,
         tieneIndicadores,
+        tieneEnriquecimientoTerritorial, // fuente contextual no ponderable en fase 0
         nEstudios:      estudiosComplementarios.length,
         nParticipantes,
     };
@@ -227,6 +238,7 @@ export function contextoDesdeGlobalesHeredados() {
     const participacion         = (typeof window !== 'undefined'                           && window.datosParticipacionCiudadana) || null;
     const estudiosComplementarios = (typeof window !== 'undefined'                          && window.estudiosComplementarios)|| [];
     const referenciasEASData    = (typeof referenciasEAS !== 'undefined'                   && referenciasEAS)                 || {};
+    const enriquecimientoTerritorial = (typeof window !== 'undefined' && window.enriquecimientoTerritorialActual) || null;
 
     // Extraer sub-objetos del nodo del municipio
     const determinantes = (datosMunicipio && datosMunicipio.determinantes) || {};
@@ -252,6 +264,7 @@ export function contextoDesdeGlobalesHeredados() {
         analisisPrevioV3,
         participacion,
         estudiosComplementarios,
+        enriquecimientoTerritorial,
     });
 }
 
@@ -287,6 +300,7 @@ export function contextoDesdeEntidades(ambitoTerritorial, planTerritorial, datos
         informe:                datos.informe || null,
         participacion:          opciones.participacion || null,
         estudiosComplementarios: opciones.estudios || [],
+        enriquecimientoTerritorial: opciones.enriquecimientoTerritorial || null,
     });
 }
 

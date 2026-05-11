@@ -14,11 +14,22 @@ function generarHTMLPlanLocal(completo) {
 
     
 
+    // [2026-05-11] Variables defensivas: priorizan estado en memoria sobre compilador
+    var _planState      = window.COMPAS && window.COMPAS.state && window.COMPAS.state.planAccion;
+    var _planCompilador = planLocalSalud && planLocalSalud.planAccion;
+    var _analisisVigente = window.analisisActual
+        || window.analisisActualV3
+        || (datosMunicipioActual && datosMunicipioActual.analisisIA)
+        || null;
+
     // Usar datos del compilador si están disponibles
 
     const acciones = planLocalSalud.agenda.completado ? planLocalSalud.agenda.actuaciones : (accionesAgenda || []);
 
-    const planAccionHTML = planLocalSalud.planAccion.completado ? planLocalSalud.planAccion.html : null;
+    const planAccionHTML =
+        (_planState && _planState.html) ? _planState.html :
+        (_planCompilador && _planCompilador.completado && _planCompilador.html) ? _planCompilador.html :
+        null;
 
     
 
@@ -74,7 +85,7 @@ function generarHTMLPlanLocal(completo) {
 
         anioPriorizacion: (datosMunicipioActual && datosMunicipioActual.anioPriorizacion) || new Date().getFullYear(),
 
-        lineasEstrategia: (datosMunicipioActual && datosMunicipioActual.lineasEstrategia) || '1, 3 y 4'
+        lineasEstrategia: (datosMunicipioActual && datosMunicipioActual.lineasEstrategia) || ''
 
     };
 
@@ -84,7 +95,7 @@ function generarHTMLPlanLocal(completo) {
 
     html += '<div class="dest dest-azul"><strong>La Estrategia pretende promover los hábitos saludables en toda la población y edades</strong>, mediante intervenciones en el <strong>ámbito local</strong>, en <strong>todos los entornos de vida</strong> y en <strong>todas las políticas y actuaciones sobre los determinantes que generan desigualdades en salud</strong>. Así mismo, propone <strong>potenciar los activos personales y comunitarios</strong> que generan salud a lo largo de la vida, para que la ciudadanía pueda afrontar el día a día con <strong>mayores cotas de bienestar</strong>.</div>';
 
-    html += '<p>El <strong>Informe sobre la situación de salud de ' + nombre + ' (' + configMarcoPDF.anioInforme + ')</strong> y la <strong>Encuesta local de salud de ' + nombre + ' (' + configMarcoPDF.anioEncuesta + ')</strong> han facilitado el paso del diagnóstico a la acción. De acuerdo con lo acordado por el Grupo-Motor en su sesión de priorización del mes de <strong>' + configMarcoPDF.mesPriorizacion + ' de ' + configMarcoPDF.anioPriorizacion + '</strong>, se adaptará el diseño del plan de acción a las <strong>líneas ' + configMarcoPDF.lineasEstrategia + '</strong> de la Estrategia, situando la <strong>percepción de calidad de vida y el bienestar emocional</strong> en el centro neurálgico del plan.</p>';
+    html += '<p>El <strong>Informe sobre la situación de salud de ' + nombre + ' (' + configMarcoPDF.anioInforme + ')</strong>, junto con <strong>los datos disponibles del diagnóstico local y las referencias de la Encuesta Andaluza de Salud</strong>, han facilitado el paso del diagnóstico a la acción. De acuerdo con lo acordado por el Grupo-Motor en su sesión de priorización del mes de <strong>' + configMarcoPDF.mesPriorizacion + ' de ' + configMarcoPDF.anioPriorizacion + '</strong>, se adaptará el diseño del plan de acción a las <strong>líneas ' + configMarcoPDF.lineasEstrategia + '</strong> de la Estrategia, situando la <strong>percepción de calidad de vida y el bienestar emocional</strong> en el centro neurálgico del plan.</p>';
 
     html += '<p>Al acompasar el Plan local de salud de ' + nombre + ' a la Estrategia, se incorporan de manera automática al mismo las <strong>líneas estratégicas</strong>, los <strong>objetivos</strong> seleccionados dentro de cada línea y los <strong>indicadores de contexto e impacto</strong> vinculados a cada objetivo. Lo que debería permitir no solo el seguimiento y la evaluación, sino también la <strong>comparación de resultados con otros territorios de referencia</strong>.</p>';
 
@@ -120,7 +131,7 @@ function generarHTMLPlanLocal(completo) {
 
     html += '<div class="sub ' + (completo ? 'page-break' : '') + '"><div class="sub-header"><div class="sub-icon" style="background:rgba(102,126,234,0.1);">📈</div><h3 class="sub-titulo">Determinantes de la salud</h3></div>';
 
-    html += '<div class="dest" style="background:linear-gradient(135deg,rgba(102,126,234,0.1),rgba(118,75,162,0.05));border-color:#0074c8;"><strong>📊 Valores estimados mediante reponderación Bettersurveys</strong><br>Estimaciones territoriales a partir de la Encuesta Andaluza de Salud 2023 para el municipio de <strong>' + nombre + '</strong>. Los valores se comparan con las referencias provinciales (Granada) y autonómicas (Andalucía).</div>';
+    html += '<div class="dest" style="background:linear-gradient(135deg,rgba(102,126,234,0.1),rgba(118,75,162,0.05));border-color:#0074c8;"><strong>📊 Encuesta Andaluza de Salud 2023 · referencias oficiales</strong><br>Referencias reales calculadas a partir de microdatos ponderados para Granada y Andalucía. Se usan como contexto epidemiológico-comparativo; no como estimación municipal directa para el municipio de <strong>' + nombre + '</strong>.</div>';
 
     html += generarDeterminantesCompletosPDF();
 
@@ -164,7 +175,7 @@ function generarHTMLPlanLocal(completo) {
 
     // 1.6 Conclusiones y Recomendaciones — generadas en Tab 1 (analisisIA)
 
-    var _iaPDF = datosMunicipioActual && datosMunicipioActual.analisisIA;
+    var _iaPDF = _analisisVigente;
 
     html += '<div class="sub ' + (completo ? 'page-break' : '') + '"><div class="sub-header"><div class="sub-icon blue">💡</div><h3 class="sub-titulo">Conclusiones y Recomendaciones <small style="font-size:0.68rem;background:#e0e7ff;color:#3730a3;padding:0.1rem 0.4rem;border-radius:6px;font-weight:600;vertical-align:middle;">IA · Tab 1</small></h3></div>';
 
