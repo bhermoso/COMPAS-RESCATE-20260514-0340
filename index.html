@@ -22483,6 +22483,14 @@ function COMPAS_crearSnapshotPlan() {
     var _analisis  = (typeof window !== 'undefined' && window.analisisActual) || null;
     var _seleccion = (window.COMPAS && window.COMPAS.state && window.COMPAS.state.seleccionEPVSA) || null;
     var _planFB    = (window.COMPAS && window.COMPAS.state && window.COMPAS.state.planAccionFirebase) || null;
+    var _planLocal = (typeof planLocalSalud !== 'undefined' && planLocalSalud) ? planLocalSalud : null;
+    var _agendaEval = null;
+
+    try {
+        _agendaEval = (typeof COMPAS_obtenerAgendaEvaluacion === 'function') ? COMPAS_obtenerAgendaEvaluacion() : null;
+    } catch(e) {
+        console.warn('[COMPÁS SNAPSHOT PLAN] COMPAS_obtenerAgendaEvaluacion falló:', e);
+    }
 
     var _seleccionDOM = null;
     try {
@@ -22499,6 +22507,8 @@ function COMPAS_crearSnapshotPlan() {
         seleccionEPVSA:      _clonar(_seleccion),
         seleccionActualDOM:  _clonar(_seleccionDOM),
         planAccionFirebase:  _clonar(_planFB),
+        planLocalSalud:      _clonar(_planLocal),
+        agendaEvaluacion:    _clonar(_agendaEval),
         datosMunicipioActual: _clonar((typeof datosMunicipioActual !== 'undefined' && datosMunicipioActual) ? datosMunicipioActual : null)
     };
 }
