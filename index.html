@@ -52563,20 +52563,23 @@ function analizarDatosMunicipio() {
             if (dA.oportunidades[0]) just += ' Mejorable: ' + dA.oportunidades[0].texto + ' (' + dA.oportunidades[0].valor + '% vs ' + dA.oportunidades[0].refAndalucia + '% Andalucía).';
 
             var mapeoCanonicoLE = (window.COMPAS_MAPEO_AREA_LE && window.COMPAS_MAPEO_AREA_LE[areaKey]) ? window.COMPAS_MAPEO_AREA_LE[areaKey] : null;
-            var lineaCanonica = (mapeoCanonicoLE && Array.isArray(mapeoCanonicoLE.le) && mapeoCanonicoLE.le.length) ? mapeoCanonicoLE.le[0] : area.lineaEPVSA;
-            var objetivoCanonico = (mapeoCanonicoLE && Array.isArray(mapeoCanonicoLE.obj) && mapeoCanonicoLE.obj.length) ? mapeoCanonicoLE.obj[0] : area.objetivoEPVSA;
+            var lineasCanonicas = (mapeoCanonicoLE && Array.isArray(mapeoCanonicoLE.le) && mapeoCanonicoLE.le.length) ? mapeoCanonicoLE.le : [area.lineaEPVSA];
+            var objetivosCanonicos = (mapeoCanonicoLE && Array.isArray(mapeoCanonicoLE.obj) && mapeoCanonicoLE.obj.length) ? mapeoCanonicoLE.obj : [area.objetivoEPVSA];
             var programasCanonicos = (mapeoCanonicoLE && Array.isArray(mapeoCanonicoLE.programas) && mapeoCanonicoLE.programas.length) ? mapeoCanonicoLE.programas : area.programas;
+            var puntuacionPorLinea = puntuacion / Math.max(1, lineasCanonicas.length);
 
-            analisis.priorizacion.push({
+            lineasCanonicas.forEach(function(lineaCanonica, idxLinea) {
+                analisis.priorizacion.push({
 
-                area: area.nombre, areaKey, puntuacion, numFortalezas: nF, numOportunidades: nO,
+                    area: area.nombre, areaKey, puntuacion: puntuacionPorLinea, numFortalezas: nF, numOportunidades: nO,
 
-                justificacion: just, lineaEPVSA: lineaCanonica,
+                    justificacion: just + (lineasCanonicas.length > 1 ? ' | Mapeo canónico multilínea.' : ''), lineaEPVSA: lineaCanonica,
 
-                objetivoEPVSA: objetivoCanonico, programas: programasCanonicos,
+                    objetivoEPVSA: objetivosCanonicos[idxLinea] != null ? objetivosCanonicos[idxLinea] : objetivosCanonicos[0], programas: programasCanonicos,
 
-                origenCiudadano: false
+                    origenCiudadano: false
 
+                });
             });
 
         });
@@ -52643,34 +52646,37 @@ function analizarDatosMunicipio() {
 
             var areaCanonicaTema = mapa && mapa.areaCanonica ? mapa.areaCanonica : null;
             var mapeoCanonicoTema = (areaCanonicaTema && window.COMPAS_MAPEO_AREA_LE && window.COMPAS_MAPEO_AREA_LE[areaCanonicaTema]) ? window.COMPAS_MAPEO_AREA_LE[areaCanonicaTema] : null;
-            var lineaTema = (mapeoCanonicoTema && Array.isArray(mapeoCanonicoTema.le) && mapeoCanonicoTema.le.length) ? mapeoCanonicoTema.le[0] : (mapa ? parseInt(mapa.linea) : 1);
-            var objetivoTema = (mapeoCanonicoTema && Array.isArray(mapeoCanonicoTema.obj) && mapeoCanonicoTema.obj.length) ? mapeoCanonicoTema.obj[0] : 0;
+            var lineasTema = (mapeoCanonicoTema && Array.isArray(mapeoCanonicoTema.le) && mapeoCanonicoTema.le.length) ? mapeoCanonicoTema.le : [(mapa ? parseInt(mapa.linea) : 1)];
+            var objetivosTema = (mapeoCanonicoTema && Array.isArray(mapeoCanonicoTema.obj) && mapeoCanonicoTema.obj.length) ? mapeoCanonicoTema.obj : [0];
             var programasTema = (mapeoCanonicoTema && Array.isArray(mapeoCanonicoTema.programas) && mapeoCanonicoTema.programas.length) ? mapeoCanonicoTema.programas : [0];
+            var puntuacionTemaPorLinea = Math.max(1, 10 - rank) / Math.max(1, lineasTema.length);
 
-            analisis.priorizacion.push({
+            lineasTema.forEach(function(lineaTema, idxLineaTema) {
+                analisis.priorizacion.push({
 
-                area:             tLabel,
+                    area:             tLabel,
 
-                areaKey:          'tema_' + t.k,
+                    areaKey:          'tema_' + t.k,
 
-                areaCanonica:     areaCanonicaTema,
+                    areaCanonica:     areaCanonicaTema,
 
-                puntuacion:       Math.max(1, 10 - rank),
+                    puntuacion:       puntuacionTemaPorLinea,
 
-                numFortalezas:    0,
+                    numFortalezas:    0,
 
-                numOportunidades: 0,
+                    numOportunidades: 0,
 
-                justificacion:    '🗳️ Prioridad ciudadana' + (pct ? ' (' + pct + '%)' : '') + '.',
+                    justificacion:    '🗳️ Prioridad ciudadana' + (pct ? ' (' + pct + '%)' : '') + '.' + (lineasTema.length > 1 ? ' | Mapeo canónico multilínea.' : ''),
 
-                lineaEPVSA:       lineaTema,
+                    lineaEPVSA:       lineaTema,
 
-                objetivoEPVSA:    objetivoTema,
+                    objetivoEPVSA:    objetivosTema[idxLineaTema] != null ? objetivosTema[idxLineaTema] : objetivosTema[0],
 
-                programas:        programasTema,
+                    programas:        programasTema,
 
-                origenCiudadano:  true
+                    origenCiudadano:  true
 
+                });
             });
 
         });
