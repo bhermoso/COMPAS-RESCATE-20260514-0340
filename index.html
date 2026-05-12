@@ -19682,43 +19682,9 @@ function generarSeleccionDesdePriorizacionCSV(priorizacion) {
 
     
 
-    // Añadir L3 y L4 si no están
-
-    if (!propuesta.find(p => p.lineaId === 3)) {
-
-        propuesta.push({
-
-            lineaId: 3,
-
-            relevancia: 70,
-
-            justificacion: 'Información y comunicación',
-
-            objetivos: [{ objetivoIdx: 0, indicadores: [] }],
-
-            programas: [{ programaIdx: 0, actuaciones: [] }]
-
-        });
-
-    }
-
-    if (!propuesta.find(p => p.lineaId === 4)) {
-
-        propuesta.push({
-
-            lineaId: 4,
-
-            relevancia: 65,
-
-            justificacion: 'Formación, investigación e innovación',
-
-            objetivos: [{ objetivoIdx: 0, indicadores: [] }],
-
-            programas: [{ programaIdx: 0, actuaciones: [] }]
-
-        });
-
-    }
+    // [COMPÁS 2026-05-12] No autoinyectar LE3/LE4 en ruta CSV legacy.
+    // Las líneas EPVSA solo deben entrar si proceden del CSV, de inferencia inequívoca
+    // o del motor modular vigente. Se evita introducir líneas instrumentales sin traza.
 
     
 
