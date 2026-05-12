@@ -50640,25 +50640,25 @@ function renderizarSeccionPriorizacion() {
 
 var _TEMA_A_EPVSA = {
 
-    1: { linea: '1 — Alimentación saludable',    obj: 'Promover una alimentación equilibrada y reducir el consumo de ultraprocesados' },
+    1: { linea: '1 — Alimentación saludable',    areaCanonica: 'alimentacionSaludable', obj: 'Promover una alimentación equilibrada y reducir el consumo de ultraprocesados' },
 
-    2: { linea: '1 — Actividad física',           obj: 'Fomentar la práctica de actividad física regular en todos los grupos de edad' },
+    2: { linea: '1 — Actividad física',           areaCanonica: 'vidaActiva', obj: 'Fomentar la práctica de actividad física regular en todos los grupos de edad' },
 
-    3: { linea: '1 — Bienestar emocional',        obj: 'Fortalecer la salud mental y las competencias socioemocionales de la población' },
+    3: { linea: '1 — Bienestar emocional',        areaCanonica: 'bienestarEmocional', obj: 'Fortalecer la salud mental y las competencias socioemocionales de la población' },
 
-    4: { linea: '1 — Uso de TIC',                 obj: 'Promover un uso saludable de pantallas y redes sociales, especialmente en jóvenes' },
+    4: { linea: '1 — Uso de TIC',                 areaCanonica: 'bienestarEmocional', obj: 'Promover un uso saludable de pantallas y redes sociales, especialmente en jóvenes' },
 
-    5: { linea: '1 — Sueño y descanso',           obj: 'Mejorar los hábitos de sueño y descanso en la población' },
+    5: { linea: '1 — Sueño y descanso',           areaCanonica: 'suenoSaludable', obj: 'Mejorar los hábitos de sueño y descanso en la población' },
 
-    6: { linea: '1 — Tabaco, alcohol y drogas',   obj: 'Reducir el consumo de tabaco, alcohol y otras sustancias en la población' },
+    6: { linea: '1 — Tabaco, alcohol y drogas',   areaCanonica: 'consumoResponsable', obj: 'Reducir el consumo de tabaco, alcohol y otras sustancias en la población' },
 
-    7: { linea: '1 — Sexualidad y reproducción',  obj: 'Promover una sexualidad saludable, segura y con perspectiva de género' },
+    7: { linea: '1 — Sexualidad y reproducción',  areaCanonica: 'bienestarEmocional', obj: 'Promover una sexualidad saludable, segura y con perspectiva de género' },
 
-    8: { linea: '1 — Violencia de género',        obj: 'Prevenir la violencia de género y promover relaciones igualitarias' },
+    8: { linea: '1 — Violencia de género',        areaCanonica: 'apoyoSocial', obj: 'Prevenir la violencia de género y promover relaciones igualitarias' },
 
-    9: { linea: '1 — Medioambiente y salud',      obj: 'Mejorar los determinantes ambientales que condicionan la salud de la población' },
+    9: { linea: '1 — Medioambiente y salud',      areaCanonica: 'entornoSaludable', obj: 'Mejorar los determinantes ambientales que condicionan la salud de la población' },
 
-   10: { linea: '1 — Alimentación saludable',    obj: 'Reducir los accidentes domésticos, viales y laborales mediante educación preventiva' }
+   10: { linea: '1 — Alimentación saludable',    areaCanonica: 'entornoSaludable', obj: 'Reducir los accidentes domésticos, viales y laborales mediante educación preventiva' }
 
 };
 
@@ -52637,11 +52637,19 @@ function analizarDatosMunicipio() {
 
             var pct    = nPart ? Math.round(t.v / nPart * 100) : null;
 
+            var areaCanonicaTema = mapa && mapa.areaCanonica ? mapa.areaCanonica : null;
+            var mapeoCanonicoTema = (areaCanonicaTema && window.COMPAS_MAPEO_AREA_LE && window.COMPAS_MAPEO_AREA_LE[areaCanonicaTema]) ? window.COMPAS_MAPEO_AREA_LE[areaCanonicaTema] : null;
+            var lineaTema = (mapeoCanonicoTema && Array.isArray(mapeoCanonicoTema.le) && mapeoCanonicoTema.le.length) ? mapeoCanonicoTema.le[0] : (mapa ? parseInt(mapa.linea) : 1);
+            var objetivoTema = (mapeoCanonicoTema && Array.isArray(mapeoCanonicoTema.obj) && mapeoCanonicoTema.obj.length) ? mapeoCanonicoTema.obj[0] : 0;
+            var programasTema = (mapeoCanonicoTema && Array.isArray(mapeoCanonicoTema.programas) && mapeoCanonicoTema.programas.length) ? mapeoCanonicoTema.programas : [0];
+
             analisis.priorizacion.push({
 
                 area:             tLabel,
 
                 areaKey:          'tema_' + t.k,
+
+                areaCanonica:     areaCanonicaTema,
 
                 puntuacion:       Math.max(1, 10 - rank),
 
@@ -52651,11 +52659,11 @@ function analizarDatosMunicipio() {
 
                 justificacion:    '🗳️ Prioridad ciudadana' + (pct ? ' (' + pct + '%)' : '') + '.',
 
-                lineaEPVSA:       mapa ? parseInt(mapa.linea) : 1,
+                lineaEPVSA:       lineaTema,
 
-                objetivoEPVSA:    0,
+                objetivoEPVSA:    objetivoTema,
 
-                programas:        [0],
+                programas:        programasTema,
 
                 origenCiudadano:  true
 
