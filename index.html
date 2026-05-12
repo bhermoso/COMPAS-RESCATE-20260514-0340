@@ -19556,35 +19556,35 @@ function generarSeleccionDesdePriorizacionCSV(priorizacion) {
 
     const areaToLineaMap = {
 
-        'bienestar emocional': { linea: 1, objetivo: 3, programas: [0, 2, 7] },
+        'bienestar emocional': { areaCanonica: 'bienestarEmocional', linea: 1, objetivo: 3, programas: [0, 2, 7] },
 
-        'vida activa': { linea: 1, objetivo: 1, programas: [0, 1, 2, 5] },
+        'vida activa': { areaCanonica: 'vidaActiva', linea: 1, objetivo: 1, programas: [0, 1, 2, 5] },
 
-        'alimentación saludable': { linea: 1, objetivo: 0, programas: [0, 2, 5] },
+        'alimentación saludable': { areaCanonica: 'alimentacionSaludable', linea: 1, objetivo: 0, programas: [0, 2, 5] },
 
-        'alimentacion saludable': { linea: 1, objetivo: 0, programas: [0, 2, 5] },
+        'alimentacion saludable': { areaCanonica: 'alimentacionSaludable', linea: 1, objetivo: 0, programas: [0, 2, 5] },
 
-        'sueño saludable': { linea: 1, objetivo: 2, programas: [0, 2] },
+        'sueño saludable': { areaCanonica: 'suenoSaludable', linea: 1, objetivo: 2, programas: [0, 2] },
 
-        'sueno saludable': { linea: 1, objetivo: 2, programas: [0, 2] },
+        'sueno saludable': { areaCanonica: 'suenoSaludable', linea: 1, objetivo: 2, programas: [0, 2] },
 
-        'vida sin humo': { linea: 1, objetivo: 0, programas: [0, 1, 2, 5] },
+        'vida sin humo': { areaCanonica: 'vidaSinHumo', linea: 1, objetivo: 0, programas: [0, 1, 2, 5] },
 
-        'activos para la salud': { linea: 1, objetivo: 6, programas: [0, 3] },
+        'activos para la salud': { areaCanonica: 'apoyoSocial', linea: 1, objetivo: 6, programas: [0, 3] },
 
-        'entornos promotores': { linea: 1, objetivo: 6, programas: [0, 1, 3] },
+        'entornos promotores': { areaCanonica: 'entornoSaludable', linea: 1, objetivo: 6, programas: [0, 1, 3] },
 
-        'participación ciudadana': { linea: 1, objetivo: 6, programas: [0] },
+        'participación ciudadana': { areaCanonica: 'apoyoSocial', linea: 1, objetivo: 6, programas: [0] },
 
-        'participacion ciudadana': { linea: 1, objetivo: 6, programas: [0] },
+        'participacion ciudadana': { areaCanonica: 'apoyoSocial', linea: 1, objetivo: 6, programas: [0] },
 
-        'información y comunicación': { linea: 3, objetivo: 0, programas: [0] },
+        'información y comunicación': { areaCanonica: 'informacionComunicacionSalud', linea: 3, objetivo: 0, programas: [0] },
 
-        'informacion y comunicacion': { linea: 3, objetivo: 0, programas: [0] },
+        'informacion y comunicacion': { areaCanonica: 'informacionComunicacionSalud', linea: 3, objetivo: 0, programas: [0] },
 
-        'formación': { linea: 4, objetivo: 0, programas: [0] },
+        'formación': { areaCanonica: 'formacionInvestigacionSalud', linea: 4, objetivo: 0, programas: [0] },
 
-        'formacion': { linea: 4, objetivo: 0, programas: [0] }
+        'formacion': { areaCanonica: 'formacionInvestigacionSalud', linea: 4, objetivo: 0, programas: [0] }
 
     };
 
@@ -19624,7 +19624,11 @@ function generarSeleccionDesdePriorizacionCSV(priorizacion) {
 
         
 
-        const lineaId = config.linea;
+        const areaCanonicaCSV = config.areaCanonica || null;
+        const mapeoCanonicoCSV = (areaCanonicaCSV && window.COMPAS_MAPEO_AREA_LE && window.COMPAS_MAPEO_AREA_LE[areaCanonicaCSV]) ? window.COMPAS_MAPEO_AREA_LE[areaCanonicaCSV] : null;
+        const lineaId = (mapeoCanonicoCSV && Array.isArray(mapeoCanonicoCSV.le) && mapeoCanonicoCSV.le.length) ? mapeoCanonicoCSV.le[0] : config.linea;
+        const objetivoCSV = (mapeoCanonicoCSV && Array.isArray(mapeoCanonicoCSV.obj) && mapeoCanonicoCSV.obj.length) ? mapeoCanonicoCSV.obj[0] : config.objetivo;
+        const programasCSV = (mapeoCanonicoCSV && Array.isArray(mapeoCanonicoCSV.programas) && mapeoCanonicoCSV.programas.length) ? mapeoCanonicoCSV.programas : config.programas;
 
         
 
@@ -19650,9 +19654,9 @@ function generarSeleccionDesdePriorizacionCSV(priorizacion) {
 
         const linea = lineasMap.get(lineaId);
 
-        linea.objetivos.add(config.objetivo);
+        linea.objetivos.add(objetivoCSV);
 
-        config.programas.forEach(p => linea.programas.add(p));
+        programasCSV.forEach(p => linea.programas.add(p));
 
         linea.justificaciones.push(p.area || p.Area);
 
@@ -50654,7 +50658,7 @@ var _TEMA_A_EPVSA = {
 
     7: { linea: '1 — Sexualidad y reproducción',  areaCanonica: 'bienestarEmocional', obj: 'Promover una sexualidad saludable, segura y con perspectiva de género' },
 
-    8: { linea: '1 — Violencia de género',        areaCanonica: 'apoyoSocial', obj: 'Prevenir la violencia de género y promover relaciones igualitarias' },
+    8: { linea: '1 — Violencia de género',        areaCanonica: 'situacionEconomica', obj: 'Prevenir la violencia de género y promover relaciones igualitarias' },
 
     9: { linea: '1 — Medioambiente y salud',      areaCanonica: 'entornoSaludable', obj: 'Mejorar los determinantes ambientales que condicionan la salud de la población' },
 
@@ -51076,9 +51080,9 @@ const TAXONOMIA_TEMAS = {
 
     sueno:              { label: 'Sueño saludable',                 lineas: [1], keyReg: /sue[ñn]o|insomnio|descanso|dormir/i },
 
-    entorno:            { label: 'Entornos promotores de salud',    lineas: [2], keyReg: /medioambiente|contaminaci[oó]n|entorno.*salud/i },
+    entorno:            { label: 'Entornos promotores de salud',    lineas: [1,2], keyReg: /medioambiente|contaminaci[oó]n|entorno.*salud/i },
 
-    desigualdad:        { label: 'Equidad y determinantes sociales',lineas: [2], keyReg: /desigualdad|inequidad|vulnerab|exclusi[oó]n|pobreza/i },
+    desigualdad:        { label: 'Equidad y determinantes sociales',lineas: [1,2], keyReg: /desigualdad|inequidad|vulnerab|exclusi[oó]n|pobreza/i },
 
     envejecimiento:     { label: 'Envejecimiento activo',           lineas: [1], keyReg: /envejecimiento|mayor|anciano|longevidad/i },
 
@@ -52013,7 +52017,7 @@ function analizarDatosMunicipio() {
 
             { topico: 'violencia de género',   patron: /violencia de g[eé]nero|violencia dom[eé]stica|maltrato/i,            linea: 1, obj: 3, progs: [7] },
 
-            { topico: 'medioambiente',         patron: /medioambiente|contaminaci[oó]n|aire|agua|ruido|entorno/i,            linea: 2, obj: 0, progs: [1] },
+            { topico: 'medioambiente',         patron: /medioambiente|contaminaci[oó]n|aire|agua|ruido|entorno/i,            linea: 1, obj: 6, progs: [0,1,3] },
 
             { topico: 'envejecimiento',        patron: /envejecimiento|mayor|anciano|persona mayor|longevidad/i,             linea: 1, obj: 0, progs: [0] },
 
@@ -52731,7 +52735,7 @@ if (tieneInforme && analisis.informeTopicos.length) {
 
         analisis.informeTopicos.forEach(function(kw) {
 
-            if (kw && kw.fallback === true) return;
+            // Fallback del informe permitido: debe alimentar líneas base cuando no hay keywords detectadas.
 
             var lid = kw.linea;
 
@@ -57443,7 +57447,7 @@ window.COMPAS_MAPEO_AREA_LE = {
 
     consumoResponsable:    {le:[1],   obj:[5],     programas:[0,2,5],       desc:'Consumo responsable de alcohol'},
 
-    entornoSaludable:      {le:[2],   obj:[0,1],   programas:[0,1,3],       desc:'Entornos promotores de salud'},
+    entornoSaludable:      {le:[1,2], obj:[0,1],   programas:[0,1,3],       desc:'Entornos promotores de salud'},
 
     apoyoSocial:           {le:[1],   obj:[3,4,6], programas:[0,3,7],       desc:'Redes de apoyo social'},
 
@@ -57619,6 +57623,13 @@ window.COMPAS_analizarTextoEstudio = function(texto, nombre){
         if(!hits)continue;
 
         var conf=Math.min(1,0.3+(hits/kws.length)*0.7);
+
+        // [2026-05-12] Ajuste de confianza para áreas estratégicas transversales:
+        // LE3/LE4 tienen listas largas de patrones; penalizar por proporción sobre
+        // todas las keywords infraestima señales reales de comunicación/formación.
+        if (ak === 'informacionComunicacionSalud' || ak === 'formacionInvestigacionSalud') {
+            conf = Math.max(conf, Math.min(0.55, 0.22 + (hits * 0.12)));
+        }
 
         var extr='';
 
@@ -59454,9 +59465,10 @@ window.COMPAS_ejecutarMotorV3 = function(){
                 window.analisisActual.propuestaEPVSA = window.analisisActual._v3_propuestaEPVSA;
             }
 
-            if ((!window.analisisActual.priorizacion || window.analisisActual.priorizacion.length === 0) && Array.isArray(window.analisisActual._v3_prioridades)) {
-                window.analisisActual.priorizacion = window.analisisActual._v3_prioridades;
-            }
+            // [FIX COMPÁS 2026-05-12] No copiar _v3_prioridades a analisisActual.priorizacion.
+            // _v3_prioridades tiene formato area-score, no formato operativo de priorización EPVSA
+            // ({puntuacion,lineaEPVSA,objetivoEPVSA,programas}). Copiarlo contamina propuestaEPVSA
+            // y genera líneas residuales LE3/LE4 desde áreas instrumentales de baja señal.
 
             // [FIX COMPÁS] V3 no debe escribir propuestaActual automáticamente.
             // La propuesta V3 solo puede aplicarse mediante _aplicarPropuestaV3().
