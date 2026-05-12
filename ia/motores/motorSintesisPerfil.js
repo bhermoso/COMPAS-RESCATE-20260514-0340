@@ -491,28 +491,29 @@ function _calcularAnalisisModular(contextoIA) {
                 if (!mapeo || !mapeo.le) return;
                 mapeo.le.forEach(function(leNum) {
                     if (!lineasMap[leNum]) {
-                        lineasMap[leNum] = { lineaId: leNum, relevancia: 0, areas: [], objetivos: new Set() };
+                        lineasMap[leNum] = { lineaId: leNum, relevancia: 0, areas: [], objetivos: new Set(), programas: new Set() };
                     }
                     lineasMap[leNum].relevancia += Math.round((item.score || 0) * 100);
                     lineasMap[leNum].areas.push(item.label || areaKey);
                     (mapeo.obj || []).forEach(function(o) { lineasMap[leNum].objetivos.add(o); });
+                    if (!lineasMap[leNum].programas) lineasMap[leNum].programas = new Set();
+                    (mapeo.programas || []).forEach(function(p) { lineasMap[leNum].programas.add(p); });
                 });
             });
         });
 
         const vals = Object.values(lineasMap);
 
-        // [COMPÁS 2026-05-10] Líneas EPVSA de soporte transversal.
-        // LE3 y LE4 no suelen emerger desde el mapeo área→línea porque actúan como
-        // condiciones de posibilidad: comunicación/educación y gestión del conocimiento.
-        // Se incorporan con señal baja y trazada cuando existe base mínima de análisis,
-        // sin competir con las líneas principales derivadas de áreas de salud.
-        // LE3 → comunicación y educación para la salud
+        // [COMPÁS 2026-05-10] Líneas EPVSA incorporadas como soporte transversal.
+        // Se conserva siempre la nomenclatura oficial de la EPVSA en la salida.
+        // El carácter instrumental/metodológico se expresa mediante metadatos internos,
+        // no sustituyendo el nombre oficial de la línea estratégica.
+        // LE3 → denominación oficial EPVSA
         if ((hayInforme || hayParticipacion) && !lineasMap[3]) {
             lineasMap[3] = {
                 lineaId: 3,
                 relevancia: 18,
-                areas: ['Comunicación y educación para la salud'],
+                areas: ['Difusión y comunicación de información veraz a la ciudadanía sobre los beneficios de una vida saludable y protección de la población frente a mensajes, publicidad y campañas perjudiciales para la salud'],
                 objetivos: new Set(),
                 _soporteTransversal: true
             };
@@ -523,7 +524,7 @@ function _calcularAnalisisModular(contextoIA) {
             lineasMap[4] = {
                 lineaId: 4,
                 relevancia: 15,
-                areas: ['Gestión del conocimiento, formación y mapeo de activos'],
+                areas: ['Impulso a la gestión del conocimiento, la investigación y la innovación en el área de la promoción de hábitos de vida saludables'],
                 objetivos: new Set(),
                 _soporteTransversal: true
             };
@@ -599,10 +600,12 @@ function _calcularAnalisisModular(contextoIA) {
                 lineaId:         l.lineaId,
                 relevancia:      Math.round((l.relevancia / maxRel) * 100 * _factorC),
                 objetivos:       [...l.objetivos],
-                programas:       [],
-                justificacion:   'Áreas relacionadas: ' + l.areas.join(', '),
+                programas:       l.programas ? [...l.programas].slice(0, 3) : [],
+                justificacion:   'Línea EPVSA relacionada: ' + l.areas.join(', '),
                 origenCiudadano: tieneCiudadano,
                 fuentes:         fuentesLinea,
+                _soporteTransversal: esSoporte,
+                tipoLineaMotor:  esSoporte ? 'soporte_transversal' : 'prioridad_derivada',
                 conclusion_ids:  ['marco_salutogenico'],
             };
         }).sort(function(a, b) { return b.relevancia - a.relevancia; });
