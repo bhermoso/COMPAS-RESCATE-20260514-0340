@@ -52545,6 +52545,7 @@ function analizarDatosMunicipio() {
             var mapeoCanonicoLE = (window.COMPAS_MAPEO_AREA_LE && window.COMPAS_MAPEO_AREA_LE[areaKey]) ? window.COMPAS_MAPEO_AREA_LE[areaKey] : null;
             var lineaCanonica = (mapeoCanonicoLE && Array.isArray(mapeoCanonicoLE.le) && mapeoCanonicoLE.le.length) ? mapeoCanonicoLE.le[0] : area.lineaEPVSA;
             var objetivoCanonico = (mapeoCanonicoLE && Array.isArray(mapeoCanonicoLE.obj) && mapeoCanonicoLE.obj.length) ? mapeoCanonicoLE.obj[0] : area.objetivoEPVSA;
+            var programasCanonicos = (mapeoCanonicoLE && Array.isArray(mapeoCanonicoLE.prog) && mapeoCanonicoLE.prog.length) ? mapeoCanonicoLE.prog : area.programas;
 
             analisis.priorizacion.push({
 
@@ -52552,7 +52553,7 @@ function analizarDatosMunicipio() {
 
                 justificacion: just, lineaEPVSA: lineaCanonica,
 
-                objetivoEPVSA: objetivoCanonico, programas: area.programas,
+                objetivoEPVSA: objetivoCanonico, programas: programasCanonicos,
 
                 origenCiudadano: false
 
