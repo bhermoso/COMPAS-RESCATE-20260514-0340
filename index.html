@@ -52503,9 +52503,25 @@ function analizarDatosMunicipio() {
             if (e.nombre_escala === 'PREDIMED' && e.interpretacion && /baja/i.test(e.interpretacion))
                 _recEsc.push({txt:'Baja adherencia mediterránea (PREDIMED: ' + (e.resultado_principal||'') + ') señala oportunidad de intervención nutricional comunitaria.' + src, area:'PREDIMED — Baja adherencia' + src, key:'escala_predimed', pts:8, le:1});
         });
+        var _MAPEO_ESCALA_AREA = {
+            escala_ibse_fV: 'apoyoSocial',
+            escala_ibse_fS: 'situacionEconomica',
+            escala_ibse_fC: 'bienestarEmocional',
+            escala_ibse_fP: 'bienestarEmocional',
+            escala_duke: 'apoyoSocial',
+            escala_sf12_pcs: 'vidaActiva',
+            escala_sf12_mcs: 'bienestarEmocional',
+            escala_cage: 'consumoResponsable',
+            escala_predimed: 'alimentacionSaludable'
+        };
         _recEsc.forEach(function(r, i) {
+            var areaCanonicaEscala = _MAPEO_ESCALA_AREA[r.key] || null;
+            var mapeoCanonicoEscala = (areaCanonicaEscala && window.COMPAS_MAPEO_AREA_LE && window.COMPAS_MAPEO_AREA_LE[areaCanonicaEscala]) ? window.COMPAS_MAPEO_AREA_LE[areaCanonicaEscala] : null;
+            var lineaEscala = (mapeoCanonicoEscala && Array.isArray(mapeoCanonicoEscala.le) && mapeoCanonicoEscala.le.length) ? mapeoCanonicoEscala.le[0] : r.le;
+            var objetivoEscala = (mapeoCanonicoEscala && Array.isArray(mapeoCanonicoEscala.obj) && mapeoCanonicoEscala.obj.length) ? mapeoCanonicoEscala.obj[0] : 0;
+            var programasEscala = (mapeoCanonicoEscala && Array.isArray(mapeoCanonicoEscala.programas) && mapeoCanonicoEscala.programas.length) ? mapeoCanonicoEscala.programas : [];
             analisis.recomendaciones.push({id:'rec_escala_'+i, prioridad:10, especifica:true, fuente_tipo:'escalas', texto:r.txt});
-            analisis.priorizacion.push({area:r.area, areaKey:r.key, puntuacion:r.pts, justificacion:r.txt, lineaEPVSA:r.le, objetivoEPVSA:0, programas:[], origenCiudadano:false, origenEscala:true});
+            analisis.priorizacion.push({area:r.area, areaKey:r.key, areaCanonica:areaCanonicaEscala, puntuacion:r.pts, justificacion:r.txt, lineaEPVSA:lineaEscala, objetivoEPVSA:objetivoEscala, programas:programasEscala, origenCiudadano:false, origenEscala:true});
         });
         if (_recEsc.length) analisis.priorizacion.sort(function(a,b){ return b.puntuacion - a.puntuacion; });
     }
