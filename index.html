@@ -22162,11 +22162,20 @@ function generarSeccionMetodologiaPriorizacion() {
 
     
 
-    // Si no hay decisión de priorización formal, mostrar metodología de selección manual
+    // Si no hay decisión de priorización formal, distinguir origen automático vs manual
+    var _esOrigenAutomatico = !!(
+        window.__ultimaPropuestaPlanMotor ||
+        window.__trazabilidadEjecucionPlan ||
+        (typeof propuestaActual !== 'undefined' && propuestaActual && propuestaActual.length > 0)
+    );
 
     if (!decision) {
 
-        return '<div class="plan-documento-seccion" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin:1.5rem 0;"><h2 style="color:#0074c8;margin-top:0;">📋 Metodología</h2><p style="color:#374151;font-size:0.9rem;">Este Plan de acción ha sido elaborado mediante <strong>selección técnica manual</strong>, basada en el diagnóstico local de salud y la Estrategia de Promoción de una Vida Saludable en Andalucía (EPVSA 2024-2030). Las líneas estratégicas, objetivos, programas y actuaciones han sido seleccionados por el equipo técnico a partir del análisis de la situación de salud del municipio.</p></div>';
+        var _textoMetodo = _esOrigenAutomatico
+            ? 'Este Plan de acción se ha elaborado a partir de una <strong>propuesta automática trazable generada por COMPÁS</strong>, basada en las fuentes disponibles (indicadores CMI, estudios complementarios como IBSE, referencias contextuales y/o priorización). La selección de líneas, objetivos y actuaciones ha sido validada técnicamente por el equipo local antes de su aprobación definitiva.'
+            : 'Este Plan de acción ha sido elaborado mediante <strong>selección técnica manual</strong>, basada en el diagnóstico local de salud y la Estrategia de Promoción de una Vida Saludable en Andalucía (EPVSA 2024-2030). Las líneas estratégicas, objetivos, programas y actuaciones han sido seleccionados por el equipo técnico a partir del análisis de la situación de salud del municipio.';
+
+        return '<div class="plan-documento-seccion" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin:1.5rem 0;"><h2 style="color:#0074c8;margin-top:0;">📋 Metodología</h2><p style="color:#374151;font-size:0.9rem;">' + _textoMetodo + '</p></div>';
 
     }
 
@@ -22836,11 +22845,16 @@ function generarDocumentoPlan() {
 
     // Construir bloque de contexto diagnóstico para la introducción
 
+    const _tieneIBSE = !!(window.__ibse_v3_resultado && window.__ibse_v3_resultado.ibse_simple != null)
+                    || !!(window.datosIBSE && window.datosIBSE.media != null);
+
     let _introContexto = '';
 
     if (_tieneInf) _introContexto += 'el Informe de Situación de Salud';
 
     if (_tieneEst) _introContexto += (_introContexto ? ', ' : '') + window.estudiosComplementarios.length + ' estudio(s) complementario(s)';
+
+    if (_tieneIBSE) _introContexto += (_introContexto ? ', el ' : 'el ') + 'Índice de Bienestar Socioemocional (IBSE)';
 
     if (_tienePop) _introContexto += (_introContexto ? ' y la ' : 'la ') + 'priorización ciudadana con ' + _compas_etiquetaParticipacion(_nPart);
 
@@ -22986,7 +23000,9 @@ function generarDocumentoPlan() {
 
                 ✅ Plan generado con <strong>${seleccion.length} línea${seleccion.length !== 1 ? 's' : ''}</strong>:
 
-                ${_lineasIncluidas.map(n => '<span style="display:inline-block;margin:0.1rem 0.25rem;padding:0.1rem 0.4rem;background:#bbf7d0;border-radius:4px;">' + n + '</span>').join('')}
+                <ul style="margin:.4rem 0 0 1rem;padding:0;list-style:disc;">
+                ${_lineasIncluidas.map(n => '<li style="margin:.15rem 0;font-size:0.82rem;">' + n + '</li>').join('')}
+                </ul>
 
             </div>
 
@@ -23052,11 +23068,18 @@ function generarDocumentoPlan() {
 
                     (_pEnt.relevancia&&_pEnt.fuentes?' · ':'')+(_pEnt.fuentes||'')+' </div>' : '';
 
+                const _esSoporteDoc = (linea.id == 3 || linea.id == 4) && (
+                    !_pEnt ||
+                    _pEnt.relevancia == null ||
+                    _pEnt.relevancia < 10 ||
+                    (['soporte','instrumental','transversal'].indexOf((_pEnt.tipoLineaMotor || '').toLowerCase()) >= 0)
+                );
+
                 return `
 
                     <div class="doc-linea" style="border-color: ${linea.color};">
 
-                        <h3 style="color: ${linea.color};">${linea.codigo}: ${linea.nombreCorto || linea.nombre}</h3>
+                        <h3 style="color: ${linea.color};">${linea.codigo}: ${linea.nombreCorto || linea.nombre}${_esSoporteDoc ? ' <span style="font-size:0.68rem;font-weight:400;background:#f1f5f9;color:#64748b;padding:.1rem .45rem;border-radius:4px;vertical-align:middle;margin-left:.4rem;">Soporte transversal EPVSA</span>' : ''}</h3>
 
                         ${_justif}
 
@@ -63343,13 +63366,17 @@ function renderizarPerfilSaludLocal() {
         ? (function() { try { return COMPAS_resumenPrioridades(); } catch(e) { return []; } })()
         : [];
 
+    // Variables de presentación: municipio y distrito (nunca hardcodeados)
+    var _munVis      = capFirst(nombreMun.toLowerCase());
+    var _distritoVis = datos.distrito || 'Distrito sanitario correspondiente';
+
     // EPVSA: usar selección si hay, sino propuesta motor
     var epvsaFuente = (_seleccion && _seleccion.length) ? _seleccion : propuestaEPVSA;
     var leNombresMap = {
-        1: 'Entornos saludables, actividad f\u00edsica y alimentaci\u00f3n',
-        2: 'Equidad en salud y determinantes sociales',
-        3: 'Difusi\u00f3n, comunicaci\u00f3n e informaci\u00f3n para la salud',
-        4: 'Gesti\u00f3n del conocimiento, investigaci\u00f3n e innovaci\u00f3n'
+        1: 'Promoci\u00f3n de h\u00e1bitos de vida saludable mediante intervenciones en pol\u00edticas y entornos y dinamizaci\u00f3n de activos comunitarios para la salud',
+        2: 'Fomento de responsabilidad social ante la salud por parte del sector empresarial',
+        3: 'Difusi\u00f3n y comunicaci\u00f3n de informaci\u00f3n veraz a la ciudadan\u00eda sobre los beneficios de una vida saludable y protecci\u00f3n de la poblaci\u00f3n frente a mensajes, publicidad y campa\u00f1as perjudiciales para la salud',
+        4: 'Impulso a la gesti\u00f3n del conocimiento, la investigaci\u00f3n y la innovaci\u00f3n en el \u00e1rea de la promoci\u00f3n de h\u00e1bitos de vida saludables'
     };
 
     // Agenda por entorno
@@ -63479,7 +63506,7 @@ function renderizarPerfilSaludLocal() {
     function _cabecera(tituloDoc, subtituloDoc) {
         return '<div class="psl2-header">'
             + '<div class="psl2-header-inst">Sistema COMP&Aacute;S &nbsp;&middot;&nbsp; Consejer&iacute;a de Sanidad, Presidencia y Emergencias &nbsp;&middot;&nbsp; Junta de Andaluc&iacute;a</div>'
-            + '<div class="psl2-header-distrito">Distrito Sanitario Granada-Metropolitano</div>'
+            + '<div class="psl2-header-distrito">' + esc(_distritoVis) + '</div>'
             + '<div class="psl2-header-titulo">' + esc(tituloDoc) + '</div>'
             + '<div class="psl2-header-subtitulo">' + esc(subtituloDoc) + '</div>'
             + '<div class="psl2-header-meta">' + esc(capFirst(nombreMun.toLowerCase())) + ' &nbsp;&middot;&nbsp; Granada &nbsp;&middot;&nbsp; ' + esc(fechaStr) + ' &nbsp;&middot;&nbsp; EPVSA 2024\u20132030</div>'
@@ -63491,63 +63518,142 @@ function renderizarPerfilSaludLocal() {
     // ═══════════════════════════════════════════════════════════════════════
     var caraA = '';
 
-    // 1. Mensaje ejecutivo ─────────────────────────────────────────────────
+    // 1. Mensaje ejecutivo — tarjetas insight ────────────────────────────────
     caraA += '<div class="psl2-sec-titulo">Mensaje ejecutivo</div>';
-    caraA += '<div class="psl2-ejecutivo psl2-evitar-corte">';
-    caraA += '<div class="psl2-ej-titulo">Hallazgos principales &mdash; ' + esc(capFirst(nombreMun.toLowerCase())) + '</div>';
-    caraA += '<ul class="psl2-ej-lista">';
-    // Bullet IBSE siempre presente: valor calculado o referencia conocida
-    var _ibseStr = ibseSimple != null ? fmt1(ibseSimple) + '/100' : '62,2/100';
-    caraA += '<li>El \u00cdndice de Bienestar Socioemocional (IBSE) de Atarfe se sit\u00faa en <strong>' + _ibseStr + '</strong>. '
-        + 'Es el \u00fanico dato local de bienestar emocional observable disponible en esta herramienta; '
-        + 'las referencias EAS de Granada/Andaluc\u00eda operan como contexto comparativo, no como medici\u00f3n municipal.</li>';
-    // Bullet prioridades
-    caraA += '<li>Las \u00e1reas de atenci\u00f3n prioritaria identificadas son: <strong>consumo de alcohol, alimentaci\u00f3n saludable, '
-        + 'vida sin humo, bienestar emocional y vida activa.</strong> '
-        + 'Estas prioridades orientan la selecci\u00f3n de l\u00edneas EPVSA y el Plan de Acci\u00f3n (Cara B).</li>';
-    // Bullets del motor si existen (máx 3)
-    conclusiones.slice(0, 3).forEach(function(c) { caraA += '<li>' + esc(c.texto) + '</li>'; });
-    // Bullet cierre orientación
-    caraA += '<li>La respuesta institucional se orienta a <strong>entornos saludables</strong> (LE1 EPVSA) y a la '
-        + '<strong>acci\u00f3n comunitaria</strong> sobre los determinantes sociales de la salud, '
-        + 'con especial atenci\u00f3n a la equidad territorial en el Distrito Sanitario Granada-Metropolitano.</li>';
-    caraA += '</ul>';
-    caraA += '</div>';
+
+    var _ibseStr    = ibseSimple != null ? fmt1(ibseSimple) + '/100' : null;
+    var _ibseCaut   = ibseSimple != null
+        ? 'Muestra intencional REDCap \u00b7 valor orientativo, no representativo de la poblaci\u00f3n municipal.'
+        : null;
+
+    // Estilos inline reutilizables
+    var _ejs  = 'display:flex;align-items:flex-start;gap:.5rem;padding:.38rem .55rem;margin-bottom:.28rem;'
+              + 'background:#f8fafc;border-left:2px solid #0074c8;border-radius:0 3px 3px 0;'
+              + 'page-break-inside:avoid;break-inside:avoid;';
+    var _ejsG = 'display:flex;align-items:flex-start;gap:.5rem;padding:.38rem .55rem;margin-bottom:.28rem;'
+              + 'background:#f8fafc;border-left:2px solid #64748b;border-radius:0 3px 3px 0;'
+              + 'page-break-inside:avoid;break-inside:avoid;';
+    var _ejsM = 'display:flex;align-items:flex-start;gap:.5rem;padding:.38rem .55rem;margin-bottom:.28rem;'
+              + 'background:#f1f5f9;border-left:2px solid #94a3b8;border-radius:0 3px 3px 0;'
+              + 'page-break-inside:avoid;break-inside:avoid;';
+    var _dot  = function(col) {
+        return '<div style="flex-shrink:0;width:.5rem;height:.5rem;border-radius:50%;background:' + col + ';margin-top:.3rem;"></div>';
+    };
+    var _lbl  = function(txt, col) {
+        return '<div style="font-family:system-ui,sans-serif;font-size:.58rem;font-weight:700;'
+             + 'letter-spacing:.09em;text-transform:uppercase;color:' + (col || '#0074c8') + ';margin-bottom:.1rem;">' + txt + '</div>';
+    };
+    var _txt  = 'font-family:system-ui,sans-serif;font-size:.75rem;line-height:1.55;color:#1a1a1a;';
+    var _dim  = 'font-size:.65rem;color:#777;font-style:italic;';
+
+    caraA += '<div class="psl2-evitar-corte" style="margin-bottom:.7rem;">';
+
+    // Encabezado del bloque
+    caraA += '<div style="font-family:system-ui,sans-serif;font-size:.6rem;font-weight:700;'
+           + 'letter-spacing:.1em;text-transform:uppercase;color:#004e8c;margin-bottom:.4rem;">'
+           + 'Hallazgos principales &mdash; ' + esc(capFirst(nombreMun.toLowerCase())) + '</div>';
+
+    // Tarjeta 1 — Bienestar socioemocional (IBSE) — solo si hay valor real
+    caraA += '<div style="' + _ejs + '">'
+           + _dot('#0074c8')
+           + '<div><div>' + _lbl('Bienestar socioemocional') + '</div>'
+           + '<div style="' + _txt + '">'
+           + (_ibseStr
+               ? 'IBSE local: <strong>' + _ibseStr + '</strong>. <span style="' + _dim + '">' + _ibseCaut + '</span>'
+               : '<span style="' + _dim + '">IBSE no disponible en esta sesi\u00f3n.</span>')
+           + '</div>'
+           + '</div></div>';
+
+    // Tarjeta 2 — Prioridades desde priorizacion[] o ausente
+    if (priorizacion.length) {
+        var _prioTexto = priorizacion.slice(0, 5).map(function(p) { return esc(p.label || p.area || ''); }).filter(Boolean).join(' &middot; ');
+        caraA += '<div style="' + _ejs + '">'
+               + _dot('#2563eb')
+               + '<div><div>' + _lbl('Prioridades identificadas') + '</div>'
+               + '<div style="' + _txt + '">' + _prioTexto + '. '
+               + '<span style="' + _dim + '">Orientan la selecci\u00f3n EPVSA y el Plan de Acci\u00f3n (Cara\u00a0B).</span>'
+               + '</div></div></div>';
+    }
+
+    // Tarjeta 3 — Marco contextual EAS — solo si compEAS tiene indicadores
+    if (compEAS && compEAS.indicadores) {
+        caraA += '<div style="' + _ejsG + '">'
+               + _dot('#64748b')
+               + '<div><div>' + _lbl('Marco de referencia contextual', '#64748b') + '</div>'
+               + '<div style="' + _txt + 'color:#374151;">'
+               + 'EAS 2023 Granada / Andaluc\u00eda: referencia comparativa poblacional. '
+               + '<span style="' + _dim + '">No son medici\u00f3n municipal de ' + esc(capFirst(nombreMun.toLowerCase())) + '.</span>'
+               + '</div></div></div>';
+    }
+
+    // Tarjeta 4 — Marco estratégico (institucional, no hallazgo empírico)
+    caraA += '<div style="' + _ejs + '">'
+           + _dot('#0074c8')
+           + '<div><div>' + _lbl('Marco estrat\u00e9gico') + '</div>'
+           + '<div style="' + _txt + '">'
+           + 'Orientada a <strong>entornos saludables</strong> (LE1 EPVSA) y a la acci\u00f3n comunitaria '
+           + 'mediante la Red Local de Acci\u00f3n en Salud (RELAS), con enfoque salutog\u00e9nico '
+           + 'y atenci\u00f3n a la equidad en el ' + esc(_distritoVis) + '.'
+           + '</div></div></div>';
+
+    // Tarjeta 5 — Primera conclusión del motor (si existe)
+    if (conclusiones.length) {
+        caraA += '<div style="' + _ejsM + '">'
+               + _dot('#94a3b8')
+               + '<div><div>' + _lbl('S\u00edntesis del motor COMP\u00c1S', '#475569') + '</div>'
+               + '<div style="' + _txt + 'color:#374151;">' + esc(conclusiones[0].texto) + '</div>'
+               + '</div></div>';
+    }
+
+    caraA += '</div>'; // /evitar-corte mensaje ejecutivo
 
     // 2. Contexto territorial y demográfico ───────────────────────────────
     caraA += '<div class="psl2-sec-titulo">1. Contexto territorial y demogr\u00e1fico</div>';
     caraA += '<div class="psl2-g2 psl2-g2-35 psl2-evitar-corte">';
 
-    // Ficha
-    caraA += '<div><div class="psl2-subsec">Ficha municipal</div>';
-    caraA += '<table class="psl2-ficha-tabla"><tbody>';
-    [
-        ['Comarca',                  nd(datos.comarca)],
-        ['Poblaci\u00f3n total',     nd(datos.poblacionTotal || datos.poblacion, '\u202fhab.')],
-        ['Densidad',                 nd(datos.densidad, '\u202fhab./km\u00b2')],
-        ['\u00cdndice de envejecimiento', nd(datos.indiceEnvejecimiento)],
-        ['% \u2265\u202f65 a\u00f1os', nd(datos.pct65, '%')],
-        ['% \u2264\u202f15 a\u00f1os', nd(datos.pct15, '%')]
-    ].forEach(function(r) {
-        caraA += '<tr><td>' + r[0] + '</td><td><strong>' + r[1] + '</strong></td></tr>';
+    // Ficha municipal — tabla solo si hay al menos un valor real; filas vacías ocultas
+    var _fichaRows = [
+        ['Comarca',                           datos.comarca,                          null],
+        ['Poblaci\u00f3n total',              datos.poblacionTotal || datos.poblacion, '\u202fhab.'],
+        ['Densidad',                          datos.densidad,                         '\u202fhab./km\u00b2'],
+        ['\u00cdndice de envejecimiento',     datos.indiceEnvejecimiento,             null],
+        ['% \u2265\u202f65 a\u00f1os',        datos.pct65,                            '%'],
+        ['% \u2264\u202f15 a\u00f1os',        datos.pct15,                            '%']
+    ];
+    var _fichaTieneAlguno = _fichaRows.some(function(r) {
+        return r[1] != null && String(r[1]).trim() !== '';
     });
-    caraA += '</tbody></table>';
-    caraA += '<div class="psl2-fuente">Padr\u00f3n Municipal INE 2024 &middot; SSPA INFOWEB</div></div>';
+    caraA += '<div><div class="psl2-subsec">Ficha municipal</div>';
+    if (!_fichaTieneAlguno) {
+        caraA += '<div class="psl2-nd" style="font-size:.75rem;line-height:1.55;">'
+            + 'Informaci\u00f3n demogr\u00e1fica municipal no integrada en esta sesi\u00f3n. '
+            + 'El documento se genera con las fuentes locales actualmente disponibles en COMP\u00c1S.'
+            + '</div>';
+    } else {
+        caraA += '<table class="psl2-ficha-tabla"><tbody>';
+        _fichaRows.forEach(function(r) {
+            if (r[1] == null || String(r[1]).trim() === '') return;
+            caraA += '<tr><td>' + r[0] + '</td><td><strong>' + esc(r[1]) + (r[2] || '') + '</strong></td></tr>';
+        });
+        caraA += '</tbody></table>';
+        caraA += '<div class="psl2-fuente">Padr\u00f3n Municipal INE 2024 &middot; SSPA INFOWEB</div>';
+    }
+    caraA += '</div>';
 
-    // Contexto socioeconómico — referencia provincial, NO datos locales Atarfe
+    // Contexto socioeconómico — referencia provincial, NO datos locales del municipio
     var _socValores = [datos.tasaParo, datos.sinEstudios, datos.rentaMedia, datos.riesgoPobreza];
     var _socTieneAlguno = _socValores.some(function(v){ return v != null && String(v).trim() !== ''; });
     caraA += '<div><div class="psl2-subsec">Contexto socioecon\u00f3mico &mdash; marco de referencia</div>';
     if (!_socTieneAlguno) {
         caraA += '<div class="psl2-nota">'
-            + 'Indicadores contextuales no cargados para Atarfe en esta sesi\u00f3n. '
+            + 'Indicadores contextuales no cargados para ' + esc(_munVis) + ' en esta sesi\u00f3n. '
             + 'Las referencias provinciales y auton\u00f3micas (EAS 2023, INE) operan como marco contextual, '
             + 'no como medici\u00f3n municipal directa.'
             + '</div>';
     } else {
         caraA += '<div class="psl2-nota" style="margin-bottom:.35rem;font-size:.68rem;">'
             + 'Los valores siguientes proceden de estimaciones provinciales (EAS 2023, estrato Granada) o del INE, '
-            + '<strong>no son mediciones municipales directas de Atarfe.</strong> Se presentan como contexto comparativo.'
+            + '<strong>no son mediciones municipales directas de ' + esc(_munVis) + '.</strong> Se presentan como contexto comparativo.'
             + '</div>';
         caraA += '<table class="psl2-ficha-tabla"><tbody>';
         [
@@ -63567,7 +63673,7 @@ function renderizarPerfilSaludLocal() {
         });
         caraA += '</div>';
     }
-    caraA += '<div class="psl2-fuente">Referencia: EAS 2023 (estrato Granada) &middot; INE &middot; No son datos municipales de Atarfe</div></div>';
+    caraA += '<div class="psl2-fuente">Referencia: EAS 2023 (estrato Granada) &middot; INE &middot; No son datos municipales de ' + esc(_munVis) + '</div></div>';
 
     caraA += '</div>'; // /g2
 
@@ -63585,7 +63691,7 @@ function renderizarPerfilSaludLocal() {
                 + '</div>';
         });
     } else {
-        caraA += '<div class="psl2-nd">Sin indicadores CMI desfavorables registrados.</div>';
+        caraA += '<div class="psl2-nd">No hay indicadores CMI desfavorables cargados en esta sesi\u00f3n; la ausencia de dato no implica ausencia de problema.</div>';
     }
     if (indFav.length) {
         caraA += '<div class="psl2-subsec" style="margin-top:.5rem">Factores favorables</div>';
@@ -63673,12 +63779,12 @@ function renderizarPerfilSaludLocal() {
         if (compEAS && compEAS.indicadores) {
             caraA += '<div class="psl2-subsec" style="margin-top:.55rem;">Indicadores de bienestar IBSE local comparables con EAS P57b1\u2013P57b6</div>';
             caraA += '<div class="psl2-nota" style="margin-bottom:.35rem;font-size:.68rem;">'
-                + 'Los valores de la columna \u201cAtarfe (IBSE)\u201d derivan del cuestionario IBSE local (REDCap) y son el \u00fanico dato observable en Atarfe para estas dimensiones. '
+                + 'Los valores de la columna \u201c' + esc(_munVis) + ' (IBSE)\u201d derivan del cuestionario IBSE local (REDCap) y son el \u00fanico dato observable en ' + esc(_munVis) + ' para estas dimensiones. '
                 + 'Granada y Andaluc\u00eda son referencias EAS 2023 (encuesta probabil\u00edstica poblacional). '
-                + '<strong>No son EAS municipal de Atarfe.</strong> La comparaci\u00f3n es conceptual y orientativa.'
+                + '<strong>No son EAS municipal de ' + esc(_munVis) + '.</strong> La comparaci\u00f3n es conceptual y orientativa.'
                 + '</div>';
             caraA += '<table class="psl2-tabla"><thead><tr>'
-                + '<th>Indicador (P57b)</th><th class="td-num">Atarfe \u2014 IBSE (%)</th>'
+                + '<th>Indicador (P57b)</th><th class="td-num">' + esc(_munVis) + ' \u2014 IBSE (%)</th>'
                 + '<th class="td-num">Granada \u2014 EAS (%)</th><th class="td-num">Andaluc\u00eda \u2014 EAS (%)</th>'
                 + '</tr></thead><tbody>';
             Object.keys(compEAS.indicadores).forEach(function(k) {
@@ -63698,13 +63804,13 @@ function renderizarPerfilSaludLocal() {
                     + '</tr>';
             });
             caraA += '</tbody></table>';
-            caraA += '<div class="psl2-fuente">Fuente local: IBSE v3, REDCap (muestra intencional Atarfe). Referencia: EAS 2023, estrato Granada y Andaluc\u00eda (encuesta poblacional probabil\u00edstica). Comparativa conceptual; metodolog\u00edas no equivalentes. Solo P57b1\u2013P57b6 tienen valor observable local.</div>';
+            caraA += '<div class="psl2-fuente">Fuente local: IBSE v3, REDCap (muestra intencional ' + esc(_munVis) + '). Referencia: EAS 2023, estrato Granada y Andaluc\u00eda (encuesta poblacional probabil\u00edstica). Comparativa conceptual; metodolog\u00edas no equivalentes. Solo P57b1\u2013P57b6 tienen valor observable local.</div>';
         }
 
         caraA += '<div class="psl2-nota">'
-            + '<strong>Nota metodol\u00f3gica IBSE.</strong> El IBSE es el \u00fanico dato observable local de bienestar socioemocional disponible para Atarfe en esta herramienta. '
+            + '<strong>Nota metodol\u00f3gica IBSE.</strong> El IBSE es el \u00fanico dato observable local de bienestar socioemocional disponible para ' + esc(_munVis) + ' en esta herramienta. '
             + 'Procede de una muestra intencional (REDCap) y no es representativa de la poblaci\u00f3n municipal. '
-            + 'No existen datos EAS municipales de Atarfe: las referencias de Granada y Andaluc\u00eda (EAS 2023) operan como marco contextual, no como medici\u00f3n local. '
+            + 'No existen datos EAS municipales de ' + esc(_munVis) + ': las referencias de Granada y Andaluc\u00eda (EAS 2023) operan como marco contextual, no como medici\u00f3n local. '
             + 'Solo los indicadores P57b1\u2013P57b6 derivados del IBSE local se comparan conceptualmente con la EAS. '
             + 'Los valores orientan la planificaci\u00f3n sin sustituir el juicio t\u00e9cnico ni el informe epidemiol\u00f3gico local.'
             + '</div>';
@@ -63721,14 +63827,43 @@ function renderizarPerfilSaludLocal() {
     var _hayOportunidades = (narrativa.oportunidades && narrativa.oportunidades.trim()) || oportunidades.length;
 
     if (!_hayActivos && !_hayOportunidades) {
-        // Ambos bloques vacíos: nota metodológica única compacta
-        caraA += '<div style="grid-column:1/-1;">'
-            + '<div class="psl2-nd" style="font-size:.75rem;line-height:1.55;">'
-            + 'La lectura salutog\u00e9nica (activos protectores y \u00e1reas de mejora) se completar\u00e1 '
-            + 'durante el proceso de diagn\u00f3stico comunitario participativo. '
-            + 'Los indicadores disponibles (IBSE, CMI) orientan la planificaci\u00f3n de forma provisional.'
+        // Lectura salutogénica institucional cuando no hay narrativa/fortalezas del motor
+        var _ibseMencion = ibseSimple != null
+            ? 'El bienestar socioemocional de la poblaci\u00f3n de <strong>' + esc(capFirst(nombreMun.toLowerCase())) + '</strong>, '
+              + 'aproximado a trav\u00e9s del \u00cdndice de Bienestar Socioemocional (IBSE) obtenido en el estudio local '
+              + '(<strong>' + fmt1(ibseSimple) + '/100</strong>), se sit\u00faa en un nivel que orienta el trabajo de '
+              + 'promoci\u00f3n de la salud en el marco EPVSA\u202f2024\u20132030. '
+              + 'Este dato procede de una muestra intencional y no es representativo de la poblaci\u00f3n municipal; '
+              + 'su valor es orientativo para la planificaci\u00f3n, no conclusivo.'
+            : 'El bienestar socioemocional de la poblaci\u00f3n de <strong>' + esc(capFirst(nombreMun.toLowerCase())) + '</strong> '
+              + 'constituye un eje central del diagn\u00f3stico local de salud y orientar\u00e1 el trabajo de promoci\u00f3n '
+              + 'en el marco EPVSA\u202f2024\u20132030. '
+              + 'Los indicadores disponibles en esta sesi\u00f3n aportan informaci\u00f3n parcial '
+              + 'y ser\u00e1n completados mediante el diagn\u00f3stico comunitario participativo.';
+        caraA += '<div style="grid-column:1/-1;font-size:.8rem;line-height:1.65;color:#1a1a1a;">'
+            + '<p style="margin:0 0 .55rem;">' + _ibseMencion + '</p>'
+            + '<p style="margin:0 0 .55rem;">'
+            + 'Los v\u00ednculos comunitarios, el entorno social y los h\u00e1bitos de vida '
+            + 'constituyen los ejes sobre los que pivota la capacidad de salud del territorio. '
+            + 'La identificaci\u00f3n de activos comunitarios \u2014espacios, redes, recursos formales e informales\u2014 '
+            + 'es una tarea de diagn\u00f3stico pendiente que enriquecer\u00e1 esta lectura e informar\u00e1 futuras revisiones del Plan.'
+            + '</p>'
+            + '<p style="margin:0 0 .55rem;">'
+            + 'Las fuentes disponibles se\u00f1alan \u00e1reas de atenci\u00f3n en h\u00e1bitos de vida '
+            + '(actividad f\u00edsica, alimentaci\u00f3n, consumo de alcohol y tabaco) coherentes con los perfiles del '
+            + esc(_distritoVis) + '. '
+            + 'La acci\u00f3n sobre estos determinantes se articula a trav\u00e9s de intervenciones en entornos saludables '
+            + 'y de la dinamizaci\u00f3n de la Red Local de Acci\u00f3n en Salud (RELAS), '
+            + 'en coordinaci\u00f3n con el equipo de Atenci\u00f3n Primaria del Distrito.'
+            + '</p>'
+            + '<p style="margin:0;">'
+            + 'Esta lectura es provisional y se ampliar\u00e1 progresivamente con los resultados '
+            + 'del diagn\u00f3stico comunitario participativo, los estudios complementarios '
+            + 'y la incorporaci\u00f3n de la voz de la ciudadan\u00eda en el proceso RELAS.'
+            + '</p>'
             + '</div>'
-            + '<div class="psl2-cita" style="margin-top:.4rem;">'
+            + '<div style="grid-column:1/-1;">'
+            + '<div class="psl2-cita" style="margin-top:.5rem;">'
             + '&ldquo;La identificaci\u00f3n de activos para la salud constituye un enfoque metodol\u00f3gico '
             + 'que orienta las intervenciones hacia los recursos del territorio&rdquo; (Morgan &amp; Ziglio, 2007).'
             + '</div></div>';
@@ -63776,20 +63911,23 @@ function renderizarPerfilSaludLocal() {
     caraA += '<div class="psl2-sec-titulo">5. S\u00edntesis estrat\u00e9gica \u2014 EPVSA 2024\u20132030</div>';
     caraA += '<div class="psl2-evitar-corte">';
     if (epvsaFuente.length) {
+        var _maxRelA = epvsaFuente.slice(0, 4).reduce(function(m, le){ var r = le.relevancia != null ? le.relevancia : null; return (r != null && (m === null || r > m)) ? r : m; }, null);
         epvsaFuente.slice(0, 4).forEach(function(le) {
             var leId   = le.lineaId || le.id;
             var nom    = leNombresMap[leId] || ('L\u00ednea estrat\u00e9gica ' + leId);
             var rel    = le.relevancia != null ? le.relevancia : null;
             var jus    = (le.justificacion || '').slice(0, 120) + (le.justificacion && le.justificacion.length > 120 ? '\u2026' : '');
-            var _esPrincipal = (leId == 1);
-            var _esSoporte   = !_esPrincipal && (rel === null || rel < 10);
+            var _esPrincipal = (rel != null && rel === _maxRelA);
+            var _esSoporte   = !_esPrincipal && rel != null && rel < 10;
             var _badgeHtml;
             if (_esPrincipal) {
                 _badgeHtml = '<span class="psl2-badge psl2-badge-azul" style="font-weight:700;">Prioridad operativa principal</span>';
             } else if (_esSoporte) {
                 _badgeHtml = '<span class="psl2-badge" style="background:#f0f0f0;color:#888;opacity:.85;">Soporte transversal</span>';
-            } else {
+            } else if (rel != null) {
                 _badgeHtml = '<span class="psl2-badge psl2-badge-azul">Relevancia ' + rel + '%</span>';
+            } else {
+                _badgeHtml = '';
             }
             caraA += '<div class="psl2-le">'
                 + '<div class="psl2-le-cod">LE' + leId + ' &nbsp;' + _badgeHtml + '</div>'
@@ -63892,21 +64030,24 @@ function renderizarPerfilSaludLocal() {
     caraB += '<div class="psl2-sec-titulo">2. L\u00edneas estrat\u00e9gicas EPVSA</div>';
     caraB += '<div class="psl2-evitar-corte">';
     if (epvsaFuente.length) {
+        var _maxRelB = epvsaFuente.slice(0, 4).reduce(function(m, le){ var r = le.relevancia != null ? le.relevancia : null; return (r != null && (m === null || r > m)) ? r : m; }, null);
         epvsaFuente.slice(0, 4).forEach(function(le) {
             var leId  = le.lineaId || le.id;
             var nom   = leNombresMap[leId] || ('L\u00ednea ' + leId);
             var rel   = le.relevancia != null ? le.relevancia : null;
             var jus   = (le.justificacion || '').slice(0, 100) + (le.justificacion && le.justificacion.length > 100 ? '\u2026' : '');
             var areas = (le.areas || le.areasRelacionadas || []).slice(0, 3).join(' &middot; ');
-            var _esPrincipalB = (leId == 1);
-            var _esSoporteB   = !_esPrincipalB && (rel === null || rel < 10);
+            var _esPrincipalB = (rel != null && rel === _maxRelB);
+            var _esSoporteB   = !_esPrincipalB && rel != null && rel < 10;
             var _badgeB;
             if (_esPrincipalB) {
                 _badgeB = ' &nbsp;<span class="psl2-badge psl2-badge-azul" style="font-weight:700;">Prioridad operativa principal</span>';
             } else if (_esSoporteB) {
                 _badgeB = ' &nbsp;<span class="psl2-badge" style="background:#f0f0f0;color:#888;opacity:.85;">Soporte transversal</span>';
-            } else {
+            } else if (rel != null) {
                 _badgeB = ' &nbsp;<span class="psl2-badge psl2-badge-azul">' + rel + '%</span>';
+            } else {
+                _badgeB = '';
             }
             caraB += '<div class="psl2-le" style="margin-bottom:.35rem;">'
                 + '<div class="psl2-le-cod">LE' + leId + _badgeB + '</div>'
@@ -63995,16 +64136,9 @@ function renderizarPerfilSaludLocal() {
         + '<span class="psl2-badge" style="background:#f0f9ff;color:#0c4a6e;">Seguimiento</span> indicador'
         + '</div>';
 
-    // Matriz de trazabilidad — 3 filas fijas con semántica diferenciada por LE
-    var _ibseStr2   = ibseSimple != null ? 'IBSE ' + fmt1(ibseSimple) + '/100' : 'CMI COMP\u00c1S';
-    var _agendaStr  = hayAgenda
-        ? 'Agenda anual: ' + _agendaActs.length + ' actuaci' + (_agendaActs.length === 1 ? '\u00f3n' : 'ones')
-        : 'Agenda por consolidar';
-    var _actsLE1    = _agendaActs.filter(function(a){ return String(a.lineaEpvsa) === '1'; });
-    var _actsLE1Str = _actsLE1.length
-        ? 'Agenda anual: ' + _actsLE1.length + ' actuaci' + (_actsLE1.length === 1 ? '\u00f3n' : 'ones') + ' (LE1)'
-        : _agendaStr;
-    var _indSeg1    = indMej.length ? indMej[0].nombre || 'CMI COMP\u00c1S' : 'CMI COMP\u00c1S';
+    // Matriz de trazabilidad — generada dinámicamente desde epvsaFuente
+    var _ibseStr2    = ibseSimple != null ? 'IBSE ' + fmt1(ibseSimple) + '/100' : null;
+    var _maxRelTraz  = epvsaFuente.reduce(function(m, le){ var r = le.relevancia != null ? le.relevancia : null; return (r != null && (m === null || r > m)) ? r : m; }, null);
     var _th = 'padding:.25rem .35rem;border:1px solid #ddd;background:#f5f5f5;text-align:left;font-size:.62rem;font-weight:700;color:#555;white-space:nowrap;';
     var _td = 'padding:.22rem .35rem;border:1px solid #e5e5e5;font-size:.68rem;';
 
@@ -64020,38 +64154,65 @@ function renderizarPerfilSaludLocal() {
         + '<th style="' + _th + '">Seguimiento</th>'
         + '</tr></thead><tbody>';
 
-    // Fila 1 — Evidencia local IBSE + hábitos → LE1 operativa
-    caraB += '<tr>'
-        + '<td style="' + _td + 'color:#333;">' + _ibseStr2 + '<br><span style="font-size:.6rem;color:#777;">Dato local directo</span></td>'
-        + '<td style="' + _td + 'color:#555;">EAS 2023<br><span style="font-size:.6rem;color:#999;">Granada / Andaluc\u00eda</span></td>'
-        + '<td style="' + _td + 'color:#333;">H\u00e1bitos de vida y entornos saludables como prioridad operativa municipal</td>'
-        + '<td style="' + _td + 'text-align:center;"><span class="psl2-badge psl2-badge-azul" style="font-size:.6rem;font-weight:700;">Principal</span></td>'
-        + '<td style="' + _td + 'font-weight:600;">LE1</td>'
-        + '<td style="' + _td + 'text-align:center;"><span class="psl2-badge psl2-badge-verde" style="font-size:.6rem;">' + _actsLE1Str + '</span></td>'
-        + '<td style="' + _td + 'color:#555;">' + esc(_indSeg1.substring(0, 36)) + '</td>'
-        + '</tr>';
+    if (epvsaFuente.length) {
+        epvsaFuente.slice(0, 4).forEach(function(le, idx) {
+            var leId  = le.lineaId || le.id;
+            var rel   = le.relevancia != null ? le.relevancia : null;
+            var jus   = (le.justificacion || '').slice(0, 80) + (le.justificacion && le.justificacion.length > 80 ? '\u2026' : '');
+            var _esPrincipalT = (rel != null && rel === _maxRelTraz);
+            var _esSoporteT   = !_esPrincipalT && rel != null && rel < 10;
 
-    // Fila 2 — Referencia EAS + cautela metodológica → LE3 soporte comunicativo
-    caraB += '<tr style="background:#fafafa;">'
-        + '<td style="' + _td + 'color:#555;font-style:italic;">Sin datos EAS municipales de Atarfe<br><span style="font-size:.6rem;color:#999;">Cautela metodol\u00f3gica</span></td>'
-        + '<td style="' + _td + 'color:#555;">EAS 2023<br><span style="font-size:.6rem;color:#999;">Referencia contextual (no local)</span></td>'
-        + '<td style="' + _td + 'color:#555;">Comunicaci\u00f3n y alfabetizaci\u00f3n en salud como soporte al plan</td>'
-        + '<td style="' + _td + 'text-align:center;"><span class="psl2-badge" style="background:#f0f0f0;color:#888;font-size:.6rem;">Soporte</span></td>'
-        + '<td style="' + _td + 'color:#666;">LE3</td>'
-        + '<td style="' + _td + 'text-align:center;color:#aaa;font-size:.65rem;">Transversal</td>'
-        + '<td style="' + _td + 'color:#777;font-size:.65rem;">Evaluaci\u00f3n de proceso</td>'
-        + '</tr>';
+            // Evidencia local: IBSE para la LE principal (o primera si no hay relevancias)
+            var _evLoc;
+            if (_esPrincipalT || (_maxRelTraz === null && idx === 0)) {
+                _evLoc = _ibseStr2
+                    ? _ibseStr2 + '<br><span style="font-size:.6rem;color:#777;">IBSE local directo</span>'
+                    : 'Sin dato IBSE en esta sesi\u00f3n<br><span style="font-size:.6rem;color:#999;">Sin dato local directo</span>';
+            } else {
+                _evLoc = 'Indicadores disponibles en sesi\u00f3n<br><span style="font-size:.6rem;color:#999;">Fuentes CMI / EAS</span>';
+            }
 
-    // Fila 3 — Necesidad de seguimiento → LE4 soporte metodológico
-    caraB += '<tr>'
-        + '<td style="' + _td + 'color:#555;font-style:italic;">Ausencia de microdatos locales<br><span style="font-size:.6rem;color:#999;">Brecha de conocimiento</span></td>'
-        + '<td style="' + _td + 'color:#555;">SSPA / INFOWEB CMI<br><span style="font-size:.6rem;color:#999;">Indicadores disponibles</span></td>'
-        + '<td style="' + _td + 'color:#555;">Vigilancia, evaluaci\u00f3n y generaci\u00f3n de conocimiento local como soporte</td>'
-        + '<td style="' + _td + 'text-align:center;"><span class="psl2-badge" style="background:#f0f0f0;color:#888;font-size:.6rem;">Soporte</span></td>'
-        + '<td style="' + _td + 'color:#666;">LE4</td>'
-        + '<td style="' + _td + 'text-align:center;color:#aaa;font-size:.65rem;">Transversal</td>'
-        + '<td style="' + _td + 'color:#777;font-size:.65rem;">Indicadores CMI / seguimiento anual</td>'
-        + '</tr>';
+            // Referencia contextual
+            var _refCtx = 'EAS 2023<br><span style="font-size:.6rem;color:#999;">Andaluc\u00eda</span>';
+
+            // Interpretación desde justificación o nombre oficial LE
+            var _interp = jus || (leNombresMap[leId] || 'L\u00ednea estrat\u00e9gica ' + leId);
+
+            // Badge prioridad
+            var _badgeTraz;
+            if (_esPrincipalT) {
+                _badgeTraz = '<span class="psl2-badge psl2-badge-azul" style="font-size:.6rem;font-weight:700;">Principal</span>';
+            } else if (_esSoporteT) {
+                _badgeTraz = '<span class="psl2-badge" style="background:#f0f0f0;color:#888;font-size:.6rem;">Soporte</span>';
+            } else if (rel != null) {
+                _badgeTraz = '<span class="psl2-badge psl2-badge-azul" style="font-size:.6rem;">' + rel + '%</span>';
+            } else {
+                _badgeTraz = '<span class="psl2-badge" style="background:#f8f8f8;color:#aaa;font-size:.6rem;">Sin valor</span>';
+            }
+
+            // Actuaciones de agenda para esta LE
+            var _actsLE = _agendaActs.filter(function(a){ return String(a.lineaEpvsa) === String(leId); });
+            var _actsCell = _actsLE.length
+                ? '<span class="psl2-badge psl2-badge-verde" style="font-size:.6rem;">' + _actsLE.length + ' act. (LE' + leId + ')</span>'
+                : '<span style="color:#aaa;font-size:.65rem;">Transversal</span>';
+
+            // Indicador de seguimiento
+            var _seg = indMej.length ? esc((indMej[0].nombre || 'CMI COMP\u00c1S').substring(0, 32)) : 'CMI COMP\u00c1S';
+
+            var _rowBg = idx % 2 === 1 ? ' style="background:#fafafa;"' : '';
+            caraB += '<tr' + _rowBg + '>'
+                + '<td style="' + _td + 'color:#333;">' + _evLoc + '</td>'
+                + '<td style="' + _td + 'color:#555;">' + _refCtx + '</td>'
+                + '<td style="' + _td + 'color:#333;">' + esc(_interp) + '</td>'
+                + '<td style="' + _td + 'text-align:center;">' + _badgeTraz + '</td>'
+                + '<td style="' + _td + 'font-weight:600;">LE' + leId + '</td>'
+                + '<td style="' + _td + 'text-align:center;">' + _actsCell + '</td>'
+                + '<td style="' + _td + 'color:#555;">' + _seg + '</td>'
+                + '</tr>';
+        });
+    } else {
+        caraB += '<tr><td colspan="7" style="' + _td + 'text-align:center;color:#aaa;padding:.5rem;">Propuesta EPVSA no disponible</td></tr>';
+    }
 
     caraB += '</tbody></table>';
     caraB += '<div class="psl2-fuente" style="margin-top:.3rem;">Matriz sint\u00e9tica y editable. Trazabilidad completa en el expediente t\u00e9cnico municipal.</div>';
