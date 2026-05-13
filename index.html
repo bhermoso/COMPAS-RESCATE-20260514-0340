@@ -22037,9 +22037,9 @@ function aplicarPropuestaACheckboxes(mostrarFeedback = true) {
 
                 const progIdx = typeof progProp === 'object' ? progProp.programaIdx : progProp;
 
-                const progId = progProp.programaIdx;
+                const progId = lineaProp.lineaId + '-' + progIdx;
 
-                
+
 
                 const progChk = document.getElementById('chk-prog-' + progId);
 
@@ -22051,7 +22051,7 @@ function aplicarPropuestaACheckboxes(mostrarFeedback = true) {
 
                 }
 
-                
+
 
                 const progEl = document.getElementById('prog-' + progId);
 
@@ -22065,7 +22065,7 @@ function aplicarPropuestaACheckboxes(mostrarFeedback = true) {
 
                 }
 
-                
+
 
                 const actuaciones = typeof progProp === 'object' ? progProp.actuaciones : [];
 
@@ -22073,7 +22073,7 @@ function aplicarPropuestaACheckboxes(mostrarFeedback = true) {
 
                     actuaciones.forEach(ai => {
 
-                        const actChk = document.getElementById('chk-act-' + lineaProp.lineaId + '-' + progProp.programaIdx + '-' + ai);
+                        const actChk = document.getElementById('chk-act-' + lineaProp.lineaId + '-' + progIdx + '-' + ai);
                         if (actChk) {
                             actChk.checked = true;
                             aplicados++;
