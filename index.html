@@ -22955,7 +22955,22 @@ function generarDocumentoPlan() {
 
     }, 0);
 
-    let _resumenIndicadores = '<strong>' + seleccion.length + '</strong> líneas estratégicas';
+    function _esLineaSoporteResumen(s) {
+        var _id = s.id || s.lineaId;
+        if (_id != 3 && _id != 4) return false;
+        var _pEnt = (propuestaActual || []).find(function(p){ return p.lineaId === _id; }) ||
+                    (_analisis && _analisis.propuestaEPVSA ? _analisis.propuestaEPVSA.find(function(p){ return p.lineaId === _id; }) : null);
+        if (!_pEnt || _pEnt.relevancia == null || _pEnt.relevancia < 10) return true;
+        if (!!_pEnt._soporteTransversal) return true;
+        var _tipo = (_pEnt.tipoLineaMotor || '').toLowerCase();
+        return _tipo.indexOf('soporte') >= 0 || _tipo.indexOf('instrumental') >= 0 || _tipo.indexOf('transversal') >= 0;
+    }
+    var _nSoporte   = seleccion.filter(_esLineaSoporteResumen).length;
+    var _nOperativas = seleccion.length - _nSoporte;
+
+    let _resumenIndicadores = _nSoporte > 0
+        ? '<strong>' + _nOperativas + '</strong> línea(s) operativa(s) principal(es) y <strong>' + _nSoporte + '</strong> línea(s) de soporte transversal EPVSA'
+        : '<strong>' + seleccion.length + '</strong> líneas estratégicas';
 
     if (_nInd)  _resumenIndicadores += ', <strong>' + _nInd + '</strong> indicadores de seguimiento';
 
