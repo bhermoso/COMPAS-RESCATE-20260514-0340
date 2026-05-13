@@ -63849,9 +63849,8 @@ function renderizarPerfilSaludLocal() {
             + 'es una tarea de diagn\u00f3stico pendiente que enriquecer\u00e1 esta lectura e informar\u00e1 futuras revisiones del Plan.'
             + '</p>'
             + '<p style="margin:0 0 .55rem;">'
-            + 'Las fuentes disponibles se\u00f1alan \u00e1reas de atenci\u00f3n en h\u00e1bitos de vida '
-            + '(actividad f\u00edsica, alimentaci\u00f3n, consumo de alcohol y tabaco) coherentes con los perfiles del '
-            + esc(_distritoVis) + '. '
+            + 'Las fuentes disponibles permiten orientar, de forma provisional, \u00e1reas de atenci\u00f3n vinculadas a h\u00e1bitos de vida, '
+            + 'bienestar socioemocional, entornos saludables y activos comunitarios, de acuerdo con el diagn\u00f3stico actualmente cargado para el territorio. '
             + 'La acci\u00f3n sobre estos determinantes se articula a trav\u00e9s de intervenciones en entornos saludables '
             + 'y de la dinamizaci\u00f3n de la Red Local de Acci\u00f3n en Salud (RELAS), '
             + 'en coordinaci\u00f3n con el equipo de Atenci\u00f3n Primaria del Distrito.'
@@ -64285,6 +64284,23 @@ function togglePanelIBSEDashboard() {
 function renderizarPanelIBSEDashboard() {
     var el = document.getElementById('panel-ibse-visual');
     if (!el) return;
+
+    // ── Guardia territorial: este dashboard estático es exclusivo de Atarfe ──
+    var _munActual = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : '';
+    if (_munActual !== 'atarfe') {
+        var _nomMun = (typeof getNombreMunicipio === 'function' && _munActual)
+            ? getNombreMunicipio(_munActual)
+            : (_munActual || 'el municipio seleccionado');
+        var _escNom = String(_nomMun).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        el.innerHTML = '<div style="font-family:system-ui,sans-serif;padding:1.5rem 1.75rem;background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;color:#78350f;line-height:1.6;">'
+            + '<strong style="display:block;margin-bottom:.5rem;">Panel IBSE no disponible para este municipio</strong>'
+            + 'El panel IBSE detallado mostrado en esta versi\u00f3n corresponde a <strong>Atarfe</strong> y no debe reutilizarse para otros municipios. '
+            + 'Para <strong>' + _escNom + '</strong>, '
+            + 'cargue o genere el informe IBSE espec\u00edfico del territorio.'
+            + '</div>';
+        return;
+    }
+
     el.innerHTML = `<div style="position:relative">
 <button onclick="togglePanelIBSEDashboard()" style="position:absolute;top:0.75rem;right:0.75rem;z-index:10;background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:6px;padding:0.35rem 0.9rem;font-size:0.82rem;cursor:pointer;font-family:inherit">&#10005; Cerrar</button>
 <!-- ░░░ HERO ░░░ -->
