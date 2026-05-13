@@ -556,6 +556,7 @@ function _calcularAnalisisModular(contextoIA) {
         const _candidatasConScore = priorizacion.filter(function(item) {
             return item && typeof item.score === 'number' && !isNaN(item.score) && item.score >= 0.24;
         });
+        console.log('[motorSintesisPerfil][propuestaEPVSA] candidatas (score>=0.24):', _candidatasConScore.map(function(x) { return { area: x.area, score: x.score, fuente: x.fuente }; }));
 
         const priorizacionConScore = _candidatasConScore.slice(0, 3);
         if (priorizacionConScore.length >= 3) {
@@ -576,6 +577,7 @@ function _calcularAnalisisModular(contextoIA) {
 
             if (_extraDiversidad) priorizacionConScore.push(_extraDiversidad);
         }
+        console.log('[motorSintesisPerfil][propuestaEPVSA] priorizacionConScore (final, con posible extra diversidad):', priorizacionConScore.map(function(x) { return { area: x.area, score: x.score }; }));
         if (!priorizacionConScore.length) {
             console.warn('[motorSintesisPerfil] propuestaEPVSA no generada: priorizacion sin score válido (>= 0.24).');
             return [];
@@ -609,6 +611,7 @@ function _calcularAnalisisModular(contextoIA) {
             });
         });
 
+        console.log('[motorSintesisPerfil][propuestaEPVSA] lineasMap tras mapeo EPVSA:', Object.keys(lineasMap).map(function(k) { return { LE: k, areas: lineasMap[k].areas, relevancia: lineasMap[k].relevancia }; }));
         const vals = Object.values(lineasMap);
 
         // [COMPÁS 2026-05-10] Líneas EPVSA incorporadas como soporte transversal.
@@ -638,6 +641,7 @@ function _calcularAnalisisModular(contextoIA) {
         }
 
         const valsFinal = Object.values(lineasMap);
+        console.log('[motorSintesisPerfil][propuestaEPVSA] LE2 presente:', !!lineasMap[2], '| líneas finales:', valsFinal.map(function(l) { return { lineaId: l.lineaId, relevancia: l.relevancia, soporte: !!l._soporteTransversal }; }));
         const maxRel = valsFinal.reduce(function(m, l) { return Math.max(m, l.relevancia); }, 1);
 
         var f = contextoIA.fuentes || {};
