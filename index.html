@@ -23540,7 +23540,7 @@ function cargarPlanGuardado() {
 
         window.COMPAS.state.planAccion = {
 
-            html: null, seleccion: planFB.seleccionEPVSA,
+            html: null, seleccion: _selNorm,
 
             fecha: planFB.fechaISO, version: planFB.version || 'auto'
 
@@ -23558,7 +23558,7 @@ function cargarPlanGuardado() {
 
     if (planLocalSalud && planLocalSalud.planAccion) {
 
-        planLocalSalud.planAccion.seleccion  = planFB.seleccionEPVSA;
+        planLocalSalud.planAccion.seleccion  = _selNorm;
 
         planLocalSalud.planAccion.completado = true;
 
@@ -23581,7 +23581,7 @@ function cargarPlanGuardado() {
     actualizarBadgePlan('guardado', planFB.fechaISO);
 
     // Feedback visual: plan restaurado (sin tocar Firebase ni autosave)
-    var _nLineas = planFB.seleccionEPVSA ? planFB.seleccionEPVSA.length : 0;
+    var _nLineas = _selNorm ? _selNorm.length : 0;
     var _fechaCorta = planFB.fechaISO ? new Date(planFB.fechaISO).toLocaleDateString('es-ES') : '';
     mostrarNotificacion({
         title: '\u{1F4C2} Plan de acción restaurado',
@@ -63980,7 +63980,7 @@ function renderizarPerfilSaludLocal() {
     var caraB = '<div class="psl2-cara-b">';
 
     caraB += _cabecera(
-        'Plan de Acci\u00f3n \u00b7 A\u00f1o 1 \u2014 ' + capFirst(nombreMun.toLowerCase()),
+        'Plan de Acci\u00f3n \u00b7 ' + esc(anioStr) + ' \u2014 ' + capFirst(nombreMun.toLowerCase()),
         'Agenda anual, trazabilidad y seguimiento &middot; Derivado del Perfil de Salud Local'
     );
 
@@ -64127,13 +64127,10 @@ function renderizarPerfilSaludLocal() {
     // B4. Trazabilidad visual ──────────────────────────────────────────────
     caraB += '<div class="psl2-sec-titulo">4. Trazabilidad evidencia\u2013acci\u00f3n</div>';
     caraB += '<div class="psl2-nota" style="margin-bottom:.5rem;font-size:.68rem;">'
-        + 'Cada nodo identifica el tipo de informaci\u00f3n: '
-        + '<span class="psl2-badge psl2-badge-azul">Observado</span> dato local directo &nbsp;&middot;&nbsp;'
-        + '<span class="psl2-badge psl2-badge-verde">Referencia</span> dato poblacional EAS/INE &nbsp;&middot;&nbsp;'
-        + '<span class="psl2-badge" style="background:#fefce8;color:#713f12;">Inferencia</span> juicio t\u00e9cnico &nbsp;&middot;&nbsp;'
-        + '<span class="psl2-badge" style="background:#fdf4ff;color:#581c87;">Decisi\u00f3n</span> acuerdo institucional &nbsp;&middot;&nbsp;'
-        + '<span class="psl2-badge" style="background:#fff7ed;color:#7c2d12;">Acci\u00f3n</span> actuaci\u00f3n programada &nbsp;&middot;&nbsp;'
-        + '<span class="psl2-badge" style="background:#f0f9ff;color:#0c4a6e;">Seguimiento</span> indicador'
+        + 'Leyenda: '
+        + '<span class="psl2-badge psl2-badge-azul" style="font-size:.6rem;font-weight:700;">Principal</span> l\u00ednea estrat\u00e9gica de mayor relevancia &nbsp;&middot;&nbsp;'
+        + '<span class="psl2-badge psl2-badge-verde" style="font-size:.6rem;">N act.</span> actuaciones en agenda &nbsp;&middot;&nbsp;'
+        + '<span class="psl2-badge" style="background:#f0f0f0;color:#888;font-size:.6rem;">Soporte</span> l\u00ednea instrumental o de contexto'
         + '</div>';
 
     // Matriz de trazabilidad — generada dinámicamente desde epvsaFuente
