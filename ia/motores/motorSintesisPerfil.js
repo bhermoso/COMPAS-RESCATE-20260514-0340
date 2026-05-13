@@ -559,6 +559,7 @@ function _calcularAnalisisModular(contextoIA) {
         console.log('[motorSintesisPerfil][propuestaEPVSA] candidatas (score>=0.24):', _candidatasConScore.map(function(x) { return { area: x.area, score: x.score, fuente: x.fuente }; }));
 
         const priorizacionConScore = _candidatasConScore.slice(0, 3);
+        var _extraDiversidad = null;
         if (priorizacionConScore.length >= 3) {
             const _lineasTop = {};
             priorizacionConScore.forEach(function(item) {
@@ -568,7 +569,7 @@ function _calcularAnalisisModular(contextoIA) {
                 });
             });
 
-            const _extraDiversidad = _candidatasConScore.slice(3).find(function(item) {
+            _extraDiversidad = _candidatasConScore.slice(3).find(function(item) {
                 const _areasTmp = (mapeoLE[item.area] ? [item.area] : (_CMI_A_AREAS[item.area] || []).slice(0, 1));
                 return _areasTmp.some(function(a) {
                     return ((mapeoLE[a] && mapeoLE[a].le) || []).some(function(le) { return !_lineasTop[le]; });
@@ -584,6 +585,8 @@ function _calcularAnalisisModular(contextoIA) {
         }
 
         const lineasMap = {};
+        const _le2Contribuciones = [];
+
         priorizacionConScore.forEach(function(item) {
             // [2026-05-12] Gobernanza semántica EPVSA:
             // Las categorías CMI agregadas no son áreas EPVSA operativas.
@@ -595,6 +598,9 @@ function _calcularAnalisisModular(contextoIA) {
             const areaKeys = _esCategoriaCMIAgregada
                 ? (_CMI_A_AREAS[item.area] || []).slice(0, 1)
                 : (mapeoLE[item.area] ? [item.area] : []);
+            const _tipoActivacion = _esCategoriaCMIAgregada ? 'categoría CMI' : 'texto directo';
+            const _esDiversidad = item === _extraDiversidad;
+
             areaKeys.forEach(function(areaKey) {
                 const mapeo = mapeoLE[areaKey];
                 if (!mapeo || !mapeo.le) return;
@@ -607,6 +613,18 @@ function _calcularAnalisisModular(contextoIA) {
                     (mapeo.obj || []).forEach(function(o) { lineasMap[leNum].objetivos.add(o); });
                     if (!lineasMap[leNum].programas) lineasMap[leNum].programas = new Set();
                     (mapeo.programas || []).forEach(function(p) { lineasMap[leNum].programas.add(p); });
+
+                    if (leNum === 2) {
+                        _le2Contribuciones.push({
+                            itemArea: item.area,
+                            areaKey: areaKey,
+                            itemLabel: item.label || areaKey,
+                            score: item.score || 0,
+                            tipoActivacion: _tipoActivacion,
+                            diversidadEstrategica: _esDiversidad,
+                            fuente: item.fuente,
+                        });
+                    }
                 });
             });
         });
@@ -641,6 +659,20 @@ function _calcularAnalisisModular(contextoIA) {
         }
 
         const valsFinal = Object.values(lineasMap);
+        if (lineasMap[2]) {
+            console.log('[motorSintesisPerfil][propuestaEPVSA][LE2] activación detectada:', _le2Contribuciones.map(function(x) {
+                return {
+                    itemArea: x.itemArea,
+                    areaKey: x.areaKey,
+                    itemLabel: x.itemLabel,
+                    score: x.score,
+                    tipoActivacion: x.tipoActivacion,
+                    diversidadEstrategica: x.diversidadEstrategica,
+                    fuente: x.fuente,
+                };
+            }));
+            console.log('[motorSintesisPerfil][propuestaEPVSA][LE2] acumulado final:', lineasMap[2].relevancia, 'transversal:', valsFinal.filter(function(l) { return !!l._soporteTransversal; }).map(function(l) { return { lineaId: l.lineaId, relevancia: l.relevancia }; }));
+        }
         console.log('[motorSintesisPerfil][propuestaEPVSA] LE2 presente:', !!lineasMap[2], '| líneas finales:', valsFinal.map(function(l) { return { lineaId: l.lineaId, relevancia: l.relevancia, soporte: !!l._soporteTransversal }; }));
         const maxRel = valsFinal.reduce(function(m, l) { return Math.max(m, l.relevancia); }, 1);
 
