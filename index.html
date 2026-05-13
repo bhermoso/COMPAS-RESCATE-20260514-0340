@@ -15878,6 +15878,16 @@ function actualizarMunicipio() {
 
         window.analisisActual = null;           // AM: evita análisis de municipio anterior como fallback
 
+        // Limpiar propuesta volátil del municipio anterior (evita fuga entre municipios)
+        propuestaActual = null;
+        window.propuestaActual = null;
+        window.seleccionAceptada = [];
+        window.propuestaAceptada = false;
+        if (window.COMPAS && window.COMPAS.state) {
+            window.COMPAS.state.seleccionEPVSA = null;
+            window.COMPAS.state.planAccionFirebase = null;
+        }
+
         // Cargar prioridades guardadas para el nuevo municipio (asíncrono, silencioso)
 
         if (typeof COMPAS_cargarPrioridadesFirebase === 'function') {
