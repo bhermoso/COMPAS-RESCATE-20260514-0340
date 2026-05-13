@@ -19225,7 +19225,14 @@ function cambiarModoPlan(modo) {
     if (modo === 'auto') {
 
         const bannerPlanGuardado = document.getElementById('plan-guardado-banner');
-        if (bannerPlanGuardado) bannerPlanGuardado.style.display = 'none';
+        var _hayPlanGuardadoM11 = !!(
+            window.COMPAS &&
+            window.COMPAS.state &&
+            window.COMPAS.state.planAccionFirebase &&
+            window.COMPAS.state.planAccionFirebase.seleccionEPVSA &&
+            window.COMPAS.state.planAccionFirebase.seleccionEPVSA.length
+        );
+        if (bannerPlanGuardado && !_hayPlanGuardadoM11) bannerPlanGuardado.style.display = 'none';
 
         const ini = document.getElementById('auto-ia-estado-inicial');
 

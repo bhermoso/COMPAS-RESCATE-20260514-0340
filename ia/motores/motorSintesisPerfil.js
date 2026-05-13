@@ -642,7 +642,8 @@ function _calcularAnalisisModular(contextoIA) {
                 lineaId: 3,
                 relevancia: 18,
                 areas: ['Difusión y comunicación de información veraz a la ciudadanía sobre los beneficios de una vida saludable y protección de la población frente a mensajes, publicidad y campañas perjudiciales para la salud'],
-                objetivos: new Set(),
+                objetivos: new Set([0]),
+                programas: new Set([0]),
                 _soporteTransversal: true
             };
         }
@@ -653,7 +654,8 @@ function _calcularAnalisisModular(contextoIA) {
                 lineaId: 4,
                 relevancia: 15,
                 areas: ['Impulso a la gestión del conocimiento, la investigación y la innovación en el área de la promoción de hábitos de vida saludables'],
-                objetivos: new Set(),
+                objetivos: new Set([0]),
+                programas: new Set([0]),
                 _soporteTransversal: true
             };
         }
