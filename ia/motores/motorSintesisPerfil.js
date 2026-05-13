@@ -219,6 +219,64 @@ function _calcularAnalisisModular(contextoIA) {
         }
     }
 
+    // ── PATH 2B — Priorización desde participación temática VRELAS ────────
+    // Convierte temas votados por la ciudadanía en áreas canónicas EPVSA.
+    // Usa temasFreq[temaId] porque ranking no conserva de forma fiable el id del tema.
+    if (hayParticipacion && contextoIA.participacion && contextoIA.participacion.temasFreq) {
+        const _temaAEpvsa = (typeof window !== 'undefined' && window._TEMA_A_EPVSA) || null;
+        const _mapeoLE = (typeof window !== 'undefined' && window.COMPAS_MAPEO_AREA_LE) || null;
+        const _tf = contextoIA.participacion.temasFreq;
+
+        if (_temaAEpvsa && _mapeoLE && typeof _tf === 'object') {
+            const _entradasVrelas = Object.keys(_tf)
+                .map(function(temaId) {
+                    const votos = Number(_tf[temaId]) || 0;
+                    const mapa = _temaAEpvsa[parseInt(temaId, 10)];
+                    const area = mapa && (mapa.area || mapa.areaCanonica || mapa.key || mapa.codigo);
+                    return { temaId: temaId, votos: votos, mapa: mapa, area: area };
+                })
+                .filter(function(x) {
+                    return x.votos > 0 && x.area && _mapeoLE[x.area];
+                })
+                .sort(function(a, b) { return b.votos - a.votos; })
+                .slice(0, 5);
+
+            const _maxVotos = _entradasVrelas.reduce(function(m, x) {
+                return Math.max(m, x.votos);
+            }, 1);
+
+            _entradasVrelas.forEach(function(x, idx) {
+                const _scoreCiudadano = parseFloat((0.24 + (x.votos / _maxVotos) * 0.18).toFixed(3));
+                const _idxExistente = priorizacion.findIndex(function(p) {
+                    return p && p.area === x.area;
+                });
+
+                if (_idxExistente >= 0) {
+                    priorizacion[_idxExistente].score = parseFloat(
+                        Math.min(1, priorizacion[_idxExistente].score + (_scoreCiudadano * 0.25)).toFixed(3)
+                    );
+                    priorizacion[_idxExistente].justificacion +=
+                        ' + Refuerzo por priorización ciudadana VRELAS (' + x.votos + ' votos).';
+                    return;
+                }
+
+                priorizacion.push({
+                    area:         x.area,
+                    label:        _mapeoLE[x.area].desc || x.area,
+                    score:        _scoreCiudadano,
+                    nAMejorar:    0,
+                    nFavorables:  0,
+                    nConDatos:    x.votos,
+                    fuente:       'participacion_vrelas',
+                    areaKey:      x.area,
+                    orden:        priorizacion.length + 1,
+                    justificacion: 'Área incorporada desde priorización temática ciudadana VRELAS: tema '
+                                  + x.temaId + ' (' + x.votos + ' votos).',
+                });
+            });
+        }
+    }
+
     // ── PATH 3 — Análisis textual salutogénico (sin CMI ni decisión) ─────
     // Se activa cuando los paths CMI y decisionPriorizacion no produjeron datos.
     // Llama a window.COMPAS_analizarTextoInforme / COMPAS_analizarTextoEstudio
@@ -330,6 +388,25 @@ function _calcularAnalisisModular(contextoIA) {
                 texto: `En "Determinantes de la salud": ${catDet.aMejorar} de ${catDet.conDatos} indicadores con tendencia desfavorable (${Math.round(catDet.aMejorar / catDet.conDatos * 100)}%).`,
             });
         }
+    }
+
+    // [2026-05-12] Activación estructural prudente de LE2:
+    // Las alertas de inequidad no deben quedar solo como texto; si existe señal
+    // empírica suficiente, incorporan "situacionEconomica" como área estratégica.
+    if (alertasInequidad.length > 0 && !priorizacion.some(function(p) { return p && p.area === 'situacionEconomica'; })) {
+        priorizacion.push({
+            area:         'situacionEconomica',
+            label:        'Equidad y determinantes sociales',
+            score:        0.28,
+            nAMejorar:    0,
+            nFavorables:  0,
+            nConDatos:    alertasInequidad.length,
+            fuente:       'alertas_inequidad',
+            areaKey:      'situacionEconomica',
+            orden:        priorizacion.length + 1,
+            justificacion: 'Activación estructural de LE2 por alerta(s) de inequidad detectada(s): '
+                          + alertasInequidad.map(function(a) { return a.tipo; }).join(', ') + '.',
+        });
     }
 
     // ── Conclusiones (con IDs conocidos por _adaptarAnalisisAFormatoUI) ────
@@ -473,19 +550,49 @@ function _calcularAnalisisModular(contextoIA) {
             prevencion:               ['entornoSaludable'],
         };
 
-        // Umbral 0.25: evita que una categoría CMI con señal trivial arrastre varias áreas EPVSA.
-        const priorizacionConScore = priorizacion.filter(function(item) {
-            return item && typeof item.score === 'number' && !isNaN(item.score) && item.score >= 0.25;
+        // [2026-05-12] Selección con diversidad estratégica mínima:
+        // Mantiene top 3 por score, pero permite incorporar una señal adicional cercana
+        // si abre una línea EPVSA distinta y evita el colapso monolítico en LE1.
+        const _candidatasConScore = priorizacion.filter(function(item) {
+            return item && typeof item.score === 'number' && !isNaN(item.score) && item.score >= 0.24;
         });
+
+        const priorizacionConScore = _candidatasConScore.slice(0, 3);
+        if (priorizacionConScore.length >= 3) {
+            const _lineasTop = {};
+            priorizacionConScore.forEach(function(item) {
+                const _areasTmp = (mapeoLE[item.area] ? [item.area] : (_CMI_A_AREAS[item.area] || []).slice(0, 1));
+                _areasTmp.forEach(function(a) {
+                    ((mapeoLE[a] && mapeoLE[a].le) || []).forEach(function(le) { _lineasTop[le] = true; });
+                });
+            });
+
+            const _extraDiversidad = _candidatasConScore.slice(3).find(function(item) {
+                const _areasTmp = (mapeoLE[item.area] ? [item.area] : (_CMI_A_AREAS[item.area] || []).slice(0, 1));
+                return _areasTmp.some(function(a) {
+                    return ((mapeoLE[a] && mapeoLE[a].le) || []).some(function(le) { return !_lineasTop[le]; });
+                });
+            });
+
+            if (_extraDiversidad) priorizacionConScore.push(_extraDiversidad);
+        }
         if (!priorizacionConScore.length) {
-            console.warn('[motorSintesisPerfil] propuestaEPVSA no generada: priorizacion sin score válido (>= 0.25).');
+            console.warn('[motorSintesisPerfil] propuestaEPVSA no generada: priorizacion sin score válido (>= 0.24).');
             return [];
         }
 
         const lineasMap = {};
         priorizacionConScore.forEach(function(item) {
-            const areaKeys = _CMI_A_AREAS[item.area]
-                             || (mapeoLE[item.area] ? [item.area] : []);
+            // [2026-05-12] Gobernanza semántica EPVSA:
+            // Las categorías CMI agregadas no son áreas EPVSA operativas.
+            // Solo se mapean directamente áreas canónicas reales; se evita expandir
+            // determinantes/eventos_no_transmisibles/prevencion en múltiples áreas LE1.
+            const _esCategoriaCMIAgregada = item.fuente === 'CMI'
+                && Object.prototype.hasOwnProperty.call(_CMI_A_AREAS, item.area);
+
+            const areaKeys = _esCategoriaCMIAgregada
+                ? (_CMI_A_AREAS[item.area] || []).slice(0, 1)
+                : (mapeoLE[item.area] ? [item.area] : []);
             areaKeys.forEach(function(areaKey) {
                 const mapeo = mapeoLE[areaKey];
                 if (!mapeo || !mapeo.le) return;
@@ -605,7 +712,15 @@ function _calcularAnalisisModular(contextoIA) {
                 origenCiudadano: tieneCiudadano,
                 fuentes:         fuentesLinea,
                 _soporteTransversal: esSoporte,
-                tipoLineaMotor:  esSoporte ? 'soporte_transversal' : 'prioridad_derivada',
+                tipoLineaMotor:  esSoporte
+                    ? 'soporte_transversal'
+                    : (l.lineaId === 4
+                        ? 'linea_habilitadora'
+                        : (l.lineaId === 3
+                            ? 'linea_comunicativa_transversal'
+                            : (l.lineaId === 2
+                                ? 'linea_estructural_contextual'
+                                : 'prioridad_operativa_principal'))),
                 conclusion_ids:  ['marco_salutogenico'],
             };
         }).sort(function(a, b) { return b.relevancia - a.relevancia; });
