@@ -405,18 +405,87 @@ function _normalizarPropuesta(resultado, contextoIA, fuentesUsadas, aa) {
         aa
     );
 
-    // ── Restricción estricta: salida acotada exactamente a IDs de entrada ────
-    // Ninguna transformación interna puede añadir líneas no presentes en entrada.
+    // ── Restricción conservadora: entrada + LE3/LE4 con señal explícita ─────
+    // Las líneas de entrada se preservan siempre.
+    // LE3 y LE4 se añaden solo si:
+    //   1. El motor las generó (existen en propuestaEPVSA post-enriquecimiento).
+    //   2. Tienen señal explícita en sus campos (no se crean desde cero).
+    //   3. No estaban ya en _lineaIdsEntrada (si estaban, ya las incluye la base).
+    // LE2 nunca se añade salvo que ya estuviera en _lineaIdsEntrada.
     const _mapaFinal = {};
     propuestaEPVSA.forEach(p => { _mapaFinal[p.lineaId] = p; });
-    const _lineasAcotadas = _lineaIdsEntrada.map(id => _mapaFinal[id]).filter(Boolean);
+
+    // Base: líneas de entrada, preservadas siempre
+    const _lineasBase = _lineaIdsEntrada.map(id => _mapaFinal[id]).filter(Boolean);
+
+    // Señales que habilitan inclusión conservadora de LE3/LE4
+    const _SENALES_LE3 = [
+        'comunicacion', 'comunicación', 'alfabetizacion', 'alfabetización',
+        'devolucion', 'devolución', 'participacion', 'participación',
+        'ciudadana', 'redes', 'campaña', 'campana', 'difusión', 'difusion',
+        'canales', 'comunicación pública', 'soporte transversal',
+    ];
+    const _SENALES_LE4 = [
+        'estudios', 'escalas', 'ibse', 'evaluación', 'evaluacion',
+        'formación', 'formacion', 'capacitación', 'capacitacion',
+        'investigación', 'investigacion', 'aprendizaje', 'monitorización',
+        'monitorizacion', 'indicadores', 'trazabilidad', 'soporte transversal',
+        'habilitadora',
+    ];
+    // Detector de señal: concatena todos los campos textuales relevantes
+    function _tieneSenal(linea, senales) {
+        const _texto = [
+            linea.tipoLineaMotor, linea.instrumental, linea._soporteTransversal,
+            linea.justificacion, linea.fuentes, linea.titulo,
+            ...(Array.isArray(linea.temasCiudadanos) ? linea.temasCiudadanos : []),
+            Array.isArray(linea.activosAplicables)
+                ? linea.activosAplicables.map(a => a.texto || '').join(' ')
+                : '',
+            linea.oportunidadComunitaria,
+        ].filter(Boolean).join(' ').toLowerCase();
+        return senales.some(s => _texto.includes(s.toLowerCase()));
+    }
+
+    // Soporte: LE3/LE4 con señal, no presentes ya en entrada, generadas por el motor
+    const _lineasSoporte = [];
+    [3, 4].forEach(leId => {
+        if (_lineaIdsEntrada.includes(leId)) return; // ya en base
+        const _linea = _mapaFinal[leId];
+        if (!_linea) return;                          // motor no la generó
+        const _senales = leId === 3 ? _SENALES_LE3 : _SENALES_LE4;
+        if (_tieneSenal(_linea, _senales)) _lineasSoporte.push(_linea);
+    });
+
+    const _lineasAcotadas = [..._lineasBase, ..._lineasSoporte];
+
+    // Extender seleccionNormalizada con LE3/LE4 soporte, solo si traen índices seguros.
+    // Sin índices seguros, la línea va a lineasPropuestas pero no a seleccionNormalizada:
+    // queda visible en el perfil, pero no genera checkboxes en el plan.
+    const _seleccionExtendida = [...seleccionNormalizada];
+    _lineasSoporte.forEach(linea => {
+        if (_seleccionExtendida.some(s => s.lineaId === linea.lineaId)) return;
+        const _objIdx  = linea._objetivosIdx || (Array.isArray(linea.objetivos) ? linea.objetivos : []);
+        const _progIdx = linea._programasIdx || (Array.isArray(linea.programas) ? linea.programas : []);
+        if (!_objIdx.length && !_progIdx.length) return; // sin estructura segura: no añadir
+        _seleccionExtendida.push({
+            lineaId:      linea.lineaId,
+            relevancia:   linea.relevancia || 50,
+            justificacion: linea.justificacion || '',
+            objetivos: _objIdx.map(idx =>
+                (typeof idx === 'object' && idx !== null ? idx : { objetivoIdx: idx, indicadores: [] })
+            ),
+            programas: _progIdx.map(idx =>
+                (typeof idx === 'object' && idx !== null ? idx : { programaIdx: idx, actuaciones: [] })
+            ),
+        });
+    });
 
     // ── Acciones sugeridas ─────────────────────────────────────────────────
     const accionesSugeridas = _extraerAccionesSugeridas(_lineasAcotadas);
 
     return {
         lineasPropuestas:    _lineasAcotadas,
-        seleccionNormalizada,
+        seleccionNormalizada: _seleccionExtendida,
         lineasActivas,
         nLineas:             _lineasAcotadas.length,
         justificacionGlobal,
@@ -424,6 +493,7 @@ function _normalizarPropuesta(resultado, contextoIA, fuentesUsadas, aa) {
         accionesSugeridas,
         nAccionesSugeridas:  accionesSugeridas.length,
         lineaIdsEntrada:     _lineaIdsEntrada,
+        lineaIdsSoporte:     _lineasSoporte.map(l => l.lineaId), // LE3/LE4 añadidas conservadoramente
         analisisBase:        contextoIA.analisisPrevio || null,
         // Referencia al objeto salutogénico usado
         analisisAccionableResumen: aa ? {
