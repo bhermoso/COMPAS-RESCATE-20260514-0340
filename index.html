@@ -71813,6 +71813,10 @@ function eval_actualizarJornada() {
 
     var pctFin    = nTotal > 0 ? Math.round(nFin / nTotal * 100) : 0;
 
+    var diagnosticoVivo = window.COMPAS && typeof window.COMPAS.proyectarDiagnostico === 'function'
+      ? window.COMPAS.proyectarDiagnostico(agenda)
+      : null;
+
     var analisis  = window.analisisActual || null;
 
     var nFavInd   = analisis && analisis.datosAnalisis ? (analisis.datosAnalisis.indicadoresFavorables || []).length : 0;
@@ -71985,7 +71989,47 @@ function eval_actualizarJornada() {
 
 
 
-    // ── Bloque 2: Participación ciudadana ─────────────────────────────
+    // ── Bloque 2: Lectura comunitaria derivada ────────────────────────
+    if (diagnosticoVivo && diagnosticoVivo.resumen) {
+        var _diagResumen = diagnosticoVivo.resumen;
+        var _diagTotal = (_diagResumen.activos || 0) + (_diagResumen.entidades || 0) +
+            (_diagResumen.necesidades || 0) + (_diagResumen.barreras || 0) +
+            (_diagResumen.facilitadores || 0) + (_diagResumen.aprendizajes || 0) +
+            (_diagResumen.evidencias || 0);
+
+        if (_diagTotal > 0) {
+            function _diagLinea(label, bloque) {
+                if (!bloque || !bloque.total) return '';
+                var top = (bloque.frecuencia || []).slice(0, 3).map(function(item) {
+                    return item.nombre + (item.n > 1 ? ' (' + item.n + ')' : '');
+                }).join(' · ');
+                return '<div style="background:white;border:1px solid #c7d2fe;border-radius:7px;padding:0.45rem 0.6rem;">' +
+                    '<div style="font-size:0.7rem;font-weight:700;color:#3730a3;text-transform:uppercase;letter-spacing:.03em;">' + label + '</div>' +
+                    '<div style="font-size:0.78rem;color:#475569;margin-top:0.15rem;"><strong>' + bloque.total + '</strong>' +
+                    (top ? ' · ' + top : '') + '</div></div>';
+            }
+
+            var _diagHtml = [
+                _diagLinea('Activos detectados', diagnosticoVivo.activos),
+                _diagLinea('Entidades / red local', diagnosticoVivo.entidades),
+                _diagLinea('Necesidades', diagnosticoVivo.necesidades),
+                _diagLinea('Barreras', diagnosticoVivo.barreras),
+                _diagLinea('Facilitadores', diagnosticoVivo.facilitadores),
+                _diagLinea('Aprendizajes', diagnosticoVivo.aprendizajes),
+                _diagLinea('Evidencias', diagnosticoVivo.evidencias)
+            ].filter(Boolean).join('');
+
+            html += '<div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:0.85rem 1rem;">';
+            html += '<div style="font-weight:700;color:#3730a3;font-size:0.85rem;margin-bottom:0.35rem;">&#128506; Lectura comunitaria derivada de actuaciones</div>';
+            html += '<div style="font-size:0.72rem;color:#64748b;line-height:1.45;margin-bottom:0.6rem;">S&iacute;ntesis no persistente generada desde actuaciones registradas en agenda. No sustituye al diagn&oacute;stico epidemiol&oacute;gico oficial ni a la validaci&oacute;n comunitaria.</div>';
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.45rem;">' + _diagHtml + '</div>';
+            html += '</div>';
+        }
+    }
+
+
+
+    // ── Bloque 3: Participación ciudadana ─────────────────────────────
 
     var _resumenPartic = (typeof COMPAS_resumenPrioridades === 'function') ? COMPAS_resumenPrioridades() : [];
 
