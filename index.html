@@ -8,7 +8,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>COMPÁS - Diseño ciudadano de la salud</title>
+    <title>COMPÁS - Herramienta de apoyo técnico para la planificación local en salud</title>
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 
@@ -6189,7 +6189,7 @@
 
                     <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f1f5f9;">
 
-                        <button onclick="irAFase(5)" style="background: #ff6600; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">Ir a Fase 6 →</button>
+                        <button onclick="irAFase(5)" style="background: #ff6600; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">Ir a Implantación / Agenda anual →</button>
 
                     </div>
 
@@ -6971,6 +6971,170 @@
 
                         <textarea id="accion-indicadores-secundarios" rows="2" placeholder="Ej:&#10;% de cobertura&#10;Nº de sesiones realizadas"></textarea>
 
+                    </div>
+
+
+
+                    <!-- ── BLOQUE 1: Cobertura y participación ── -->
+
+                    <div style="margin:1rem 0 0.5rem;padding:0.6rem 0.9rem;background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:4px;">
+                        <strong style="font-size:0.85rem;color:#0369a1;">📊 Cobertura y participación</strong>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Participantes previstos</label>
+                            <input type="number" id="accion-participantes-previstos" min="0" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Participantes alcanzados</label>
+                            <input type="number" id="accion-participantes-alcanzados" min="0" placeholder="0">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Mujeres</label>
+                            <input type="number" id="accion-participantes-mujeres" min="0" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Hombres</label>
+                            <input type="number" id="accion-participantes-hombres" min="0" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Otro / No consta</label>
+                            <input type="number" id="accion-participantes-otro-nc" min="0" placeholder="0">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Grupos de edad participantes</label>
+                        <input type="text" id="accion-grupos-edad" placeholder="Ej: 0-14, 15-29, 30-44, 45-64, 65+">
+                    </div>
+
+                    <p style="font-size:0.78rem;color:#64748b;margin:0 0 0.75rem;font-style:italic;">El sexo es una variable estructural para observar diferencias y desigualdades. Si no se recoge, indicar 'no consta'.</p>
+
+
+
+                    <!-- ── BLOQUE 2: Implementación de la actuación ── -->
+
+                    <div style="margin:1rem 0 0.5rem;padding:0.6rem 0.9rem;background:#f0fdf4;border-left:3px solid #22c55e;border-radius:4px;">
+                        <strong style="font-size:0.85rem;color:#15803d;">⚙️ Implementación de la actuación</strong>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nº de sesiones</label>
+                            <input type="number" id="accion-numero-sesiones" min="0" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de actividad</label>
+                            <select id="accion-tipo-actividad">
+                                <option value="">— Seleccionar —</option>
+                                <option value="taller">Taller</option>
+                                <option value="jornada">Jornada</option>
+                                <option value="campana">Campaña</option>
+                                <option value="intervencion_comunitaria">Intervención comunitaria</option>
+                                <option value="formacion">Formación</option>
+                                <option value="coordinacion">Coordinación</option>
+                                <option value="comunicacion">Comunicación</option>
+                                <option value="otra">Otra</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Temática principal</label>
+                        <input type="text" id="accion-tematica-principal" placeholder="Ej: Alimentación, Actividad física, Salud mental...">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Temáticas secundarias <small style="font-weight:400;color:#94a3b8">(una por línea)</small></label>
+                        <textarea id="accion-tematicas-secundarias" rows="2" placeholder="Ej:&#10;Bienestar emocional&#10;Entornos saludables"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ámbito territorial</label>
+                        <input type="text" id="accion-ambito-territorial" placeholder="Municipio completo, barrio, centro educativo, zona básica…">
+                    </div>
+
+
+
+                    <!-- ── BLOQUE 3: Red local y colaboración ── -->
+
+                    <div style="margin:1rem 0 0.5rem;padding:0.6rem 0.9rem;background:#fdf4ff;border-left:3px solid #a855f7;border-radius:4px;">
+                        <strong style="font-size:0.85rem;color:#7e22ce;">🤝 Red local y colaboración</strong>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Entidades colaboradoras</label>
+                        <textarea id="accion-entidades-colaboradoras" rows="2" placeholder="Organizaciones e instituciones que han colaborado..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Asociaciones implicadas</label>
+                        <textarea id="accion-asociaciones-implicadas" rows="2" placeholder="Asociaciones vecinales, de pacientes, juveniles..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Activos comunitarios movilizados</label>
+                        <textarea id="accion-activos-comunitarios" rows="2" placeholder="Espacios, recursos, líderes comunitarios..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Profesionales (detalle)</label>
+                        <textarea id="accion-profesionales-detalle" rows="2" placeholder="Tipo y nº aproximado de profesionales implicados"></textarea>
+                    </div>
+
+
+
+                    <!-- ── BLOQUE 4: Evaluación y aprendizaje ── -->
+
+                    <div style="margin:1rem 0 0.5rem;padding:0.6rem 0.9rem;background:#fff7ed;border-left:3px solid #f97316;border-radius:4px;">
+                        <strong style="font-size:0.85rem;color:#c2410c;">📋 Evaluación y aprendizaje</strong>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Valor indicador alcanzado</label>
+                            <input type="text" id="accion-valor-indicador-alcanzado" placeholder="Ej: 127 participantes, 89%...">
+                        </div>
+                        <div class="form-group">
+                            <label>Fuente de verificación</label>
+                            <input type="text" id="accion-fuente-verificacion" placeholder="Lista asistencia, acta, memoria, encuesta, registro…">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Resultado observado</label>
+                        <textarea id="accion-resultado-observado" rows="2" placeholder="Qué se consiguió, cambios observados, cumplimiento de meta..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Barreras encontradas</label>
+                        <textarea id="accion-barreras" rows="2" placeholder="Dificultades, obstáculos, factores limitantes..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Facilitadores</label>
+                        <textarea id="accion-facilitadores" rows="2" placeholder="Factores que favorecieron la ejecución..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Aprendizajes</label>
+                        <textarea id="accion-aprendizajes" rows="2" placeholder="Lecciones aprendidas para el siguiente ciclo..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Decisión para el siguiente ciclo</label>
+                        <select id="accion-decision-siguiente-ciclo">
+                            <option value="no_decidido">— No decidido —</option>
+                            <option value="mantener">Mantener</option>
+                            <option value="modificar">Modificar</option>
+                            <option value="escalar">Escalar</option>
+                            <option value="suspender">Suspender</option>
+                            <option value="evaluar_mas">Evaluar más</option>
+                        </select>
                     </div>
 
 
@@ -15939,6 +16103,8 @@ function actualizarMunicipio() {
 
             window._acordeonCarga = {}; // limpiar preview sesión real al cambiar municipio
             window.__compas_carriles_borrados = {}; // reset guardias anti-rehidratacion al cambiar municipio
+            window.decisionPriorizacionActual = null; // [COMPÁS limpio] evita fuga de decisión entre municipios
+            window.datosFusionPriorizacion    = null; // [COMPÁS limpio] evita fuga de fusión entre municipios
 
         }
 
@@ -15973,18 +16139,12 @@ function actualizarMunicipio() {
             window.COMPAS.state.planAccionFirebase = null;
         }
 
-        // Cargar prioridades guardadas para el nuevo municipio (asíncrono, silencioso)
+        // [COMPÁS limpio] Prioridades no rehidratadas automáticamente desde Firebase al cambiar municipio.
+        // La priorización arranca vacía; solo se incorpora por acción explícita del usuario.
+        console.log('[COMPÁS limpio] COMPAS_cargarPrioridadesFirebase no llamada automáticamente para', key, '— priorización arranca limpia.');
 
-        if (typeof COMPAS_cargarPrioridadesFirebase === 'function') {
-
-            setTimeout(function() { COMPAS_cargarPrioridadesFirebase(key); }, 800);
-
-        }
-
-        // Cargar última sesión real desde Firebase para el acordeón (precede a resúmenes persistidos)
-        if (typeof _cargarUltimaSesionAcordeon === 'function') {
-            setTimeout(function() { _cargarUltimaSesionAcordeon(key); }, 400);
-        }
+        // [COMPÁS limpio] Última sesión de acordeón no rehidratada automáticamente desde Firebase.
+        console.log('[COMPÁS limpio] _cargarUltimaSesionAcordeon no llamada automáticamente para', key, '— acordeón arranca limpio.');
 
         // Hidratar población oficial SAM desde Firebase si existe mapeo INE (no destructivo)
         if (typeof compas_pob_cargarDesdeFirebase === 'function') {
@@ -16187,20 +16347,17 @@ function actualizarMunicipio() {
 
     
 
-    // Cargar datos de participación ciudadana si existen
-
-    cargarParticipacionCiudadana(key);
-
-    cargarDecisionPriorizacion(key);
-
+    // [COMPÁS limpio] Participación ciudadana y decisión de priorización no cargadas automáticamente.
+    // Se incorporan en sesión solo por acción explícita del usuario (importar CSV, confirmar decisión).
+    console.log('[COMPÁS limpio] cargarParticipacionCiudadana no llamada automáticamente para', key, '— datosParticipacionCiudadana arranca null.');
+    console.log('[COMPÁS limpio] cargarDecisionPriorizacion no llamada automáticamente para', key, '— decisionPriorizacionActual arranca null.');
 
 
-    // Cargar estudios complementarios persistidos en Firebase
 
-    _cargarEstudiosFirebase(key);
+    // [COMPÁS limpio] estudios complementarios no rehidratados automáticamente desde Firebase.
+    console.log('[COMPÁS limpio] estudios complementarios no rehidratados automáticamente desde Firebase.');
 
     // I2: Cargar datos IBSE agregados desde Firebase
-
     _cargarIBSEFirebase(key);
 
     cargarMiembros();
@@ -17225,7 +17382,7 @@ document.querySelectorAll('.fase').forEach(fase => {
 
         // Verificar si es Fase 6 (Implantación/Agenda) y si hay plan de acción
 
-        if (numFase === '6') {
+        if (numFase === '5') {
 
             if (!planLocalSalud.planAccion.completado) {
 
@@ -23342,8 +23499,10 @@ function generarDocumentoPlan() {
     
 
     // *** GUARDAR PARA EL COMPILADOR ***
-
-    guardarPlanAccionParaCompilador(html, seleccion);
+    // En modo carga restaurativa M11 no se reescribe el compilador desde DOM/checks.
+    if (!_m11CargarModoActivo) {
+        guardarPlanAccionParaCompilador(html, seleccion);
+    }
 
 
 
@@ -23699,21 +23858,16 @@ function cargarPlanGuardado() {
 
     if (banner) banner.style.display = 'none';
 
-    // Sincronizar agenda: si está vacía, importar automáticamente; si no, mostrar botón
+    // La agenda de ejecución no debe autogenerarse al cargar un plan guardado;
+    // solo debe incorporarse por acción expresa del usuario mediante el botón.
 
     if (typeof sincronizarPlanConAgenda === 'function') {
-
-        if (!accionesAgenda || accionesAgenda.length === 0) {
-
-            setTimeout(function() { sincronizarPlanConAgenda(true); }, 400);
-
-        }
-
         var _btnSync = document.getElementById('btn-sync-agenda');
-
         if (_btnSync) _btnSync.style.display = 'inline-flex';
-
     }
+
+    // Desbloquear pestaña Implantación/Agenda anual si el plan ya está completo
+    if (typeof verificarAccesoFase6 === 'function') verificarAccesoFase6();
 
 }
 
@@ -25147,6 +25301,50 @@ function normalizarActuacion(act) {
 
     if (act.observaciones  === undefined) act.observaciones  = '';
 
+    // ── Campos evaluativos: cobertura y participación ────────────────
+
+    if (act.participantesPrevistos    === undefined) act.participantesPrevistos    = '';
+    if (act.participantesAlcanzados   === undefined) act.participantesAlcanzados   = '';
+    if (act.participantesMujeres      === undefined) act.participantesMujeres      = '';
+    if (act.participantesHombres      === undefined) act.participantesHombres      = '';
+    if (act.participantesOtroNoConsta === undefined) act.participantesOtroNoConsta = '';
+    if (act.gruposEdad                === undefined) act.gruposEdad                = '';
+
+    // ── Campos evaluativos: implementación ───────────────────────────
+
+    if (act.numeroSesiones    === undefined) act.numeroSesiones    = '';
+    if (act.tipoActividad     === undefined) act.tipoActividad     = '';
+    if (act.tematicaPrincipal === undefined) act.tematicaPrincipal = '';
+    if (!Array.isArray(act.tematicasSecundarias)) act.tematicasSecundarias = [];
+    if (act.ambitoTerritorial === undefined) act.ambitoTerritorial = '';
+
+    // ── Campos evaluativos: red local ────────────────────────────────
+
+    if (act.entidadesColaboradoras === undefined) act.entidadesColaboradoras = '';
+    if (act.asociacionesImplicadas === undefined) act.asociacionesImplicadas = '';
+    if (act.activosComunitarios    === undefined) act.activosComunitarios    = '';
+    if (act.profesionalesDetalle   === undefined) act.profesionalesDetalle   = '';
+
+    // ── Contrato Diagnóstico Vivo v3: arrays estructurados paralelos ──
+    if (!Array.isArray(act.activosComunitariosDetalle)) act.activosComunitariosDetalle = [];
+    if (!Array.isArray(act.entidadesDetalle))           act.entidadesDetalle           = [];
+    if (!Array.isArray(act.necesidadesDetectadas))      act.necesidadesDetectadas      = [];
+    if (!Array.isArray(act.barrerasDetalle))            act.barrerasDetalle            = [];
+    if (!Array.isArray(act.facilitadoresDetalle))       act.facilitadoresDetalle       = [];
+    if (!Array.isArray(act.oportunidadesDetectadas))    act.oportunidadesDetectadas    = [];
+    if (!Array.isArray(act.aprendizajesDetalle))        act.aprendizajesDetalle        = [];
+    if (!Array.isArray(act.evidenciasDetalle))          act.evidenciasDetalle          = [];
+
+    // ── Campos evaluativos: evaluación y aprendizaje ─────────────────
+
+    if (act.valorIndicadorAlcanzado === undefined) act.valorIndicadorAlcanzado = '';
+    if (act.resultadoObservado      === undefined) act.resultadoObservado      = '';
+    if (act.fuenteVerificacion      === undefined) act.fuenteVerificacion      = '';
+    if (act.barreras                === undefined) act.barreras                = '';
+    if (act.facilitadores           === undefined) act.facilitadores           = '';
+    if (act.aprendizajes            === undefined) act.aprendizajes            = '';
+    if (act.decisionSiguienteCiclo  === undefined) act.decisionSiguienteCiclo  = 'no_decidido';
+
     return act;
 
 }
@@ -25831,9 +26029,25 @@ function renderAgendas() {
 
     
 
+    // Fuente de agenda: accionesAgenda si disponible; fallback a planLocalSalud.agenda (solo lectura, sin Firebase)
+    const fuenteAgenda = (
+        Array.isArray(accionesAgenda) && accionesAgenda.length > 0
+    )
+        ? accionesAgenda
+        : (
+            typeof planLocalSalud !== 'undefined' &&
+            planLocalSalud &&
+            planLocalSalud.agenda &&
+            planLocalSalud.agenda.completado === true &&
+            Array.isArray(planLocalSalud.agenda.actuaciones) &&
+            planLocalSalud.agenda.actuaciones.length > 0
+        )
+            ? planLocalSalud.agenda.actuaciones
+            : [];
+
     // Filtrar acciones
 
-    let accionesFiltradas = accionesAgenda.filter(a => {
+    let accionesFiltradas = fuenteAgenda.filter(a => {
 
         if (filtroAnio !== 'todos' && a.anio !== filtroAnio) return false;
 
@@ -26051,7 +26265,11 @@ function crearTarjetaAccion(accion) {
 
         ${accion.programa ? `<div class="accion-programa-ref">📂 ${accion.programa}</div>` : ''}
 
-        
+        ${accion.objetivoEPVSA ? `<div class="accion-programa-ref" title="${accion.objetivoEPVSA}">🎯 Objetivos EPVSA vinculados</div>` : ''}
+
+        ${(accion.indicadorPrincipal || accion.indicador) ? `<div class="accion-programa-ref" title="${accion.indicadorPrincipal || accion.indicador}">📊 Indicadores asociados</div>` : ''}
+
+
 
         ${accion.descripcion ? `<div class="accion-descripcion">${accion.descripcion}</div>` : ''}
 
@@ -26209,6 +26427,14 @@ function verDetalleAccion(id) {
                             <span class="detalle-value">${accion.objetivoEPVSA || '—'}</span>
 
                         </div>
+
+                        ${(accion.indicadorPrincipal || accion.indicador) ? `<div class="detalle-item" style="grid-column: 1 / -1;">
+
+                            <span class="detalle-label">Indicadores EPVSA asociados</span>
+
+                            <span class="detalle-value" style="word-break: break-word; white-space: normal;">${accion.indicadorPrincipal || accion.indicador}</span>
+
+                        </div>` : ''}
 
                         <div class="detalle-item">
 
@@ -26572,6 +26798,30 @@ function mostrarModalNuevaAccion() {
 
     document.getElementById('accion-indicadores-secundarios').value = '';
 
+    // ── Reset nuevos campos evaluativos ──
+    document.getElementById('accion-participantes-previstos').value = '';
+    document.getElementById('accion-participantes-alcanzados').value = '';
+    document.getElementById('accion-participantes-mujeres').value = '';
+    document.getElementById('accion-participantes-hombres').value = '';
+    document.getElementById('accion-participantes-otro-nc').value = '';
+    document.getElementById('accion-grupos-edad').value = '';
+    document.getElementById('accion-numero-sesiones').value = '';
+    document.getElementById('accion-tipo-actividad').value = '';
+    document.getElementById('accion-tematica-principal').value = '';
+    document.getElementById('accion-tematicas-secundarias').value = '';
+    document.getElementById('accion-ambito-territorial').value = '';
+    document.getElementById('accion-entidades-colaboradoras').value = '';
+    document.getElementById('accion-asociaciones-implicadas').value = '';
+    document.getElementById('accion-activos-comunitarios').value = '';
+    document.getElementById('accion-profesionales-detalle').value = '';
+    document.getElementById('accion-valor-indicador-alcanzado').value = '';
+    document.getElementById('accion-resultado-observado').value = '';
+    document.getElementById('accion-fuente-verificacion').value = '';
+    document.getElementById('accion-barreras').value = '';
+    document.getElementById('accion-facilitadores').value = '';
+    document.getElementById('accion-aprendizajes').value = '';
+    document.getElementById('accion-decision-siguiente-ciclo').value = 'no_decidido';
+
     document.getElementById('accion-fecha-prevista').value = '';
 
     document.getElementById('accion-fecha-real').value = '';
@@ -26677,6 +26927,36 @@ function guardarAccion() {
         estrategia: document.getElementById('accion-linea-epvsa').value,
 
         objetivo: document.getElementById('accion-objetivo-epvsa').value.trim(),
+
+        // ── Campos evaluativos: cobertura y participación ──
+        participantesPrevistos:    document.getElementById('accion-participantes-previstos').value.trim(),
+        participantesAlcanzados:   document.getElementById('accion-participantes-alcanzados').value.trim(),
+        participantesMujeres:      document.getElementById('accion-participantes-mujeres').value.trim(),
+        participantesHombres:      document.getElementById('accion-participantes-hombres').value.trim(),
+        participantesOtroNoConsta: document.getElementById('accion-participantes-otro-nc').value.trim(),
+        gruposEdad:                document.getElementById('accion-grupos-edad').value.trim(),
+
+        // ── Campos evaluativos: implementación ──
+        numeroSesiones:       document.getElementById('accion-numero-sesiones').value.trim(),
+        tipoActividad:        document.getElementById('accion-tipo-actividad').value,
+        tematicaPrincipal:    document.getElementById('accion-tematica-principal').value.trim(),
+        tematicasSecundarias: document.getElementById('accion-tematicas-secundarias').value.trim().split('\n').map(function(s){return s.trim();}).filter(Boolean),
+        ambitoTerritorial:    document.getElementById('accion-ambito-territorial').value.trim(),
+
+        // ── Campos evaluativos: red local ──
+        entidadesColaboradoras: document.getElementById('accion-entidades-colaboradoras').value.trim(),
+        asociacionesImplicadas: document.getElementById('accion-asociaciones-implicadas').value.trim(),
+        activosComunitarios:    document.getElementById('accion-activos-comunitarios').value.trim(),
+        profesionalesDetalle:   document.getElementById('accion-profesionales-detalle').value.trim(),
+
+        // ── Campos evaluativos: evaluación y aprendizaje ──
+        valorIndicadorAlcanzado:  document.getElementById('accion-valor-indicador-alcanzado').value.trim(),
+        resultadoObservado:       document.getElementById('accion-resultado-observado').value.trim(),
+        fuenteVerificacion:       document.getElementById('accion-fuente-verificacion').value.trim(),
+        barreras:                 document.getElementById('accion-barreras').value.trim(),
+        facilitadores:            document.getElementById('accion-facilitadores').value.trim(),
+        aprendizajes:             document.getElementById('accion-aprendizajes').value.trim(),
+        decisionSiguienteCiclo:   document.getElementById('accion-decision-siguiente-ciclo').value,
 
         // ── Campos de agenda ──
 
@@ -26787,6 +27067,36 @@ function editarAccion(id) {
 
     document.getElementById('accion-indicadores-secundarios').value = Array.isArray(accion.indicadoresSecundarios) ? accion.indicadoresSecundarios.join('\n') : (accion.indicadoresSecundarios || '');
 
+    // ── Rehidratar campos evaluativos: cobertura y participación ──
+    document.getElementById('accion-participantes-previstos').value    = accion.participantesPrevistos    || '';
+    document.getElementById('accion-participantes-alcanzados').value   = accion.participantesAlcanzados   || '';
+    document.getElementById('accion-participantes-mujeres').value      = accion.participantesMujeres      || '';
+    document.getElementById('accion-participantes-hombres').value      = accion.participantesHombres      || '';
+    document.getElementById('accion-participantes-otro-nc').value      = accion.participantesOtroNoConsta || '';
+    document.getElementById('accion-grupos-edad').value                = accion.gruposEdad                || '';
+
+    // ── Rehidratar campos evaluativos: implementación ──
+    document.getElementById('accion-numero-sesiones').value      = accion.numeroSesiones    || '';
+    document.getElementById('accion-tipo-actividad').value       = accion.tipoActividad     || '';
+    document.getElementById('accion-tematica-principal').value   = accion.tematicaPrincipal || '';
+    document.getElementById('accion-tematicas-secundarias').value = Array.isArray(accion.tematicasSecundarias) ? accion.tematicasSecundarias.join('\n') : (accion.tematicasSecundarias || '');
+    document.getElementById('accion-ambito-territorial').value   = accion.ambitoTerritorial || '';
+
+    // ── Rehidratar campos evaluativos: red local ──
+    document.getElementById('accion-entidades-colaboradoras').value = accion.entidadesColaboradoras || '';
+    document.getElementById('accion-asociaciones-implicadas').value = accion.asociacionesImplicadas || '';
+    document.getElementById('accion-activos-comunitarios').value    = accion.activosComunitarios    || '';
+    document.getElementById('accion-profesionales-detalle').value   = accion.profesionalesDetalle   || '';
+
+    // ── Rehidratar campos evaluativos: evaluación y aprendizaje ──
+    document.getElementById('accion-valor-indicador-alcanzado').value  = accion.valorIndicadorAlcanzado  || '';
+    document.getElementById('accion-resultado-observado').value        = accion.resultadoObservado        || '';
+    document.getElementById('accion-fuente-verificacion').value        = accion.fuenteVerificacion        || '';
+    document.getElementById('accion-barreras').value                   = accion.barreras                  || '';
+    document.getElementById('accion-facilitadores').value              = accion.facilitadores              || '';
+    document.getElementById('accion-aprendizajes').value               = accion.aprendizajes               || '';
+    document.getElementById('accion-decision-siguiente-ciclo').value   = accion.decisionSiguienteCiclo    || 'no_decidido';
+
     document.getElementById('accion-fecha-prevista').value = accion.fechaPrevista || '';
 
     document.getElementById('accion-fecha-real').value = accion.fechaReal || '';
@@ -26851,9 +27161,15 @@ function agenda_cambiarEstado(id, nuevoEstado) {
 
         const tieneIndicador = accion.indicador && accion.indicador.trim().length > 0;
 
-        const tieneObservacionesReal = accion.observaciones && accion.observaciones.trim().length > 0
+        const obsLineasReales = String(accion.observaciones || '')
+            .split(/\r?\n/)
+            .map(function(l) { return l.trim(); })
+            .filter(Boolean)
+            .filter(function(l) {
+                return !/^\[\d{1,2}\/\d{1,2}\/\d{4}\]\s*Estado actualizado a:\s*.+$/i.test(l);
+            });
 
-            && !accion.observaciones.trim().match(/^\[\d{1,2}\/\d{1,2}\/\d{4}\] Estado actualizado a:/);
+        const tieneObservacionesReal = obsLineasReales.length > 0;
 
         if (!tieneIndicador && !tieneObservacionesReal) {
 
@@ -27165,7 +27481,7 @@ document.querySelectorAll('.fase').forEach(f => {
 
     f.addEventListener('click', () => {
 
-        if (f.dataset.fase === '6') {
+        if (f.dataset.fase === '5') {
 
             setTimeout(function() {
                 var p = initAgendas();
@@ -27689,7 +28005,7 @@ function previsualizarPLS() {
 
                     <span class="pls-compas">COMPÁS</span>
 
-                    <span class="pls-subtitulo">Diseño ciudadano de la salud</span>
+                    <span class="pls-subtitulo">Herramienta de apoyo técnico para la planificación local en salud</span>
 
                 </div>
 
@@ -28135,6 +28451,11 @@ function abrirPreviewVentana() {
     
 
     const ventana = window.open('', '_blank', 'width=900,height=700');
+
+    if (!ventana) {
+        exportarHTMLPlan();
+        return;
+    }
 
     ventana.document.write(html);
 
@@ -28877,7 +29198,7 @@ function generarDocumentoCompletoPDF(nombre) {
 
             <div class="header-compas">COMPÁS</div>
 
-            <div class="header-subtitulo">Diseño ciudadano de la salud</div>
+            <div class="header-subtitulo">Herramienta de apoyo técnico para la planificación local en salud</div>
 
         </div>
 
@@ -29706,7 +30027,7 @@ function generarHTMLPerfilSaludLocal(nombre, contenido) {
 
             <div class="header-compas">COMPÁS</div>
 
-            <div class="header-subtitulo">Diseño ciudadano de la salud</div>
+            <div class="header-subtitulo">Herramienta de apoyo técnico para la planificación local en salud</div>
 
         </div>
 
@@ -31088,7 +31409,7 @@ function generarCabeceraInstitucional(tipoDocumento, nombreMunicipio, opciones =
 
     html += '            <span style="font-size: 3.5rem; font-weight: 700; letter-spacing: 18px; text-transform: uppercase; color: #2c3e50; display: block; margin-bottom: 0.5rem;">COMPÁS</span>\n';
 
-    html += '            <span style="font-size: 1rem; letter-spacing: 12px; text-transform: uppercase; font-weight: 300; color: #666; display: block;">Diseño ciudadano de la salud</span>\n';
+    html += '            <span style="font-size: 1rem; letter-spacing: 12px; text-transform: uppercase; font-weight: 300; color: #666; display: block;">Herramienta de apoyo técnico para la planificación local en salud</span>\n';
 
     html += '        </div>\n';
 
@@ -33220,7 +33541,7 @@ function crearDocumentoExportacion(titulo, contenido, estilosExtra = '') {
 
     <div class="footer-doc">
 
-        <p>COMPÁS - Diseño ciudadano de la salud | Distrito sanitario Granada-Metropolitano</p>
+        <p>COMPÁS - Herramienta de apoyo técnico para la planificación local en salud | Distrito sanitario Granada-Metropolitano</p>
 
     </div>
 
@@ -36271,7 +36592,7 @@ function generarFlyerPapel() {
 
         <p>Su opinión es fundamental para definir las prioridades del Plan Local de Salud</p>
 
-        <p style="margin-top: 10px;">Documento generado con COMPÁS - Diseño ciudadano de la salud</p>
+        <p style="margin-top: 10px;">Documento generado con COMPÁS - Herramienta de apoyo técnico para la planificación local en salud</p>
 
     </div>
 
@@ -47897,9 +48218,8 @@ function cargarEstudiosComplementarios(input) {
 
 
 
-        // Persistir en Firebase
-
-        _guardarEstudiosFirebase();
+        // [COMPÁS limpio] estudios/escalas actualizados en memoria; no persistidos automáticamente.
+        console.log('[COMPÁS limpio] estudios/escalas actualizados en memoria; no persistidos automáticamente.');
 
 
 
@@ -48148,7 +48468,8 @@ function cargarEstudioTextoLibre(textarea) {
 
     else window.estudiosComplementarios.push(entrada);
 
-    _guardarEstudiosFirebase();
+    // [COMPÁS limpio] estudios/escalas actualizados en memoria; no persistidos automáticamente.
+    console.log('[COMPÁS limpio] estudios/escalas actualizados en memoria; no persistidos automáticamente.');
 
     const el = document.getElementById('estado-estudios');
 
@@ -48178,7 +48499,8 @@ function cargarEstudioTextoLibreSec03(textarea) {
 
     else window.estudiosComplementarios.push(entrada);
 
-    _guardarEstudiosFirebase();
+    // [COMPÁS limpio] estudios/escalas actualizados en memoria; no persistidos automáticamente.
+    console.log('[COMPÁS limpio] estudios/escalas actualizados en memoria; no persistidos automáticamente.');
 
     var estadoEl = document.getElementById('estado-estudios-sec03');
 
@@ -49003,7 +49325,8 @@ function guardarEscalaDiagnostica(){
     var idx = arr.findIndex(function(e){ return e.nombre_escala === entrada.nombre_escala; });
     if (idx >= 0) arr[idx] = entrada; else arr.push(entrada);
     _compasEscalasSet(arr);
-    _guardarEscalasFirebase();
+    // [COMPÁS limpio] estudios/escalas actualizados en memoria; no persistidos automáticamente.
+    console.log('[COMPÁS limpio] estudios/escalas actualizados en memoria; no persistidos automáticamente.');
     renderizarListadoEscalasDiagnosticas();
     renderizarSeccionEstudios();
 }
@@ -49011,7 +49334,8 @@ function eliminarEscalaDiagnostica(idx){
     var arr = _compasEscalasGet();
     arr.splice(idx,1);
     _compasEscalasSet(arr);
-    _guardarEscalasFirebase();
+    // [COMPÁS limpio] estudios/escalas actualizados en memoria; no persistidos automáticamente.
+    console.log('[COMPÁS limpio] estudios/escalas actualizados en memoria; no persistidos automáticamente.');
     renderizarListadoEscalasDiagnosticas();
     renderizarSeccionEstudios();
 }
@@ -55720,20 +56044,10 @@ function poblarPerfilNuevo(datos, nombre) {
 
 
 
-    // ── Cargar análisis IA guardado en Firebase ───────────────
-
+    // [COMPÁS limpio] analisisIA guardado detectado, no rehidratado automáticamente.
+    // El análisis IA se genera en memoria bajo demanda; no se restaura desde Firebase al cambiar de municipio.
     if (datos.analisisIA) {
-
-        const iaInicial = document.getElementById('ia-estado-inicial');
-
-        if (iaInicial) iaInicial.style.display = 'none';
-
-        renderizarResultadoIA(datos.analisisIA);
-
-        // Actualizar badge del compilador ahora que analisisIA está disponible en datosMunicipioActual
-
-        if (typeof actualizarEstadoCompilador === 'function') actualizarEstadoCompilador();
-
+        console.log('[COMPÁS limpio] analisisIA guardado detectado en Firebase para', getMunicipioActual(), '— no rehidratado automáticamente.');
     }
 
 
@@ -55815,6 +56129,10 @@ function _rehidratarAgendaCompilador() {
                   return typeof normalizarActuacion === 'function' ? normalizarActuacion(a) : a;
               });
               if (typeof guardarAgendaParaCompilador === 'function') guardarAgendaParaCompilador(acts);
+              if (typeof accionesAgenda !== 'undefined') {
+                  accionesAgenda = acts;
+                  accionesAgenda._municipio = mun;
+              }
           }
       });
 }
@@ -56558,29 +56876,8 @@ function generarPropuestaIA() {
 
                 var municipioId = getMunicipioActual();
 
-                if (municipioId && typeof db !== 'undefined') {
-
-                    db.ref('estrategias/' + estrategiaActual + '/municipios/' + municipioId + '/propuestaIA').set(
-
-                        Object.assign({}, resultado, {
-
-                            fechaGeneracion:  new Date().toISOString(),
-
-                            fuentes:          fuentesUsadas,
-
-                            _origenCalculo:   'motor_modular',
-
-                            _trazabilidadId:  salidaMotor.trazabilidadId,
-
-                            _gradoConfianza:  salidaMotor.gradoConfianza,
-
-                        })
-
-                    );
-
-                }
-
-
+                // [COMPÁS limpio] propuesta IA generada en memoria (motor modular); no persistida automáticamente en Firebase.
+                console.log('[COMPÁS limpio] propuestaIA (motor_modular) generada en memoria para', municipioId, '— no persistida automáticamente.');
 
                 renderizarPropuestaIA(resultado, municipio, fuentesUsadas);
 
@@ -56649,15 +56946,8 @@ function generarPropuestaIA() {
 
                 var municipioId = getMunicipioActual();
 
-                if (municipioId && typeof db !== 'undefined') {
-
-                    db.ref('estrategias/' + estrategiaActual + '/municipios/' + municipioId + '/propuestaIA').set(
-
-                        Object.assign({}, resultado, { fechaGeneracion: new Date().toISOString(), fuentes: fuentesUsadas })
-
-                    );
-
-                }
+                // [COMPÁS limpio] propuesta IA generada en memoria (motor heredado); no persistida automáticamente en Firebase.
+                console.log('[COMPÁS limpio] propuestaIA (motor_heredado) generada en memoria para', municipioId, '— no persistida automáticamente.');
 
                 renderizarPropuestaIA(resultado, municipio, fuentesUsadas);
 
@@ -63220,20 +63510,13 @@ function ibse_cargarCSV(input) {
 
             }
 
-            // Guardar respuestas individuales
+            // [COMPÁS limpio] CSV IBSE cargado solo en sesión; no persistido automáticamente.
+            console.log('[COMPÁS limpio] CSV IBSE cargado solo en sesión; no persistido automáticamente. N=' + validos.length);
 
-            var refResp = db.ref('ibse_respuestas/' + municipio);
-            var payloadResp = {};
-            validos.forEach(function(v) {
-                payloadResp[refResp.push().key] = v;
-            });
-
-            refResp.remove().then(function() {
-                return refResp.set(payloadResp);
-            }).catch(function(err) {
-                console.error('[ibse_cargarCSV] Error guardando respuestas individuales:', err);
-                alert('Error guardando respuestas IBSE en Firebase.');
-            });
+            // Poblar variables de sesión para renders v3 y SAM
+            window._ibse_v2_rawData       = validos;
+            window._compasLocalIBSE_datos = validos;
+            window._ibse_v2_respuestas    = validos;
 
             // Calcular agregado
 
@@ -65801,25 +66084,23 @@ function ibse_enviarRespuesta() {
         if (_d.sexo && _d.edad) { sam_registrarVoto(_d.sexo, _d.edad, voto.id); if (typeof sam_actualizarConSeguida === 'function') sam_actualizarConSeguida(null); }
     }
 
-    if (typeof db !== 'undefined') {
+    // [COMPÁS limpio] respuesta IBSE registrada solo en sesión; no persistida automáticamente.
+    console.log('[COMPÁS limpio] respuesta IBSE registrada solo en sesión; no persistida automáticamente.');
 
-        db.ref('ibse_respuestas/' + municipio).push(datos).then(function() {
+    // Acumular en arrays de sesión
+    if (!Array.isArray(window._ibse_v2_rawData))       window._ibse_v2_rawData       = [];
+    if (!Array.isArray(window._compasLocalIBSE_datos)) window._compasLocalIBSE_datos = [];
+    if (!Array.isArray(window._ibse_v2_respuestas))    window._ibse_v2_respuestas    = [];
+    window._ibse_v2_rawData.push(datos);
+    window._compasLocalIBSE_datos.push(datos);
+    window._ibse_v2_respuestas.push(datos);
 
-            ibse_recalcularAgregado(municipio);
-
-            var exito = document.getElementById('ibse-exito');
-
-            if (exito) exito.style.display = 'block';
-
-            document.querySelectorAll('#modal-ibse-cuestionario input[type="radio"]').forEach(function(r) { r.checked = false; });
-
-            document.getElementById('ibse-edad').value = '';
-
-            document.getElementById('ibse-sexo').value = '';
-
-        });
-
-    }
+    // Feedback visual y reset del formulario
+    var exito = document.getElementById('ibse-exito');
+    if (exito) exito.style.display = 'block';
+    document.querySelectorAll('#modal-ibse-cuestionario input[type="radio"]').forEach(function(r) { r.checked = false; });
+    document.getElementById('ibse-edad').value = '';
+    document.getElementById('ibse-sexo').value = '';
 
 }
 
@@ -68074,24 +68355,14 @@ function duke_enviarRespuesta() {
     }
     // Interpretación
     datos.interpretacion = compas_interpretarEscala('duke', calc, null);
-    // Persistencia individual en Firebase
-    if (typeof db !== 'undefined') {
-        db.ref('escalas_respuestas/duke/' + mun).push(datos).then(function() {
-            console.info('[Duke-UNC] Respuesta guardada para ' + mun + ' (total=' + (calc ? calc.duke_total : '?') + ')');
-            _duke_sincronizarResumen(mun);
-            var exito = document.getElementById('duke-exito');
-            if (exito) exito.style.display = 'block';
-            // Limpiar formulario
-            document.querySelectorAll('#modal-duke-cuestionario input[type="radio"]').forEach(function(r) { r.checked = false; });
-            document.getElementById('duke-edad').value = '';
-            document.getElementById('duke-sexo').value = '';
-        }).catch(function(e) {
-            console.warn('[Duke-UNC] Error Firebase:', e);
-            if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Error al guardar. Intenta de nuevo.'; }
-        });
-    } else {
-        console.warn('[Duke-UNC] Firebase no disponible. Respuesta no persistida.');
-    }
+    // [COMPÁS limpio] respuesta Duke-UNC registrada solo en sesión; no persistida automáticamente.
+    console.log('[COMPÁS limpio] respuesta Duke-UNC registrada solo en sesión; no persistida automáticamente.');
+    var exito = document.getElementById('duke-exito');
+    if (exito) exito.style.display = 'block';
+    // Limpiar formulario
+    document.querySelectorAll('#modal-duke-cuestionario input[type="radio"]').forEach(function(r) { r.checked = false; });
+    document.getElementById('duke-edad').value = '';
+    document.getElementById('duke-sexo').value = '';
 }
 
 // ── Duke: patrón muestral (población → N → simulador) ─────────────────
@@ -68165,9 +68436,6 @@ function duke_simularCasos(callback) {
         return resp;
     }
 
-    if (typeof db === 'undefined') { alert('Firebase no disponible.'); return; }
-
-    var ref = db.ref('escalas_respuestas/duke/' + mun);
     var batch = [];
     var ts = new Date().toISOString();
 
@@ -68190,17 +68458,9 @@ function duke_simularCasos(callback) {
         batch.push(datos);
     });
 
-    // Escribir en Firebase (update aditivo, no destructivo — preserva respuestas reales)
-    var batchObj = {};
-    var simTs = Date.now().toString(36);
-    batch.forEach(function(d, i) { batchObj['sim_' + simTs + '_' + i] = d; });
-    ref.update(batchObj).then(function() {
-        console.info('[Duke] ' + batch.length + ' respuestas simuladas guardadas para ' + mun);
-        _duke_sincronizarResumen(mun);
-        if (typeof callback === 'function') callback(batch.length);
-    }).catch(function(e) {
-        console.warn('[Duke] Error al guardar simulación:', e);
-    });
+    // [COMPÁS limpio] simulación Duke generada solo en sesión; no persistida automáticamente.
+    console.log('[COMPÁS limpio] simulación Duke generada solo en sesión; no persistida automáticamente. N=' + batch.length);
+    if (typeof callback === 'function') callback(batch.length);
 }
 
 function duke_resetSimulacion(mun) {
@@ -68876,19 +69136,13 @@ function cage_enviarRespuesta() {
         datos.riesgo = calc.riesgo;
     }
     datos.interpretacion = compas_interpretarEscala('cage', calc, null);
-    if (typeof db !== 'undefined') {
-        db.ref('escalas_respuestas/cage/' + mun).push(datos).then(function() {
-            console.info('[CAGE] Respuesta guardada para ' + mun + ' (positivos=' + (calc ? calc.cage_positivos : '?') + ')');
-            var exito = document.getElementById('cage-exito');
-            if (exito) exito.style.display = 'block';
-            document.querySelectorAll('#modal-cage-cuestionario input[type="radio"]').forEach(function(r) { r.checked = false; });
-            document.getElementById('cage-edad').value = '';
-            document.getElementById('cage-sexo').value = '';
-        }).catch(function(e) {
-            console.warn('[CAGE] Error Firebase:', e);
-            if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Error al guardar.'; }
-        });
-    }
+    // [COMPÁS limpio] respuesta CAGE registrada solo en sesión; no persistida automáticamente.
+    console.log('[COMPÁS limpio] respuesta CAGE registrada solo en sesión; no persistida automáticamente.');
+    var exito = document.getElementById('cage-exito');
+    if (exito) exito.style.display = 'block';
+    document.querySelectorAll('#modal-cage-cuestionario input[type="radio"]').forEach(function(r) { r.checked = false; });
+    document.getElementById('cage-edad').value = '';
+    document.getElementById('cage-sexo').value = '';
 }
 
 // ── Agregación CAGE ───────────────────────────────────────────────────────
@@ -69137,19 +69391,13 @@ function predimed_enviarRespuesta() {
         datos.nivel = calc.nivel;
     }
     datos.interpretacion = compas_interpretarEscala('predimed', calc, null);
-    if (typeof db !== 'undefined') {
-        db.ref('escalas_respuestas/predimed/' + mun).push(datos).then(function() {
-            console.info('[PREDIMED] Respuesta guardada para ' + mun + ' (total=' + (calc ? calc.pred_total : '?') + ')');
-            var exito = document.getElementById('predimed-exito');
-            if (exito) exito.style.display = 'block';
-            document.querySelectorAll('#modal-predimed-cuestionario input[type="radio"]').forEach(function(r) { r.checked = false; });
-            document.getElementById('predimed-edad').value = '';
-            document.getElementById('predimed-sexo').value = '';
-        }).catch(function(e) {
-            console.warn('[PREDIMED] Error Firebase:', e);
-            if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Error al guardar.'; }
-        });
-    }
+    // [COMPÁS limpio] respuesta PREDIMED registrada solo en sesión; no persistida automáticamente.
+    console.log('[COMPÁS limpio] respuesta PREDIMED registrada solo en sesión; no persistida automáticamente.');
+    var exito = document.getElementById('predimed-exito');
+    if (exito) exito.style.display = 'block';
+    document.querySelectorAll('#modal-predimed-cuestionario input[type="radio"]').forEach(function(r) { r.checked = false; });
+    document.getElementById('predimed-edad').value = '';
+    document.getElementById('predimed-sexo').value = '';
 }
 
 // ── Agregación PREDIMED ───────────────────────────────────────────────────
@@ -69518,18 +69766,13 @@ function sf12_enviarRespuesta() {
     datos.municipio = mun;
     var calc = compas_calcularSF12_normativo(datos);
     if (calc) { datos.pcs = calc.pcs; datos.mcs = calc.mcs; datos.normativo = true; }
-    if (typeof db !== 'undefined') {
-        db.ref('escalas_respuestas/sf12/' + mun).push(datos).then(function() {
-            console.info('[SF-12] Respuesta normativa guardada: PCS=' + (calc?calc.pcs:'?') + ' MCS=' + (calc?calc.mcs:'?'));
-            var exito = document.getElementById('sf12-exito');
-            if (exito) exito.style.display = 'block';
-            document.querySelectorAll('#modal-sf12-cuestionario input[type="radio"]').forEach(function(r) { r.checked = false; });
-            document.getElementById('sf12-edad').value = '';
-            document.getElementById('sf12-sexo').value = '';
-        }).catch(function(e) {
-            console.warn('[SF-12] Error Firebase:', e);
-        });
-    }
+    // [COMPÁS limpio] respuesta SF-12 registrada solo en sesión; no persistida automáticamente.
+    console.log('[COMPÁS limpio] respuesta SF-12 registrada solo en sesión; no persistida automáticamente.');
+    var exito = document.getElementById('sf12-exito');
+    if (exito) exito.style.display = 'block';
+    document.querySelectorAll('#modal-sf12-cuestionario input[type="radio"]').forEach(function(r) { r.checked = false; });
+    document.getElementById('sf12-edad').value = '';
+    document.getElementById('sf12-sexo').value = '';
 }
 
 // ── SF-12: simulador + info muestral ─────────────────────────────────────────
@@ -69580,10 +69823,6 @@ function sf12_simularCasos(callback) {
         return resp;
     }
 
-    if (typeof db === 'undefined') { alert('Firebase no disponible.'); return; }
-    var ref = db.ref('escalas_respuestas/sf12/' + mun);
-    var batchObj = {};
-    var simTs = Date.now().toString(36);
     var ts = new Date().toISOString();
     casos.forEach(function(c, i) {
         var resp = _simResp();
@@ -69593,12 +69832,10 @@ function sf12_simularCasos(callback) {
         datos.sexo = c.sexo; datos.sexo_num = c.sexo_num; datos.edad = c.edad;
         datos.timestamp = ts; datos.municipio = mun; datos.fuente = 'simulacion';
         if (calc) { datos.pcs = calc.pcs; datos.mcs = calc.mcs; datos.normativo = true; }
-        batchObj['sim_' + simTs + '_' + i] = datos;
     });
-    ref.update(batchObj).then(function() {
-        console.info('[SF-12] ' + casos.length + ' respuestas simuladas guardadas para ' + mun);
-        if (typeof callback === 'function') callback(casos.length);
-    }).catch(function(e) { console.warn('[SF-12] Error simulación:', e); });
+    // [COMPÁS limpio] simulación SF-12 generada solo en sesión; no persistida automáticamente.
+    console.log('[COMPÁS limpio] simulación SF-12 generada solo en sesión; no persistida automáticamente. N=' + casos.length);
+    if (typeof callback === 'function') callback(casos.length);
 }
 
 function _sf12_sincronizarResumen(mun) {
@@ -69687,13 +69924,10 @@ function sf12_cargarCSV(input) {
                 validos.push(datos);
             });
             if (!validos.length) { alert('No se encontraron filas válidas con los 12 ítems SF-12.'); return; }
-            var ref = db.ref('escalas_respuestas/sf12/' + mun);
-            var batch = {};
-            validos.forEach(function(d, i) { batch['csv_' + Date.now().toString(36) + '_' + i] = d; });
-            ref.update(batch).then(function() {
-                alert(validos.length + ' respuestas SF-12 cargadas' + (excluidos ? ' (' + excluidos + ' excluidas por datos incompletos)' : '') + '.');
-                if (typeof renderizarSeccionEstudios === 'function') renderizarSeccionEstudios();
-            }).catch(function(e) { alert('Error al guardar: ' + e.message); });
+            // [COMPÁS limpio] CSV SF-12 cargado solo en sesión; no persistido automáticamente.
+            console.log('[COMPÁS limpio] CSV SF-12 cargado solo en sesión; no persistido automáticamente. N=' + validos.length);
+            alert(validos.length + ' respuestas SF-12 cargadas' + (excluidos ? ' (' + excluidos + ' excluidas por datos incompletos)' : '') + '.');
+            if (typeof renderizarSeccionEstudios === 'function') renderizarSeccionEstudios();
         }
     });
 }
@@ -70029,13 +70263,10 @@ function cage_cargarCSV(input) {
                 validos.push(datos);
             });
             if (!validos.length) { alert('No se encontraron filas válidas con los 4 ítems CAGE (valores 0/1).'); return; }
-            var ref = db.ref('escalas_respuestas/cage/' + mun);
-            var batch = {};
-            validos.forEach(function(d, i) { batch['csv_' + Date.now().toString(36) + '_' + i] = d; });
-            ref.update(batch).then(function() {
-                alert(validos.length + ' respuestas CAGE cargadas' + (excluidos ? ' (' + excluidos + ' excluidas por datos incompletos)' : '') + '.');
-                if (typeof renderizarSeccionEstudios === 'function') renderizarSeccionEstudios();
-            }).catch(function(e) { alert('Error al guardar: ' + e.message); });
+            // [COMPÁS limpio] CSV CAGE cargado solo en sesión; no persistido automáticamente.
+            console.log('[COMPÁS limpio] CSV CAGE cargado solo en sesión; no persistido automáticamente. N=' + validos.length);
+            alert(validos.length + ' respuestas CAGE cargadas' + (excluidos ? ' (' + excluidos + ' excluidas por datos incompletos)' : '') + '.');
+            if (typeof renderizarSeccionEstudios === 'function') renderizarSeccionEstudios();
         }
     });
 }
@@ -70165,13 +70396,10 @@ function predimed_cargarCSV(input) {
                 validos.push(datos);
             });
             if (!validos.length) { alert('No se encontraron filas válidas con los 14 ítems PREDIMED (valores 0/1).'); return; }
-            var ref = db.ref('escalas_respuestas/predimed/' + mun);
-            var batch = {};
-            validos.forEach(function(d, i) { batch['csv_' + Date.now().toString(36) + '_' + i] = d; });
-            ref.update(batch).then(function() {
-                alert(validos.length + ' respuestas PREDIMED cargadas' + (excluidos ? ' (' + excluidos + ' excluidas)' : '') + '.');
-                if (typeof renderizarSeccionEstudios === 'function') renderizarSeccionEstudios();
-            }).catch(function(e) { alert('Error al guardar: ' + e.message); });
+            // [COMPÁS limpio] CSV PREDIMED cargado solo en sesión; no persistido automáticamente.
+            console.log('[COMPÁS limpio] CSV PREDIMED cargado solo en sesión; no persistido automáticamente. N=' + validos.length);
+            alert(validos.length + ' respuestas PREDIMED cargadas' + (excluidos ? ' (' + excluidos + ' excluidas)' : '') + '.');
+            if (typeof renderizarSeccionEstudios === 'function') renderizarSeccionEstudios();
         }
     });
 }
@@ -71836,6 +72064,48 @@ function sincronizarPlanConAgenda(silencioso) {
 
 
 
+        // Construir trazabilidad metodológica: objetivos e indicadores seleccionados en esta línea
+
+        var _objSelIdx = Array.isArray(lineaSel.objetivos) ? lineaSel.objetivos : [];
+
+        var _objPartes = [];
+
+        var _indPartes = [];
+
+        _objSelIdx.forEach(function(oi) {
+
+            var _idxObj = (typeof oi === 'number') ? oi : (oi && oi.idx != null ? oi.idx : null);
+
+            var obj = (_idxObj != null && linea.objetivos) ? linea.objetivos[_idxObj] : null;
+
+            if (!obj) return;
+
+            var _cod = obj.codigo || obj.id || ('OE ' + ((_idxObj || 0) + 1));
+
+            var _txt = obj.texto || obj.descripcion || obj.nombre || '';
+
+            _objPartes.push(_txt ? (_cod + ' - ' + _txt) : _cod);
+
+            // Indicadores del objetivo (soporta obj.indicadores o obj.indicador como string)
+
+            var _inds = Array.isArray(obj.indicadores) ? obj.indicadores : (obj.indicador ? [obj.indicador] : []);
+
+            _inds.forEach(function(ind) {
+
+                var _i = (typeof ind === 'string') ? ind : (ind.texto || ind.descripcion || ind.nombre || '');
+
+                if (_i) _indPartes.push(_i);
+
+            });
+
+        });
+
+        var objetivosSeleccionadosTexto   = _objPartes.join('; ');
+
+        var indicadoresSeleccionadosTexto = _indPartes.join(' | ');
+
+
+
         (lineaSel.programas || []).forEach(function(progSel) {
 
             var prog = linea.programas ? linea.programas[progSel.idx] : null;
@@ -71876,7 +72146,11 @@ function sincronizarPlanConAgenda(silencioso) {
 
                         programaCodigo: prog.codigo, entorno: entorno,
 
-                        codigo: act.codigo, nombre: act.nombre
+                        codigo: act.codigo, nombre: act.nombre,
+
+                        objetivosSeleccionadosTexto:   objetivosSeleccionadosTexto,
+
+                        indicadoresSeleccionadosTexto: indicadoresSeleccionadosTexto
 
                     });
 
@@ -71896,7 +72170,11 @@ function sincronizarPlanConAgenda(silencioso) {
 
                         programaCodigo: prog.codigo, entorno: entorno,
 
-                        codigo: act.codigo, nombre: act.nombre
+                        codigo: act.codigo, nombre: act.nombre,
+
+                        objetivosSeleccionadosTexto:   objetivosSeleccionadosTexto,
+
+                        indicadoresSeleccionadosTexto: indicadoresSeleccionadosTexto
 
                     });
 
@@ -71912,7 +72190,11 @@ function sincronizarPlanConAgenda(silencioso) {
 
                     programaCodigo: prog.codigo, entorno: entorno,
 
-                    codigo: prog.codigo, nombre: prog.nombre || prog.codigo
+                    codigo: prog.codigo, nombre: prog.nombre || prog.codigo,
+
+                    objetivosSeleccionadosTexto:   objetivosSeleccionadosTexto,
+
+                    indicadoresSeleccionadosTexto: indicadoresSeleccionadosTexto
 
                 });
 
@@ -71976,7 +72258,7 @@ function sincronizarPlanConAgenda(silencioso) {
 
             lineaEpvsa:            act.lineaCodigo || '',
 
-            objetivoEPVSA:         '',
+            objetivoEPVSA:         act.objetivosSeleccionadosTexto   || '',
 
             poblacion:             '',
 
@@ -71988,7 +72270,7 @@ function sincronizarPlanConAgenda(silencioso) {
 
             profesionales:         '',
 
-            indicador:             '',
+            indicador:             act.indicadoresSeleccionadosTexto || '',
 
             meta:                  '',
 
@@ -71998,7 +72280,7 @@ function sincronizarPlanConAgenda(silencioso) {
 
             recursos:              '',
 
-            evidencia:             'Plan local de salud · EPVSA 2024-2030 · ' + act.codigo,
+            evidencia:             'Plan local de salud · EPVSA 2024-2030 · ' + act.codigo + (act.objetivosSeleccionadosTexto ? ' · ' + act.objetivosSeleccionadosTexto : ''),
 
             // ── Campos estructurales de trazabilidad (por completar en Fase 5) ──
 
@@ -72012,13 +72294,13 @@ function sincronizarPlanConAgenda(silencioso) {
 
             contacto:              '',
 
-            indicadorPrincipal:    '',
+            indicadorPrincipal:    act.indicadoresSeleccionadosTexto || '',
 
             indicadoresSecundarios:[],
 
             estrategia:            act.lineaCodigo || '',
 
-            objetivo:              '',
+            objetivo:              act.objetivosSeleccionadosTexto   || '',
 
             // ── Campos de agenda y seguimiento (por completar en Fase 5) ──
 
@@ -72040,7 +72322,10 @@ function sincronizarPlanConAgenda(silencioso) {
 
     if (añadidas > 0) {
 
-        if (typeof guardarAgendasFirebase === 'function') guardarAgendasFirebase();
+        // [COMPÁS limpio] No persistir automáticamente en Firebase al incorporar desde plan.
+        // El guardado definitivo de agenda depende de acción explícita del usuario (guardarAgendasFirebase).
+        if (typeof guardarAgendaParaCompilador === 'function') guardarAgendaParaCompilador(accionesAgenda);
+        if (typeof eval_actualizarFase6 === 'function') eval_actualizarFase6();
 
         if (typeof renderAgendas === 'function') renderAgendas();
 
