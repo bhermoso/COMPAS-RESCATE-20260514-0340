@@ -25655,11 +25655,11 @@ function actuacion_proyectarDiagnostico(actuaciones) {
         _acumular(out.activos, _aLista(a.activosComunitariosDetalle).concat(_aLista(a.activosComunitarios)), frecuencias.activos, a);
         _acumular(out.entidades, _aLista(a.entidadesDetalle).concat(_aLista(a.entidadesColaboradoras)), frecuencias.entidades, a);
         _acumular(out.necesidades, _aLista(a.necesidadesDetectadas), frecuencias.necesidades, a);
-        _acumular(out.barreras, _aLista(a.barrerasDetalle), frecuencias.barreras, a);
-        _acumular(out.facilitadores, _aLista(a.facilitadoresDetalle), frecuencias.facilitadores, a);
+        _acumular(out.barreras, _aLista(a.barrerasDetalle).concat(_aLista(a.barreras)), frecuencias.barreras, a);
+        _acumular(out.facilitadores, _aLista(a.facilitadoresDetalle).concat(_aLista(a.facilitadores)), frecuencias.facilitadores, a);
         _acumular(out.oportunidades, _aLista(a.oportunidadesDetectadas), frecuencias.oportunidades, a);
-        _acumular(out.aprendizajes, _aLista(a.aprendizajesDetalle), frecuencias.aprendizajes, a);
-        _acumular(out.evidencias, _aLista(a.evidenciasDetalle).concat(_aLista(a.evidencia)), frecuencias.evidencias, a);
+        _acumular(out.aprendizajes, _aLista(a.aprendizajesDetalle).concat(_aLista(a.aprendizajes)), frecuencias.aprendizajes, a);
+        _acumular(out.evidencias, _aLista(a.evidenciasDetalle).concat(_aLista(a.evidencia)).concat(_aLista(a.fuenteVerificacion)), frecuencias.evidencias, a);
     });
 
     Object.keys(frecuencias).forEach(function(nombreBloque) {
