@@ -6629,7 +6629,9 @@
 
                     <input type="hidden" id="accion-id">
 
-                    
+                    <div id="accion-aviso-completar" style="display:none;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:#92400e;">
+                        <strong>⚠️ Recomendación:</strong> Para que la evaluación anual sea auditable, conviene completar al menos el indicador principal o las observaciones de resultado.
+                    </div>
 
                     <div class="form-group">
 
@@ -22178,11 +22180,90 @@ function generarSeccionMetodologiaPriorizacion() {
 
     if (!decision) {
 
-        var _textoMetodo = _esOrigenAutomatico
-            ? 'Este Plan de acción se ha elaborado a partir de una <strong>propuesta automática trazable generada por COMPÁS</strong>, basada en las fuentes disponibles (indicadores CMI, estudios complementarios como IBSE, referencias contextuales y/o priorización). La selección de líneas, objetivos y actuaciones ha sido validada técnicamente por el equipo local antes de su aprobación definitiva.'
-            : 'Este Plan de acción ha sido elaborado mediante <strong>selección técnica manual</strong>, basada en el diagnóstico local de salud y la Estrategia de Promoción de una Vida Saludable en Andalucía (EPVSA 2024-2030). Las líneas estratégicas, objetivos, programas y actuaciones han sido seleccionados por el equipo técnico a partir del análisis de la situación de salud del municipio.';
+        var _textoMetodo;
 
-        return '<div class="plan-documento-seccion" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin:1.5rem 0;"><h2 style="color:#0074c8;margin-top:0;">📋 Metodología</h2><p style="color:#374151;font-size:0.9rem;">' + _textoMetodo + '</p></div>';
+        if (_esOrigenAutomatico) {
+            // Leer datos del motor si están disponibles
+            var _motDatos  = window.__ultimaPropuestaPlanMotor || {};
+            // Fuentes: cadena de resolución conservadora — primer objeto no vacío gana
+            var _fuentesMet = _motDatos.fuentes
+                || (window.analisisActual        && window.analisisActual.fuentes)
+                || (window.analisisActualV3       && window.analisisActualV3.fuentes)
+                || (window.COMPAS && window.COMPAS.state && window.COMPAS.state.analisisActual  && window.COMPAS.state.analisisActual.fuentes)
+                || (window.COMPAS && window.COMPAS.state && window.COMPAS.state.analisisActualV3 && window.COMPAS.state.analisisActualV3.fuentes)
+                || (window.COMPAS && window.COMPAS.state && window.COMPAS.state.contextoIA       && window.COMPAS.state.contextoIA.fuentes)
+                || (window.__contextoIA && window.__contextoIA.fuentes)
+                || {};
+            var _confVal   = _motDatos.gradoConfianza != null ? _motDatos.gradoConfianza : null;
+            var _confLabel = _motDatos.gradoConfianzaLabel || null;
+
+            // Calcular etiquetas de fuentes activas — exclusivamente desde _fuentesMet resuelto
+            // Acepta claves tieneXxx (analisisActual.fuentes) y claves legadas (hayXxx, nXxx)
+            var _hayAlgunaFuenteMet =
+                   !!(_fuentesMet.tieneInforme    || _fuentesMet.informe      || _motDatos.hayInforme)
+                || !!(_fuentesMet.tieneEstudios   || _fuentesMet.estudios     || _motDatos.nEst > 0)
+                || !!(_fuentesMet.tienePopular    || _fuentesMet.participacion || _motDatos.hayParticipacion)
+                || !!(_fuentesMet.tieneDet        || _fuentesMet.determinantes || _motDatos.nDet > 0)
+                || !!(_fuentesMet.tieneIndicadores|| _fuentesMet.cmi          || _motDatos.tieneCMI);
+            var _fuentesActivas = [];
+            if (_fuentesMet.tieneInforme    || _fuentesMet.informe     || _motDatos.hayInforme)       _fuentesActivas.push('informe de situaci\u00f3n de salud');
+            if (_fuentesMet.tieneEstudios   || _fuentesMet.estudios    || _motDatos.nEst > 0)         _fuentesActivas.push('estudios complementarios');
+            if (_fuentesMet.tienePopular    || _fuentesMet.participacion|| _motDatos.hayParticipacion) _fuentesActivas.push('priorizaci\u00f3n ciudadana');
+            if (_fuentesMet.tieneDet        || _fuentesMet.determinantes|| _motDatos.nDet > 0)         _fuentesActivas.push('determinantes EAS');
+            if (_fuentesMet.tieneIndicadores|| _fuentesMet.cmi         || _motDatos.tieneCMI)         _fuentesActivas.push('indicadores CMI');
+            // Fallback genérico SOLO si _fuentesMet no aportó ninguna señal real
+            if (!_fuentesActivas.length && !_hayAlgunaFuenteMet
+                    && (window.__trazabilidadEjecucionPlan || typeof propuestaActual !== 'undefined')) {
+                _fuentesActivas.push('fuentes disponibles en sesi\u00f3n');
+            }
+
+            var _fuentesTxt = _fuentesActivas.length
+                ? 'Fuentes activas: ' + _fuentesActivas.join(', ') + '.'
+                : '';
+
+            // Bloque de confianza
+            var _confTxt = '';
+            if (_confVal !== null) {
+                _confTxt = 'La confianza metodol\u00f3gica calculada es <strong>' + Math.round(_confVal * 100) + '\u00a0%'
+                    + (_confLabel ? ' (' + _confLabel + ')' : '') + '</strong>. '
+                    + 'Este valor refleja la cobertura y diversidad de fuentes disponibles en el momento del an\u00e1lisis, '
+                    + '<strong>no el correcto funcionamiento t\u00e9cnico del motor</strong>: una confianza baja indica limitaci\u00f3n de datos, no fallo del sistema.';
+            } else {
+                _confTxt = 'La confianza metodol\u00f3gica refleja la cobertura y diversidad de fuentes disponibles, '
+                    + '<strong>no el correcto funcionamiento t\u00e9cnico del motor</strong>.';
+            }
+
+            // Nota adicional si solo hay informe — calculado desde _fuentesMet, no desde _fuentesActivas
+            // (evita falso negativo si _motDatos aporta señales adicionales que inflan el array)
+            var _soloBorrador =
+                !!(_fuentesMet.tieneInforme    || _fuentesMet.informe      || _motDatos.hayInforme)
+                && !(_fuentesMet.tieneEstudios   || _fuentesMet.estudios     || _motDatos.nEst > 0)
+                && !(_fuentesMet.tienePopular    || _fuentesMet.participacion || _motDatos.hayParticipacion)
+                && !(_fuentesMet.tieneDet        || _fuentesMet.determinantes || _motDatos.nDet > 0)
+                && !(_fuentesMet.tieneIndicadores|| _fuentesMet.cmi          || _motDatos.tieneCMI);
+            var _borradorTxt = _soloBorrador
+                ? ' Al estar disponible \u00fanicamente el informe de situaci\u00f3n de salud, '
+                  + 'esta propuesta debe interpretarse como <strong>borrador t\u00e9cnico inicial basado en diagn\u00f3stico documental</strong>, '
+                  + 'pendiente de contraste con participaci\u00f3n ciudadana, estudios complementarios, indicadores CMI o determinantes cuando est\u00e9n disponibles.'
+                : '';
+
+            _textoMetodo = 'Este Plan de acci\u00f3n se ha elaborado a partir de una '
+                + '<strong>propuesta autom\u00e1tica trazable generada por COMP\u00c1S</strong>. '
+                + (_fuentesTxt ? _fuentesTxt + ' ' : '')
+                + _confTxt
+                + _borradorTxt
+                + ' La selecci\u00f3n de l\u00edneas, objetivos y actuaciones requiere validaci\u00f3n t\u00e9cnica por el equipo local antes de su aprobaci\u00f3n definitiva.';
+        } else {
+            _textoMetodo = 'Este Plan de acci\u00f3n ha sido elaborado mediante <strong>selecci\u00f3n t\u00e9cnica manual</strong>, '
+                + 'basada en el diagn\u00f3stico local de salud y la Estrategia de Promoci\u00f3n de una Vida Saludable en Andaluc\u00eda (EPVSA\u00a02024\u20132030). '
+                + 'Las l\u00edneas estrat\u00e9gicas, objetivos, programas y actuaciones han sido seleccionados por el equipo t\u00e9cnico '
+                + 'a partir del an\u00e1lisis de la situaci\u00f3n de salud del municipio.';
+        }
+
+        return '<div class="plan-documento-seccion" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin:1.5rem 0;">'
+            + '<h2 style="color:#0074c8;margin-top:0;">\uD83D\uDCCB Metodolog\u00eda</h2>'
+            + '<p style="color:#374151;font-size:0.9rem;">' + _textoMetodo + '</p>'
+            + '</div>';
 
     }
 
@@ -26647,7 +26728,8 @@ function editarAccion(id) {
 
     if (!accion) return;
 
-    
+    // Ocultar aviso por defecto (se muestra solo en agenda_cambiarEstado si es necesario)
+    document.getElementById('accion-aviso-completar').style.display = 'none';
 
     document.getElementById('modal-titulo').textContent = '✏️ Editar acción';
 
@@ -26762,6 +26844,28 @@ function agenda_cambiarEstado(id, nuevoEstado) {
     accionesAgenda[idx] = accion;
 
     guardarAgendasFirebase();
+
+    // Si se marca como finalizada, validar si necesita completar datos de resultado
+
+    if (nuevoEstado === 'finalizada') {
+
+        const tieneIndicador = accion.indicador && accion.indicador.trim().length > 0;
+
+        const tieneObservacionesReal = accion.observaciones && accion.observaciones.trim().length > 0
+
+            && !accion.observaciones.trim().match(/^\[\d{1,2}\/\d{1,2}\/\d{4}\] Estado actualizado a:/);
+
+        if (!tieneIndicador && !tieneObservacionesReal) {
+
+            editarAccion(id);
+
+            document.getElementById('accion-aviso-completar').style.display = 'block';
+
+            return;
+
+        }
+
+    }
 
     renderAgendas();
 
@@ -26938,7 +27042,8 @@ function guardarAgendasFirebase() {
         .then(function() {
             // 5. Solo tras confirmación: actualizar compilador y dashboard
             if (typeof guardarAgendaParaCompilador === 'function') guardarAgendaParaCompilador(accionesAgenda);
-            if (typeof eval_actualizarDashboard    === 'function') eval_actualizarDashboard();
+            if (typeof eval_actualizarFase6        === 'function') eval_actualizarFase6();
+            else if (typeof eval_actualizarDashboard === 'function') eval_actualizarDashboard();
             return accionesAgenda;
         })
         .catch(function(e) {
@@ -49668,6 +49773,13 @@ function sam_actualizarConSeguida(nActual) {
     // nActual debe representar muestra real conseguida, nunca N objetivo ni simulación.
     // _esSimulado = true cuando los votos provienen de vrelas_simular, no de participación real.
     nActual = (_sam_conseguida && Number(_sam_conseguida.total) > 0 && !_sam_conseguida._esSimulado) ? Number(_sam_conseguida.total) : 0;
+    var _samMuestraIBSE = window.__ibse_v3_sam_muestra || _sam_conseguida || {};
+    var _samIBSETotal = (_samMuestraIBSE && Number(_samMuestraIBSE.total) > 0) ? Number(_samMuestraIBSE.total) : 0;
+    if (_samIBSETotal === 0 && _samMuestraIBSE && _samMuestraIBSE.hombres && _samMuestraIBSE.mujeres) {
+        _SAM_GRUPOS.forEach(function(g) {
+            _samIBSETotal += (_samMuestraIBSE.hombres[g] || 0) + (_samMuestraIBSE.mujeres[g] || 0);
+        });
+    }
     // SAM inline: actualizar todos los contenedores activos
     var ids = [
         'sam-monitor-contenido',
@@ -49675,12 +49787,26 @@ function sam_actualizarConSeguida(nActual) {
         'sam-inline-tematica-contenido',
         'sam-inline-hpc-contenido'
     ];
+    // Añadir contenedores IBSE que deben seguir el flujo de actualización SAM
+    ids = ids.concat([
+        'ibse-sam-container',
+        'panel-ibse-visual-sam',
+        'ibse-v3-sam-muestra'
+    ]);
 
     ids.forEach(function(id){
         var el = document.getElementById(id);
         if (el) {
-            sam_renderMonitorMuestra(id, pob, _sam_conseguida || {}, N, esDemo, nActual);
-            el.parentElement.style.display = (_sam_conseguida && _sam_conseguida.total > 0) ? 'block' : 'none';
+            var muestra = (id === 'ibse-sam-container' || id === 'panel-ibse-visual-sam' || id === 'ibse-v3-sam-muestra')
+                ? _samMuestraIBSE
+                : (_sam_conseguida || {});
+            var totalVisible = (id === 'ibse-sam-container' || id === 'panel-ibse-visual-sam' || id === 'ibse-v3-sam-muestra')
+                ? _samIBSETotal
+                : nActual;
+            sam_renderMonitorMuestra(id, pob, muestra, N, esDemo, totalVisible);
+            if (el.parentElement) {
+                el.parentElement.style.display = (totalVisible > 0) ? 'block' : 'none';
+            }
         }
     });
 
@@ -70085,6 +70211,29 @@ function ibse_sincronizarREDCap() {
 
 function eval_actualizarFase6() {
 
+    // ── Guardia metodológica: determinar modo evaluación ─────────────────
+    // 'real'        → al menos una actuación finalizada o en ejecución
+    // 'exploratorio'→ sin ejecución registrada suficiente
+    // Fuente canónica directa: accionesAgenda[] es siempre sincrónico con la UI.
+    // COMPAS_obtenerAgendaEvaluacion() puede leer planLocalSalud con datos aún no actualizados.
+    var _hayEjecucion = false;
+    if (typeof accionesAgenda !== 'undefined' && Array.isArray(accionesAgenda) && accionesAgenda.length > 0) {
+        _hayEjecucion = accionesAgenda.some(function(a) {
+            return a.estado === 'finalizada' || a.estado === 'en ejecucion';
+        });
+    } else {
+        var _agendaEval = (typeof COMPAS_obtenerAgendaEvaluacion === 'function')
+            ? COMPAS_obtenerAgendaEvaluacion()
+            : null;
+        var _porEstado  = (_agendaEval && _agendaEval.proyeccion && _agendaEval.proyeccion.porEstado)
+            ? _agendaEval.proyeccion.porEstado : {};
+        _hayEjecucion = !!(_agendaEval && _agendaEval.total > 0
+            && ((_porEstado.finalizada || 0) > 0 || (_porEstado['en ejecucion'] || 0) > 0));
+    }
+    if (window.COMPAS && window.COMPAS.state) {
+        window.COMPAS.state._evaluacionModo = _hayEjecucion ? 'real' : 'exploratorio';
+    }
+
     eval_actualizarDashboard();
 
     eval_actualizarProceso();
@@ -70624,6 +70773,9 @@ function eval_actualizarDashboard() {
 
 
 
+    // ── Aviso de modo de evaluación ────────────────────────────────────
+    var _modoEval = (window.COMPAS && window.COMPAS.state && window.COMPAS.state._evaluacionModo)
+        ? window.COMPAS.state._evaluacionModo : 'exploratorio';
     // ── Ensamblar ──────────────────────────────────────────────────────
 
     cont.innerHTML = headerHtml +
@@ -70633,6 +70785,23 @@ function eval_actualizarDashboard() {
         kpiHtml + barHtml + issDetalleHtml + fuentesHtml +
 
         '</div>';
+
+    // ── Badge de modo: inyección directa por DOM, independiente del string-assembly ──
+    // Esto garantiza visibilidad aunque el ensamblado falle parcialmente.
+    var _evalBody = cont.children[1] || cont;
+    var _badgeNode = document.createElement('div');
+    _badgeNode.setAttribute('data-eval-modo', _modoEval);
+    if (_modoEval === 'real') {
+        _badgeNode.style.cssText = 'margin-bottom:0.65rem;padding:0.55rem 0.85rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;display:flex;align-items:flex-start;gap:0.5rem;';
+        _badgeNode.innerHTML = '<span style="font-size:0.9rem;flex-shrink:0;">&#10003;</span>'
+            + '<span style="font-size:0.75rem;color:#166534;line-height:1.5;"><strong>Evaluaci\u00f3n basada en ejecuci\u00f3n registrada</strong> de actuaciones del Plan Local de Salud.</span>';
+    } else {
+        _badgeNode.style.cssText = 'margin-bottom:0.65rem;padding:0.55rem 0.85rem;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;display:flex;align-items:flex-start;gap:0.5rem;';
+        _badgeNode.innerHTML = '<span style="font-size:0.9rem;flex-shrink:0;">&#9888;</span>'
+            + '<span style="font-size:0.75rem;color:#92400e;line-height:1.5;"><strong>Estimaci\u00f3n exploratoria:</strong> no hay ejecuci\u00f3n registrada suficiente.'
+            + ' El ISS describe contexto y situaci\u00f3n de salud, pero no constituye evaluaci\u00f3n real de ejecuci\u00f3n del plan.</span>';
+    }
+    _evalBody.insertBefore(_badgeNode, _evalBody.firstChild);
 
 }
 
@@ -74809,9 +74978,23 @@ window.ibse_v3_renderSegmentos = function(data) {
     if (!_samPob && _samHost) {
       _samHost.innerHTML = '<div style="font-size:12px;color:#94a3b8;margin-top:10px;">Población SAM no disponible para este municipio.</div>';
     } else {
-      // IBSE v3: render final estático de la muestra real adulta obtenida frente a la n teórica; no usar animación incremental.
-      sam_renderMonitorMuestra('ibse-v3-sam-muestra', _samPob,
-                               _samMue, _samN, _samEsDemo, resultado.adultos.n);
+      // IBSE v3: animación caso a caso desde agregado real (_samMue).
+      // El orden visual es aleatorio (barajado), no temporal: reproduce la distribución
+      // real por sexo/grupo de edad, no la secuencia de recogida de datos.
+      // Fallback a render estático si ibse_v3_animarSAMMuestra no está disponible.
+      if (typeof window.ibse_v3_animarSAMMuestra === 'function') {
+        window.ibse_v3_animarSAMMuestra(
+          'ibse-v3-sam-muestra',
+          _samPob,
+          _samMue,
+          _samN,
+          _samEsDemo,
+          45000
+        );
+      } else {
+        sam_renderMonitorMuestra('ibse-v3-sam-muestra', _samPob,
+                                 _samMue, _samN, _samEsDemo, resultado.adultos.n);
+      }
     }
   }
 

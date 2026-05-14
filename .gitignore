@@ -20,3 +20,8 @@ _fuera_repo_20260512/
 
 # Cuarentena temporal local
 _fuera_repo_20260513/
+
+# Backups locales fuera de seguimiento
+_fuera_repo_*/
+*.bak_*
+temp_*.txt
