@@ -25507,6 +25507,141 @@ function actuacion_proyectarEvaluacion(actuaciones) {
 
 }
 
+/**
+ * Proyección pura del array de actuaciones para DIAGNÓSTICO COMUNITARIO VIVO.
+ * Lee campos estructurados y legacy sin mutar actuaciones ni persistir resultados.
+ */
+function actuacion_proyectarDiagnostico(actuaciones) {
+    function _normalizarTexto(valor) {
+        if (valor === null || valor === undefined) return '';
+        return String(valor).trim().replace(/\s+/g, ' ');
+    }
+
+    function _nombreItem(item) {
+        if (item === null || item === undefined) return '';
+        if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') {
+            return _normalizarTexto(item);
+        }
+        if (typeof item === 'object') {
+            return _normalizarTexto(
+                item.nombre || item.name || item.titulo || item.title ||
+                item.descripcion || item.texto || item.valor || item.id || item.codigo || ''
+            );
+        }
+        return '';
+    }
+
+    function _aLista(valor) {
+        if (valor === null || valor === undefined) return [];
+        if (Array.isArray(valor)) {
+            return valor.reduce(function(acc, item) {
+                return acc.concat(_aLista(item));
+            }, []);
+        }
+        if (typeof valor === 'object') {
+            var nombre = _nombreItem(valor);
+            return nombre ? [nombre] : [];
+        }
+        return String(valor)
+            .split(/\r?\n|;|\|/)
+            .map(_normalizarTexto)
+            .filter(Boolean);
+    }
+
+    function _deduplicar(lista) {
+        var vistos = {};
+        var out = [];
+        lista.forEach(function(nombre) {
+            var limpio = _normalizarTexto(nombre);
+            var clave = limpio.toLocaleLowerCase();
+            if (!limpio || vistos[clave]) return;
+            vistos[clave] = true;
+            out.push(limpio);
+        });
+        return out;
+    }
+
+    function _bloque() {
+        return { total: 0, items: [], frecuencia: [] };
+    }
+
+    function _acumular(bloque, valores, frecuenciaGlobal) {
+        _deduplicar(valores).forEach(function(nombre) {
+            var clave = nombre.toLocaleLowerCase();
+            bloque.items.push(nombre);
+            frecuenciaGlobal[clave] = frecuenciaGlobal[clave] || { nombre: nombre, n: 0 };
+            frecuenciaGlobal[clave].n += 1;
+        });
+    }
+
+    function _cerrarBloque(bloque, frecuenciaGlobal) {
+        bloque.items = _deduplicar(bloque.items);
+        bloque.total = bloque.items.length;
+        bloque.frecuencia = Object.keys(frecuenciaGlobal).map(function(clave) {
+            return frecuenciaGlobal[clave];
+        }).sort(function(a, b) {
+            return b.n - a.n || a.nombre.localeCompare(b.nombre);
+        });
+    }
+
+    var out = {
+        activos: _bloque(),
+        entidades: _bloque(),
+        necesidades: _bloque(),
+        barreras: _bloque(),
+        facilitadores: _bloque(),
+        oportunidades: _bloque(),
+        aprendizajes: _bloque(),
+        evidencias: _bloque(),
+        resumen: {
+            actuacionesAnalizadas: Array.isArray(actuaciones) ? actuaciones.length : 0,
+            activos: 0,
+            entidades: 0,
+            necesidades: 0,
+            barreras: 0,
+            facilitadores: 0,
+            oportunidades: 0,
+            aprendizajes: 0,
+            evidencias: 0
+        }
+    };
+
+    var frecuencias = {
+        activos: {},
+        entidades: {},
+        necesidades: {},
+        barreras: {},
+        facilitadores: {},
+        oportunidades: {},
+        aprendizajes: {},
+        evidencias: {}
+    };
+
+    if (!Array.isArray(actuaciones) || !actuaciones.length) return out;
+
+    actuaciones.forEach(function(act) {
+        var a = act || {};
+        _acumular(out.activos, _aLista(a.activosComunitariosDetalle).concat(_aLista(a.activosComunitarios)), frecuencias.activos);
+        _acumular(out.entidades, _aLista(a.entidadesDetalle).concat(_aLista(a.entidadesColaboradoras)), frecuencias.entidades);
+        _acumular(out.necesidades, _aLista(a.necesidadesDetectadas), frecuencias.necesidades);
+        _acumular(out.barreras, _aLista(a.barrerasDetalle), frecuencias.barreras);
+        _acumular(out.facilitadores, _aLista(a.facilitadoresDetalle), frecuencias.facilitadores);
+        _acumular(out.oportunidades, _aLista(a.oportunidadesDetectadas), frecuencias.oportunidades);
+        _acumular(out.aprendizajes, _aLista(a.aprendizajesDetalle), frecuencias.aprendizajes);
+        _acumular(out.evidencias, _aLista(a.evidenciasDetalle).concat(_aLista(a.evidencia)), frecuencias.evidencias);
+    });
+
+    Object.keys(frecuencias).forEach(function(nombreBloque) {
+        _cerrarBloque(out[nombreBloque], frecuencias[nombreBloque]);
+        out.resumen[nombreBloque] = out[nombreBloque].total;
+    });
+
+    return out;
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.proyectarDiagnostico = actuacion_proyectarDiagnostico;
+
 function COMPAS_obtenerAgendaEvaluacion() {
     function _clonarActuaciones(arr) {
         if (!Array.isArray(arr)) return [];
