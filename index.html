@@ -25565,12 +25565,41 @@ function actuacion_proyectarDiagnostico(actuaciones) {
         return { total: 0, items: [], frecuencia: [] };
     }
 
-    function _acumular(bloque, valores, frecuenciaGlobal) {
+    function _metaActuacion(act) {
+        var a = act || {};
+        return {
+            id: a.id != null ? a.id : '',
+            codigo: a.codigo || a.codigoEPVSA || '',
+            codigoEPVSA: a.codigoEPVSA || a.codigo || '',
+            titulo: a.nombre || a.actuacion || a.titulo || '',
+            estado: a.estado || 'planificada',
+            lineaEPVSA: a.lineaEPVSA || a.lineaEpvsa || a.estrategia || '',
+            objetivoEPVSA: a.objetivoEPVSA || a.objetivo || '',
+            indicadorPrincipal: a.indicadorPrincipal || a.indicador || '',
+            programa: a.programa || '',
+            entorno: a.entorno || '',
+            anio: a.anio || '',
+            fechaPrevista: a.fechaPrevista || '',
+            fechaReal: a.fechaReal || ''
+        };
+    }
+
+    function _claveActuacion(meta) {
+        return String(meta.id || meta.codigoEPVSA || meta.codigo || meta.titulo || '').toLocaleLowerCase();
+    }
+
+    function _acumular(bloque, valores, frecuenciaGlobal, act) {
+        var meta = _metaActuacion(act);
+        var claveAct = _claveActuacion(meta);
         _deduplicar(valores).forEach(function(nombre) {
             var clave = nombre.toLocaleLowerCase();
             bloque.items.push(nombre);
-            frecuenciaGlobal[clave] = frecuenciaGlobal[clave] || { nombre: nombre, n: 0 };
+            frecuenciaGlobal[clave] = frecuenciaGlobal[clave] || { nombre: nombre, n: 0, actuaciones: [], _actuacionesIndex: {} };
             frecuenciaGlobal[clave].n += 1;
+            if (claveAct && !frecuenciaGlobal[clave]._actuacionesIndex[claveAct]) {
+                frecuenciaGlobal[clave]._actuacionesIndex[claveAct] = true;
+                frecuenciaGlobal[clave].actuaciones.push(meta);
+            }
         });
     }
 
@@ -25578,7 +25607,9 @@ function actuacion_proyectarDiagnostico(actuaciones) {
         bloque.items = _deduplicar(bloque.items);
         bloque.total = bloque.items.length;
         bloque.frecuencia = Object.keys(frecuenciaGlobal).map(function(clave) {
-            return frecuenciaGlobal[clave];
+            var item = frecuenciaGlobal[clave];
+            delete item._actuacionesIndex;
+            return item;
         }).sort(function(a, b) {
             return b.n - a.n || a.nombre.localeCompare(b.nombre);
         });
@@ -25621,14 +25652,14 @@ function actuacion_proyectarDiagnostico(actuaciones) {
 
     actuaciones.forEach(function(act) {
         var a = act || {};
-        _acumular(out.activos, _aLista(a.activosComunitariosDetalle).concat(_aLista(a.activosComunitarios)), frecuencias.activos);
-        _acumular(out.entidades, _aLista(a.entidadesDetalle).concat(_aLista(a.entidadesColaboradoras)), frecuencias.entidades);
-        _acumular(out.necesidades, _aLista(a.necesidadesDetectadas), frecuencias.necesidades);
-        _acumular(out.barreras, _aLista(a.barrerasDetalle), frecuencias.barreras);
-        _acumular(out.facilitadores, _aLista(a.facilitadoresDetalle), frecuencias.facilitadores);
-        _acumular(out.oportunidades, _aLista(a.oportunidadesDetectadas), frecuencias.oportunidades);
-        _acumular(out.aprendizajes, _aLista(a.aprendizajesDetalle), frecuencias.aprendizajes);
-        _acumular(out.evidencias, _aLista(a.evidenciasDetalle).concat(_aLista(a.evidencia)), frecuencias.evidencias);
+        _acumular(out.activos, _aLista(a.activosComunitariosDetalle).concat(_aLista(a.activosComunitarios)), frecuencias.activos, a);
+        _acumular(out.entidades, _aLista(a.entidadesDetalle).concat(_aLista(a.entidadesColaboradoras)), frecuencias.entidades, a);
+        _acumular(out.necesidades, _aLista(a.necesidadesDetectadas), frecuencias.necesidades, a);
+        _acumular(out.barreras, _aLista(a.barrerasDetalle), frecuencias.barreras, a);
+        _acumular(out.facilitadores, _aLista(a.facilitadoresDetalle), frecuencias.facilitadores, a);
+        _acumular(out.oportunidades, _aLista(a.oportunidadesDetectadas), frecuencias.oportunidades, a);
+        _acumular(out.aprendizajes, _aLista(a.aprendizajesDetalle), frecuencias.aprendizajes, a);
+        _acumular(out.evidencias, _aLista(a.evidenciasDetalle).concat(_aLista(a.evidencia)), frecuencias.evidencias, a);
     });
 
     Object.keys(frecuencias).forEach(function(nombreBloque) {
