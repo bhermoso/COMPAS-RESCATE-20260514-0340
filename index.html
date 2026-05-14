@@ -7367,13 +7367,11 @@
 
                             <div style="font-weight:700; font-size:0.95rem;">Resumen de evaluaci&#243;n</div>
 
-                            <div style="font-size:0.75rem; opacity:0.8;">Selecciona un municipio y pulsa Actualizar para cargar los datos</div>
+                            <div style="font-size:0.75rem; opacity:0.8;">La evaluación se actualiza con los datos registrados en agenda</div>
 
                         </div>
 
                     </div>
-
-                    <button onclick="eval_actualizarFase6()" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; border-radius:6px; padding:0.3rem 0.75rem; font-size:0.75rem; cursor:pointer;">&#128260; Actualizar</button>
 
                 </div>
 
@@ -7381,7 +7379,7 @@
 
                     <div style="color:#94a3b8; font-size:0.8rem; font-style:italic; text-align:center; padding:0.5rem 0;">
 
-                        Carga un municipio y pulsa <strong style="color:#64748b; font-style:normal;">Actualizar</strong> para ver el resumen.
+                        Carga un municipio para ver el resumen de evaluación.
 
                     </div>
 
@@ -7429,7 +7427,7 @@
 
                                 </div>
 
-                                <div style="font-size:0.75rem; color:#94a3b8; line-height:1.4;">Funcionamiento del Grupo Motor y liderazgo institucional. <em>Selecciona un municipio y pulsa Actualizar.</em></div>
+                                <div style="font-size:0.75rem; color:#94a3b8; line-height:1.4;">Funcionamiento del Grupo Motor y liderazgo institucional. <em>Selecciona un municipio para cargar la evaluación.</em></div>
 
                             </div>
 
@@ -7496,12 +7494,6 @@
                                 <div style="font-size:0.75rem; color:#94a3b8; line-height:1.4;">Transparencia y comunicación pública del progreso del Plan.</div>
 
                             </div>
-
-                        </div>
-
-                        <div style="margin-top:0.75rem; text-align:right;">
-
-                            <button onclick="eval_actualizarFase6()" style="background:none; border:1px solid #e2e8f0; border-radius:6px; padding:0.3rem 0.75rem; font-size:0.75rem; color:#64748b; cursor:pointer;">🔄 Actualizar con datos del sistema</button>
 
                         </div>
 
@@ -27475,13 +27467,13 @@ function exportarAgendas() {
 
 
 
-// Inicializar agendas cuando se accede a la Fase 6; actualizar evaluación
+// Inicializar agendas al entrar en Agenda o Evaluación; actualizar evaluación
 
 document.querySelectorAll('.fase').forEach(f => {
 
     f.addEventListener('click', () => {
 
-        if (f.dataset.fase === '5') {
+        if (f.dataset.fase === '5' || f.dataset.fase === '6') {
 
             setTimeout(function() {
                 var p = initAgendas();
@@ -70829,8 +70821,6 @@ function eval_actualizarDashboard() {
 
         '</div></div>' +
 
-        '<button onclick="eval_actualizarFase6()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.75rem;cursor:pointer;">&#128260; Actualizar</button>' +
-
         '</div>';
 
 
@@ -71359,14 +71349,6 @@ function eval_actualizarProceso() {
             '</div>';
 
     }
-
-
-
-    html += '<div style="margin-top:0.75rem; text-align:right;">' +
-
-        '<button onclick="eval_actualizarFase6()" style="background:none;border:1px solid #e2e8f0;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.75rem;color:#64748b;cursor:pointer;">&#128260; Actualizar</button>' +
-
-    '</div>';
 
 
 
