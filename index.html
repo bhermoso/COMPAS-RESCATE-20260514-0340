@@ -70816,6 +70816,7 @@ function COMPAS_crearSnapshotEvaluacion() {
         }
     }
 
+    var generadoISO = new Date().toISOString();
     var municipio = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
 
     var agendaEvaluacion = null;
@@ -70828,6 +70829,26 @@ function COMPAS_crearSnapshotEvaluacion() {
     }
 
     var accionesAgendaSnapshot = agendaEvaluacion ? agendaEvaluacion.actuaciones : null;
+    var aniosActuaciones = [];
+    if (agendaEvaluacion && Array.isArray(agendaEvaluacion.actuaciones)) {
+        var _aniosSet = {};
+        agendaEvaluacion.actuaciones.forEach(function(a) {
+            var _anio = a && a.anio ? String(a.anio).trim() : '';
+            if (!_anio && a && a.fechaReal) {
+                var _fr = new Date(a.fechaReal);
+                if (!isNaN(_fr.getTime())) _anio = String(_fr.getFullYear());
+            }
+            if (!_anio && a && a.fechaPrevista) {
+                var _fp = new Date(a.fechaPrevista);
+                if (!isNaN(_fp.getTime())) _anio = String(_fp.getFullYear());
+            }
+            if (_anio) _aniosSet[_anio] = true;
+        });
+        aniosActuaciones = Object.keys(_aniosSet).sort();
+    }
+    var ciclo = aniosActuaciones.length === 1
+        ? aniosActuaciones[0]
+        : (aniosActuaciones.length > 1 ? 'multi-anual' : String(new Date().getFullYear()));
 
     var resumenAgenda = null;
     if (agendaEvaluacion && agendaEvaluacion.total > 0) {
@@ -70895,8 +70916,18 @@ function COMPAS_crearSnapshotEvaluacion() {
 
     return {
         version: 'snapshot_evaluacion_v0',
-        fechaISO: new Date().toISOString(),
+        fechaISO: generadoISO,
+        contratoLongitudinal: 'evaluacion_longitudinal_v1',
+        generadoISO: generadoISO,
+        fechaCorteISO: generadoISO,
         municipio: municipio,
+        municipioId: municipio,
+        municipioNombre: municipio,
+        ciclo: ciclo,
+        cicloInferidoDesde: aniosActuaciones.length ? 'actuaciones.anio/fechaReal/fechaPrevista' : 'fechaSistema',
+        aniosActuaciones: aniosActuaciones,
+        agendaFuente: agendaEvaluacion ? agendaEvaluacion.fuente : 'ninguna',
+        totalActuaciones: resumenAgenda ? resumenAgenda.total : 0,
         accionesAgenda: accionesAgendaSnapshot,
         resumenAgenda: resumenAgenda,
         agendaEvaluacionFuente: agendaEvaluacion ? agendaEvaluacion.fuente : 'ninguna',
@@ -70913,7 +70944,7 @@ function COMPAS_crearSnapshotEvaluacion() {
         diagnosticoVivo: diagnosticoVivo ? {
             version: 'diagnostico_vivo_v1',
             fuente: 'actuacionesAgenda',
-            generadoISO: new Date().toISOString(),
+            generadoISO: generadoISO,
             persistente: false,
             oficial: false,
             datos: diagnosticoVivo
