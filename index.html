@@ -71046,6 +71046,97 @@ function COMPAS_crearSnapshotEvaluacion() {
         }
     };
 
+    var _baseLong = indicadoresLongitudinales.base;
+    var _ejecLong = indicadoresLongitudinales.ejecucion;
+    var _calidadLong = indicadoresLongitudinales.calidadDatos;
+    var _comunidadLong = indicadoresLongitudinales.lecturaComunitariaAgenda;
+    var _estadoEjecucion = 'parcial';
+    if (_baseLong.totalCiclo === 0) _estadoEjecucion = 'sin_base';
+    else if (_ejecLong.tasaFinalizacionDentroCiclo >= 70 && _ejecLong.tasaArrastre < 25) _estadoEjecucion = 'solida';
+    else if (_ejecLong.tasaFinalizacionDentroCiclo < 40 || _ejecLong.tasaNoEjecucion >= 40) _estadoEjecucion = 'baja';
+    else if ((_ejecLong.tasaFinalizacionDentroCiclo >= 40 && _ejecLong.tasaFinalizacionDentroCiclo < 70) ||
+        (_ejecLong.tasaArrastre >= 25 && _ejecLong.tasaArrastre < 50)) _estadoEjecucion = 'parcial';
+
+    var _estadoTemporalidad = 'ciclo_limpio';
+    if (_baseLong.totalFueraCiclo === 0) _estadoTemporalidad = 'ciclo_limpio';
+    else if (_ejecLong.pesoFueraCicloEnAgenda >= 25) _estadoTemporalidad = 'alta_carga_fuera_ciclo';
+    else if (_ejecLong.pesoFueraCicloEnAgenda > 0) _estadoTemporalidad = 'agenda_multi_anual_cargada';
+
+    var _estadoCalidadDatos = 'suficiente';
+    if (_calidadLong.tasaAnioActuacionVacio >= 25 || _calidadLong.tasaFechaRealInvalida >= 10) _estadoCalidadDatos = 'critica';
+    else if (_calidadLong.tasaAnioActuacionVacio >= 10 || _calidadLong.tasaFechaRealInvalida > 0 || _calidadLong.tasaFechaRealVacia >= 30) _estadoCalidadDatos = 'baja_calidad_temporal';
+
+    var _estadoRedComunitaria = 'no_documentada';
+    if (_comunidadLong.entidadesColaboradoras >= 2 && _comunidadLong.activosDetectados >= 1) _estadoRedComunitaria = 'activa';
+    else if (_comunidadLong.entidadesColaboradoras >= 1 || _comunidadLong.activosDetectados >= 1) _estadoRedComunitaria = 'incipiente';
+
+    var _estadoTrazabilidad = 'verificable';
+    if (_comunidadLong.evidenciasVerificables === 0) _estadoTrazabilidad = 'no_verificable';
+    else if (_comunidadLong.evidenciasVerificables < _baseLong.totalCiclo * 0.5) _estadoTrazabilidad = 'debil';
+
+    var lecturaEvaluativaLongitudinal = {
+        version: 'lectura_evaluativa_longitudinal_v1',
+        ciclo: cicloEvaluado,
+        fuente: 'snapshot_evaluacion',
+        oficial: false,
+        persistente: false,
+        clasificaciones: {
+            ejecucion: {
+                estado: _estadoEjecucion,
+                tasaFinalizacionDentroCiclo: _ejecLong.tasaFinalizacionDentroCiclo,
+                tasaArrastre: _ejecLong.tasaArrastre,
+                tasaNoEjecucion: _ejecLong.tasaNoEjecucion,
+                tasaSuspension: _ejecLong.tasaSuspension
+            },
+            temporalidad: {
+                estado: _estadoTemporalidad,
+                pesoFueraCicloEnAgenda: _ejecLong.pesoFueraCicloEnAgenda,
+                totalAgenda: _baseLong.totalAgenda,
+                totalCiclo: _baseLong.totalCiclo,
+                totalFueraCiclo: _baseLong.totalFueraCiclo
+            },
+            calidadDatos: {
+                estado: _estadoCalidadDatos,
+                tasaAnioActuacionVacio: _calidadLong.tasaAnioActuacionVacio,
+                tasaFechaRealVacia: _calidadLong.tasaFechaRealVacia,
+                tasaFechaRealInvalida: _calidadLong.tasaFechaRealInvalida
+            },
+            redComunitaria: {
+                estado: _estadoRedComunitaria,
+                activosDetectados: _comunidadLong.activosDetectados,
+                entidadesColaboradoras: _comunidadLong.entidadesColaboradoras,
+                aprendizajesGenerados: _comunidadLong.aprendizajesGenerados,
+                evidenciasVerificables: _comunidadLong.evidenciasVerificables
+            },
+            trazabilidad: {
+                estado: _estadoTrazabilidad,
+                evidenciasVerificables: _comunidadLong.evidenciasVerificables,
+                totalCiclo: _baseLong.totalCiclo
+            }
+        },
+        alertas: [],
+        fortalezas: [],
+        limitaciones: [],
+        criteriosAplicados: [
+            'ejecucion: totalCiclo, tasaFinalizacionDentroCiclo, tasaArrastre, tasaNoEjecucion',
+            'temporalidad: totalFueraCiclo y pesoFueraCicloEnAgenda',
+            'calidadDatos: tasas de anioActuacionVacio, fechaRealVacia y fechaRealInvalida',
+            'redComunitaria: entidadesColaboradoras y activosDetectados',
+            'trazabilidad: evidenciasVerificables frente a totalCiclo'
+        ]
+    };
+    if (_ejecLong.tasaArrastre >= 50) lecturaEvaluativaLongitudinal.alertas.push('alto_arrastre');
+    if (_estadoEjecucion === 'baja') lecturaEvaluativaLongitudinal.alertas.push('baja_ejecucion');
+    if (_estadoTemporalidad === 'alta_carga_fuera_ciclo') lecturaEvaluativaLongitudinal.alertas.push('alta_carga_fuera_ciclo');
+    if (_estadoCalidadDatos === 'baja_calidad_temporal' || _estadoCalidadDatos === 'critica') lecturaEvaluativaLongitudinal.alertas.push(_estadoCalidadDatos);
+    if (_estadoTrazabilidad === 'debil' || _estadoTrazabilidad === 'no_verificable') lecturaEvaluativaLongitudinal.alertas.push('baja_trazabilidad_verificable');
+    if (_estadoEjecucion === 'solida') lecturaEvaluativaLongitudinal.fortalezas.push('ejecucion_solida');
+    if (_estadoTemporalidad === 'ciclo_limpio') lecturaEvaluativaLongitudinal.fortalezas.push('ciclo_limpio');
+    if (_estadoRedComunitaria === 'activa') lecturaEvaluativaLongitudinal.fortalezas.push('red_comunitaria_activa');
+    if (_estadoTrazabilidad === 'verificable') lecturaEvaluativaLongitudinal.fortalezas.push('trazabilidad_verificable');
+    if (_baseLong.totalCiclo === 0) lecturaEvaluativaLongitudinal.limitaciones.push('sin_actuaciones_del_ciclo');
+    if (_comunidadLong.alcance === 'agenda_completa_cargada') lecturaEvaluativaLongitudinal.limitaciones.push('lectura_comunitaria_no_filtrada_por_ciclo');
+
     var iss = null;
     try {
         iss = _clonar(eval_calcularISS());
@@ -71107,6 +71198,7 @@ function COMPAS_crearSnapshotEvaluacion() {
         actuacionesCicloEvaluado: actuacionesCicloEvaluado,
         actuacionesFueraCiclo: actuacionesFueraCiclo,
         indicadoresLongitudinales: indicadoresLongitudinales,
+        lecturaEvaluativaLongitudinal: lecturaEvaluativaLongitudinal,
         accionesAgenda: accionesAgendaSnapshot,
         resumenAgenda: resumenAgenda,
         agendaEvaluacionFuente: agendaEvaluacion ? agendaEvaluacion.fuente : 'ninguna',
