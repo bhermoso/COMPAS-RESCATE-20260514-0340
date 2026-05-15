@@ -70884,6 +70884,9 @@ function COMPAS_crearSnapshotEvaluacion() {
             return null;
         }
     }
+    function _pct(num, den) {
+        return den > 0 ? Math.round((num / den) * 1000) / 10 : 0;
+    }
 
     var generadoISO = new Date().toISOString();
     var municipio = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
@@ -71002,6 +71005,47 @@ function COMPAS_crearSnapshotEvaluacion() {
         console.warn('[COMPÁS SNAPSHOT EVALUACIÓN] proyectarDiagnostico falló:', e);
     }
 
+    var indicadoresLongitudinales = {
+        version: 'indicadores_longitudinales_v1',
+        ciclo: cicloEvaluado,
+        fuente: 'snapshot_evaluacion',
+        base: {
+            totalAgenda: resumenCicloEvaluacion.totalAgenda || 0,
+            totalCiclo: resumenCicloEvaluacion.totalCiclo || 0,
+            totalFueraCiclo: resumenCicloEvaluacion.totalFueraCiclo || 0
+        },
+        ejecucion: {
+            tasaFinalizacionDentroCiclo: _pct(resumenCicloEvaluacion.finalizadasDentroCiclo, resumenCicloEvaluacion.totalCiclo),
+            tasaFinalizacionFueraCiclo: _pct(resumenCicloEvaluacion.finalizadasFueraCiclo, resumenCicloEvaluacion.totalCiclo),
+            tasaArrastre: _pct(
+                resumenCicloEvaluacion.pendientes +
+                resumenCicloEvaluacion.enEjecucion +
+                resumenCicloEvaluacion.finalizadasFueraCiclo +
+                resumenCicloEvaluacion.finalizadasSinFecha,
+                resumenCicloEvaluacion.totalCiclo
+            ),
+            tasaSuspension: _pct(resumenCicloEvaluacion.suspendidas, resumenCicloEvaluacion.totalCiclo),
+            tasaNoEjecucion: _pct(resumenCicloEvaluacion.pendientes, resumenCicloEvaluacion.totalCiclo),
+            pesoFueraCicloEnAgenda: _pct(resumenCicloEvaluacion.totalFueraCiclo, resumenCicloEvaluacion.totalAgenda)
+        },
+        calidadDatos: {
+            anioActuacionVacio: resumenCicloEvaluacion.advertencias.anioActuacionVacio || 0,
+            fechaRealVacia: resumenCicloEvaluacion.advertencias.fechaRealVacia || 0,
+            fechaRealInvalida: resumenCicloEvaluacion.advertencias.fechaRealInvalida || 0,
+            tasaAnioActuacionVacio: _pct(resumenCicloEvaluacion.advertencias.anioActuacionVacio, resumenCicloEvaluacion.totalAgenda),
+            tasaFechaRealVacia: _pct(resumenCicloEvaluacion.advertencias.fechaRealVacia, resumenCicloEvaluacion.totalCiclo),
+            tasaFechaRealInvalida: _pct(resumenCicloEvaluacion.advertencias.fechaRealInvalida, resumenCicloEvaluacion.totalCiclo)
+        },
+        lecturaComunitariaAgenda: {
+            activosDetectados: diagnosticoVivo && diagnosticoVivo.activos ? diagnosticoVivo.activos.total : 0,
+            entidadesColaboradoras: diagnosticoVivo && diagnosticoVivo.entidades ? diagnosticoVivo.entidades.total : 0,
+            barrerasRecurrentes: diagnosticoVivo && diagnosticoVivo.barreras ? diagnosticoVivo.barreras.total : 0,
+            aprendizajesGenerados: diagnosticoVivo && diagnosticoVivo.aprendizajes ? diagnosticoVivo.aprendizajes.total : 0,
+            evidenciasVerificables: diagnosticoVivo && diagnosticoVivo.evidencias ? diagnosticoVivo.evidencias.total : 0,
+            alcance: 'agenda_completa_cargada'
+        }
+    };
+
     var iss = null;
     try {
         iss = _clonar(eval_calcularISS());
@@ -71062,6 +71106,7 @@ function COMPAS_crearSnapshotEvaluacion() {
         resumenCicloEvaluacion: resumenCicloEvaluacion,
         actuacionesCicloEvaluado: actuacionesCicloEvaluado,
         actuacionesFueraCiclo: actuacionesFueraCiclo,
+        indicadoresLongitudinales: indicadoresLongitudinales,
         accionesAgenda: accionesAgendaSnapshot,
         resumenAgenda: resumenAgenda,
         agendaEvaluacionFuente: agendaEvaluacion ? agendaEvaluacion.fuente : 'ninguna',
