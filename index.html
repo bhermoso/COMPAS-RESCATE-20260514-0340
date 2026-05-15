@@ -70919,6 +70919,53 @@ function COMPAS_crearSnapshotEvaluacion() {
         ? aniosActuaciones[0]
         : (aniosActuaciones.length > 1 ? 'multi-anual' : String(new Date().getFullYear()));
 
+    var resumenCicloEvaluacion = {
+        version: 'resumen_ciclo_evaluacion_v1',
+        ciclo: ciclo,
+        criterio: 'actuacion.anio',
+        totalAnalizadas: 0,
+        pertenecientes: 0,
+        noPertenecen: 0,
+        pendientes: 0,
+        enEjecucion: 0,
+        finalizadasDentroCiclo: 0,
+        finalizadasFueraCiclo: 0,
+        finalizadasSinFecha: 0,
+        suspendidas: 0,
+        advertencias: {
+            anioActuacionVacio: 0,
+            fechaRealVacia: 0,
+            fechaRealInvalida: 0
+        }
+    };
+    if (agendaEvaluacion && Array.isArray(agendaEvaluacion.actuaciones)) {
+        var _clasificadorCiclo = window.COMPAS && typeof window.COMPAS.clasificarCicloEvaluacion === 'function'
+            ? window.COMPAS.clasificarCicloEvaluacion
+            : (typeof actuacion_clasificarCicloEvaluacion === 'function' ? actuacion_clasificarCicloEvaluacion : null);
+        resumenCicloEvaluacion.totalAnalizadas = agendaEvaluacion.actuaciones.length;
+        if (_clasificadorCiclo) {
+            agendaEvaluacion.actuaciones.forEach(function(act) {
+                var _clasif = _clasificadorCiclo(act, ciclo);
+                var _estadoCiclo = _clasif && _clasif.estadoCiclo;
+                if (_clasif && _clasif.pertenece) resumenCicloEvaluacion.pertenecientes++;
+                else resumenCicloEvaluacion.noPertenecen++;
+
+                if (_estadoCiclo === 'pendiente') resumenCicloEvaluacion.pendientes++;
+                else if (_estadoCiclo === 'en_ejecucion') resumenCicloEvaluacion.enEjecucion++;
+                else if (_estadoCiclo === 'suspendida') resumenCicloEvaluacion.suspendidas++;
+                else if (_estadoCiclo === 'finalizada_dentro_ciclo') resumenCicloEvaluacion.finalizadasDentroCiclo++;
+                else if (_estadoCiclo === 'finalizada_fuera_ciclo') resumenCicloEvaluacion.finalizadasFueraCiclo++;
+                else if (_estadoCiclo === 'finalizada_sin_fecha') resumenCicloEvaluacion.finalizadasSinFecha++;
+
+                ((_clasif && _clasif.advertencias) || []).forEach(function(advertencia) {
+                    if (advertencia === 'anio_actuacion_vacio') resumenCicloEvaluacion.advertencias.anioActuacionVacio++;
+                    else if (advertencia === 'fecha_real_vacia') resumenCicloEvaluacion.advertencias.fechaRealVacia++;
+                    else if (advertencia === 'fecha_real_invalida') resumenCicloEvaluacion.advertencias.fechaRealInvalida++;
+                });
+            });
+        }
+    }
+
     var resumenAgenda = null;
     if (agendaEvaluacion && agendaEvaluacion.total > 0) {
         var porEstado = agendaEvaluacion.proyeccion.porEstado || {};
@@ -70997,6 +71044,7 @@ function COMPAS_crearSnapshotEvaluacion() {
         aniosActuaciones: aniosActuaciones,
         agendaFuente: agendaEvaluacion ? agendaEvaluacion.fuente : 'ninguna',
         totalActuaciones: resumenAgenda ? resumenAgenda.total : 0,
+        resumenCicloEvaluacion: resumenCicloEvaluacion,
         accionesAgenda: accionesAgendaSnapshot,
         resumenAgenda: resumenAgenda,
         agendaEvaluacionFuente: agendaEvaluacion ? agendaEvaluacion.fuente : 'ninguna',
