@@ -70841,6 +70841,16 @@ function COMPAS_crearSnapshotEvaluacion() {
         resumenAgenda = { total: total, finalizadas: finalizadas, enEjecucion: enEjecucion, suspendidas: suspendidas, planificadas: planificadas, pctFinalizadas: pctFinalizadas };
     }
 
+    var diagnosticoVivo = null;
+    try {
+        if (agendaEvaluacion && Array.isArray(agendaEvaluacion.actuaciones) &&
+            window.COMPAS && typeof window.COMPAS.proyectarDiagnostico === 'function') {
+            diagnosticoVivo = _clonar(window.COMPAS.proyectarDiagnostico(agendaEvaluacion.actuaciones));
+        }
+    } catch(e) {
+        console.warn('[COMPÁS SNAPSHOT EVALUACIÓN] proyectarDiagnostico falló:', e);
+    }
+
     var iss = null;
     try {
         iss = _clonar(eval_calcularISS());
@@ -70899,7 +70909,15 @@ function COMPAS_crearSnapshotEvaluacion() {
         resumenPrioridades: resumenPrioridades,
         arbolTrazabilidad: arbolTrazabilidad,
         planAccionFirebase: planAccionFirebase,
-        seleccionEPVSA: seleccionEPVSA
+        seleccionEPVSA: seleccionEPVSA,
+        diagnosticoVivo: diagnosticoVivo ? {
+            version: 'diagnostico_vivo_v1',
+            fuente: 'actuacionesAgenda',
+            generadoISO: new Date().toISOString(),
+            persistente: false,
+            oficial: false,
+            datos: diagnosticoVivo
+        } : null
     };
 }
 
