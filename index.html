@@ -25548,6 +25548,22 @@ function actuacion_proyectarDiagnostico(actuaciones) {
             .filter(Boolean);
     }
 
+    function _normalizarEvidencia(nombre) {
+        var limpio = _normalizarTexto(nombre);
+        if (!limpio) return '';
+        if (/^Plan local de salud\b/i.test(limpio) && /EPVSA 2024-2030/i.test(limpio)) {
+            return 'Plan local de salud · EPVSA 2024-2030';
+        }
+        if (/^EPVSA 2024-2030\b/i.test(limpio)) {
+            return 'EPVSA 2024-2030';
+        }
+        return limpio;
+    }
+
+    function _aListaEvidencias(valor) {
+        return _aLista(valor).map(_normalizarEvidencia).filter(Boolean);
+    }
+
     function _deduplicar(lista) {
         var vistos = {};
         var out = [];
@@ -25659,7 +25675,7 @@ function actuacion_proyectarDiagnostico(actuaciones) {
         _acumular(out.facilitadores, _aLista(a.facilitadoresDetalle).concat(_aLista(a.facilitadores)), frecuencias.facilitadores, a);
         _acumular(out.oportunidades, _aLista(a.oportunidadesDetectadas), frecuencias.oportunidades, a);
         _acumular(out.aprendizajes, _aLista(a.aprendizajesDetalle).concat(_aLista(a.aprendizajes)), frecuencias.aprendizajes, a);
-        _acumular(out.evidencias, _aLista(a.evidenciasDetalle).concat(_aLista(a.evidencia)).concat(_aLista(a.fuenteVerificacion)), frecuencias.evidencias, a);
+        _acumular(out.evidencias, _aListaEvidencias(a.evidenciasDetalle).concat(_aListaEvidencias(a.evidencia)).concat(_aListaEvidencias(a.fuenteVerificacion)), frecuencias.evidencias, a);
     });
 
     Object.keys(frecuencias).forEach(function(nombreBloque) {
