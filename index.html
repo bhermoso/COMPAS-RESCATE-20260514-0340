@@ -70921,6 +70921,11 @@ function COMPAS_crearSnapshotEvaluacion() {
     };
 }
 
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.auditarSnapshotEvaluacion = function() {
+    return COMPAS_crearSnapshotEvaluacion();
+};
+
 
 
 // ── Dashboard principal de evaluación ────────────────────────────────
