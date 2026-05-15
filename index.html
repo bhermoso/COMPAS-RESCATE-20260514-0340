@@ -72353,6 +72353,42 @@ function eval_actualizarJornada() {
 
 
 
+
+    var _snapshotEvalJornada = window.COMPAS && typeof window.COMPAS.obtenerSnapshotEvaluacionActual === 'function'
+        ? window.COMPAS.obtenerSnapshotEvaluacionActual()
+        : null;
+    if (_snapshotEvalJornada && _snapshotEvalJornada.resumenCicloEvaluacion && _snapshotEvalJornada.lecturaEvaluativaLongitudinal) {
+        var _resCicloJornada = _snapshotEvalJornada.resumenCicloEvaluacion;
+        var _lecLongJornada = _snapshotEvalJornada.lecturaEvaluativaLongitudinal;
+        var _valSnapJornada = _snapshotEvalJornada.validacionSnapshotEvaluacion || { advertencias: [], errores: [] };
+        var _clasJornada = _lecLongJornada.clasificaciones || {};
+        var _advJornada = (_valSnapJornada.advertencias || []).slice(0, 3);
+        var _errJornada = (_valSnapJornada.errores || []).slice(0, 2);
+
+        html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0.7rem 0.85rem;font-size:0.76rem;color:#475569;">';
+        html += '<div style="font-weight:700;color:#334155;margin-bottom:0.35rem;">Lectura longitudinal t&#233;cnica del ciclo</div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:0.45rem 0.8rem;">';
+        html += '<span>Ciclo evaluado: <strong>' + (_snapshotEvalJornada.cicloEvaluado || _resCicloJornada.ciclo || '-') + '</strong></span>';
+        html += '<span>Actuaciones del ciclo: <strong>' + (_resCicloJornada.totalCiclo || 0) + '</strong></span>';
+        if ((_resCicloJornada.totalFueraCiclo || 0) > 0) {
+            html += '<span>Fuera de ciclo: <strong>' + _resCicloJornada.totalFueraCiclo + '</strong></span>';
+        }
+        if (_clasJornada.ejecucion) html += '<span>Ejecuci&#243;n: <strong>' + _clasJornada.ejecucion.estado + '</strong></span>';
+        if (_clasJornada.temporalidad) html += '<span>Temporalidad: <strong>' + _clasJornada.temporalidad.estado + '</strong></span>';
+        if (_clasJornada.trazabilidad) html += '<span>Trazabilidad: <strong>' + _clasJornada.trazabilidad.estado + '</strong></span>';
+        html += '</div>';
+
+        if (_errJornada.length || _advJornada.length) {
+            html += '<div style="margin-top:0.35rem;color:#64748b;">';
+            if (_errJornada.length) html += 'Errores t&#233;cnicos: ' + _errJornada.join(', ') + '. ';
+            if (_advJornada.length) html += 'Advertencias: ' + _advJornada.join(', ') + '.';
+            html += '</div>';
+        }
+
+        html += '<div style="margin-top:0.3rem;color:#94a3b8;">Lectura derivada del snapshot evaluativo; no sustituye los conteos operativos del plan.</div>';
+        html += '</div>';
+    }
+
     // ── Bloque 1: Estado del plan ────────────────────────────────────
 
     if (nTotal > 0) {
