@@ -70918,12 +70918,18 @@ function COMPAS_crearSnapshotEvaluacion() {
     var ciclo = aniosActuaciones.length === 1
         ? aniosActuaciones[0]
         : (aniosActuaciones.length > 1 ? 'multi-anual' : String(new Date().getFullYear()));
+    var cicloEvaluado = ciclo === 'multi-anual' ? String(new Date().getFullYear()) : ciclo;
 
+    var actuacionesCicloEvaluado = [];
+    var actuacionesFueraCiclo = [];
     var resumenCicloEvaluacion = {
         version: 'resumen_ciclo_evaluacion_v1',
-        ciclo: ciclo,
+        ciclo: cicloEvaluado,
         criterio: 'actuacion.anio',
         totalAnalizadas: 0,
+        totalAgenda: 0,
+        totalCiclo: 0,
+        totalFueraCiclo: 0,
         pertenecientes: 0,
         noPertenecen: 0,
         pendientes: 0,
@@ -70943,12 +70949,18 @@ function COMPAS_crearSnapshotEvaluacion() {
             ? window.COMPAS.clasificarCicloEvaluacion
             : (typeof actuacion_clasificarCicloEvaluacion === 'function' ? actuacion_clasificarCicloEvaluacion : null);
         resumenCicloEvaluacion.totalAnalizadas = agendaEvaluacion.actuaciones.length;
+        resumenCicloEvaluacion.totalAgenda = agendaEvaluacion.actuaciones.length;
         if (_clasificadorCiclo) {
             agendaEvaluacion.actuaciones.forEach(function(act) {
-                var _clasif = _clasificadorCiclo(act, ciclo);
+                var _clasif = _clasificadorCiclo(act, cicloEvaluado);
                 var _estadoCiclo = _clasif && _clasif.estadoCiclo;
-                if (_clasif && _clasif.pertenece) resumenCicloEvaluacion.pertenecientes++;
-                else resumenCicloEvaluacion.noPertenecen++;
+                if (_clasif && _clasif.pertenece) {
+                    resumenCicloEvaluacion.pertenecientes++;
+                    actuacionesCicloEvaluado.push(_clonar(act));
+                } else {
+                    resumenCicloEvaluacion.noPertenecen++;
+                    actuacionesFueraCiclo.push(_clonar(act));
+                }
 
                 if (_estadoCiclo === 'pendiente') resumenCicloEvaluacion.pendientes++;
                 else if (_estadoCiclo === 'en_ejecucion') resumenCicloEvaluacion.enEjecucion++;
@@ -70964,6 +70976,8 @@ function COMPAS_crearSnapshotEvaluacion() {
                 });
             });
         }
+        resumenCicloEvaluacion.totalCiclo = actuacionesCicloEvaluado.length;
+        resumenCicloEvaluacion.totalFueraCiclo = actuacionesFueraCiclo.length;
     }
 
     var resumenAgenda = null;
@@ -71040,11 +71054,14 @@ function COMPAS_crearSnapshotEvaluacion() {
         municipioId: municipio,
         municipioNombre: municipio,
         ciclo: ciclo,
+        cicloEvaluado: cicloEvaluado,
         cicloInferidoDesde: aniosActuaciones.length ? 'actuaciones.anio/fechaReal/fechaPrevista' : 'fechaSistema',
         aniosActuaciones: aniosActuaciones,
         agendaFuente: agendaEvaluacion ? agendaEvaluacion.fuente : 'ninguna',
         totalActuaciones: resumenAgenda ? resumenAgenda.total : 0,
         resumenCicloEvaluacion: resumenCicloEvaluacion,
+        actuacionesCicloEvaluado: actuacionesCicloEvaluado,
+        actuacionesFueraCiclo: actuacionesFueraCiclo,
         accionesAgenda: accionesAgendaSnapshot,
         resumenAgenda: resumenAgenda,
         agendaEvaluacionFuente: agendaEvaluacion ? agendaEvaluacion.fuente : 'ninguna',
