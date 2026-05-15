@@ -60054,6 +60054,7 @@ function _aplicarPropuestaV3() {
         mostrarNotificacion({ title: 'Propuesta v3 aplicada', message: 'Se han preseleccionado ' + seleccion.length + ' líneas. Revisa y ajusta libremente.', type: 'success', duration: 4000 });
     }
 }
+window._aplicarPropuestaV3 = _aplicarPropuestaV3;
 
 function _actualizarBannerPropuestaV3() {
     var banner = document.getElementById('plan-v3-propuesta-banner');
