@@ -60064,26 +60064,20 @@ function _actualizarBannerPropuestaV3() {
         banner.style.display = 'none';
         return;
     }
-    var aplicada = !!window.__propuestaV3Aplicada;
     var lineasResumen = av3.propuestaEPVSA.map(function(p) {
         return '<span style="background:#dbeafe;color:#1d4ed8;padding:.1rem .38rem;border-radius:4px;font-size:.75rem;font-weight:600;">LE' + p.lineaId + ' (' + p.relevancia + '%)</span>';
     }).join(' ');
-
-    var tsBadge = aplicada
-        ? '<span style="color:#166534;background:#dcfce7;padding:.1rem .4rem;border-radius:4px;font-size:.72rem;">✔ Aplicada ' + new Date(window.__propuestaV3Aplicada.ts).toLocaleTimeString('es') + '</span>'
-        : '';
 
     banner.style.display = 'block';
     banner.innerHTML =
         '<div style="display:flex;align-items:flex-start;gap:.75rem;flex-wrap:wrap;">' +
         '<div style="flex:1;min-width:0;">' +
-        '<div style="font-weight:700;color:#1e40af;margin-bottom:.3rem;">🤖 Propuesta automática — Motor v3 ' + tsBadge + '</div>' +
-        '<div style="color:#475569;margin-bottom:.4rem;">El análisis multicriterio sugiere priorizar: ' + lineasResumen + '</div>' +
-        '<div style="font-size:.74rem;color:#64748b;">Puedes aplicarla como punto de partida y ajustar manualmente. La propuesta no borra selecciones previas del modo manual.</div>' +
+        '<div style="font-weight:700;color:#1e40af;margin-bottom:.3rem;">🤖 Lectura analítica v3</div>' +
+        '<div style="color:#475569;margin-bottom:.4rem;">El análisis multicriterio identifica señales en: ' + lineasResumen + '</div>' +
+        '<div style="font-size:.74rem;color:#64748b;">Para construir el Plan de acción, utiliza Generar propuesta operativa. Esta lectura no aplica cambios sobre la selección del plan.</div>' +
         '</div>' +
         '<div style="display:flex;flex-direction:column;gap:.35rem;align-items:flex-end;">' +
-        '<button onclick="_aplicarPropuestaV3()" style="padding:.45rem 1rem;background:#1d4ed8;color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:.8rem;white-space:nowrap;">▶ Aplicar propuesta</button>' +
-        (aplicada ? '<button onclick="window.__propuestaV3Aplicada=null;window.COMPAS.state.seleccionEPVSA=[];renderPlanAccion();" style="padding:.3rem .7rem;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:6px;font-size:.74rem;cursor:pointer;font-weight:600;white-space:nowrap;">↩ Limpiar selección</button>' : '') +
+        '<span style="padding:.35rem .65rem;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:6px;font-size:.74rem;font-weight:600;white-space:nowrap;">Solo lectura</span>' +
         '</div>' +
         '</div>';
 }
