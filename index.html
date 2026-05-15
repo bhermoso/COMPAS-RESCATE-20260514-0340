@@ -71031,6 +71031,23 @@ window.COMPAS.auditarSnapshotEvaluacion = function() {
     return COMPAS_crearSnapshotEvaluacion();
 };
 
+window.COMPAS.auditarPlanMunicipioActual = function() {
+    var banner = document.getElementById('plan-guardado-banner');
+    var municipio = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
+    var estrategia = (typeof estrategiaActual !== 'undefined') ? estrategiaActual : null;
+    return {
+        municipio: municipio,
+        estrategia: estrategia,
+        rutaEsperadaPlanAccion: 'estrategias/' + (estrategia || '') + '/municipios/' + (municipio || '') + '/planAccion',
+        planAccionFirebase: window.COMPAS && window.COMPAS.state ? (window.COMPAS.state.planAccionFirebase || null) : null,
+        planAccionState: window.COMPAS && window.COMPAS.state ? (window.COMPAS.state.planAccion || null) : null,
+        planLocal: (typeof planLocalSalud !== 'undefined' && planLocalSalud) ? (planLocalSalud.planAccion || null) : null,
+        seleccionEPVSA: window.COMPAS && window.COMPAS.state ? (window.COMPAS.state.seleccionEPVSA || null) : null,
+        bannerVisible: banner ? window.getComputedStyle(banner).display : null,
+        bannerInlineDisplay: banner ? banner.style.display : null
+    };
+};
+
 
 
 // ── Dashboard principal de evaluación ────────────────────────────────
