@@ -71137,6 +71137,55 @@ function COMPAS_crearSnapshotEvaluacion() {
     if (_baseLong.totalCiclo === 0) lecturaEvaluativaLongitudinal.limitaciones.push('sin_actuaciones_del_ciclo');
     if (_comunidadLong.alcance === 'agenda_completa_cargada') lecturaEvaluativaLongitudinal.limitaciones.push('lectura_comunitaria_no_filtrada_por_ciclo');
 
+    var validacionSnapshotEvaluacion = {
+        version: 'validacion_snapshot_evaluacion_v1',
+        valido: true,
+        errores: [],
+        advertencias: []
+    };
+    function _errorSnapshot(mensaje) {
+        validacionSnapshotEvaluacion.errores.push(mensaje);
+        validacionSnapshotEvaluacion.valido = false;
+    }
+    function _advertenciaSnapshot(mensaje) {
+        validacionSnapshotEvaluacion.advertencias.push(mensaje);
+    }
+    function _validarTasaSnapshot(nombre, valor) {
+        if (!isFinite(valor)) _errorSnapshot(nombre + '_no_finita');
+        else if (valor < 0) _errorSnapshot(nombre + '_negativa');
+        else if (valor > 100) _errorSnapshot(nombre + '_mayor_100');
+    }
+    if (resumenCicloEvaluacion.totalAgenda !== resumenCicloEvaluacion.totalCiclo + resumenCicloEvaluacion.totalFueraCiclo) _errorSnapshot('conteo_total_agenda_inconsistente');
+    if (resumenCicloEvaluacion.totalCiclo !== actuacionesCicloEvaluado.length) _errorSnapshot('conteo_actuaciones_ciclo_inconsistente');
+    if (resumenCicloEvaluacion.totalFueraCiclo !== actuacionesFueraCiclo.length) _errorSnapshot('conteo_actuaciones_fuera_ciclo_inconsistente');
+    if (resumenCicloEvaluacion.pertenecientes !== resumenCicloEvaluacion.totalCiclo) _errorSnapshot('conteo_pertenecientes_inconsistente');
+    if (resumenCicloEvaluacion.noPertenecen !== resumenCicloEvaluacion.totalFueraCiclo) _errorSnapshot('conteo_no_pertenecen_inconsistente');
+    _validarTasaSnapshot('tasaFinalizacionDentroCiclo', _ejecLong.tasaFinalizacionDentroCiclo);
+    _validarTasaSnapshot('tasaFinalizacionFueraCiclo', _ejecLong.tasaFinalizacionFueraCiclo);
+    _validarTasaSnapshot('tasaArrastre', _ejecLong.tasaArrastre);
+    _validarTasaSnapshot('tasaSuspension', _ejecLong.tasaSuspension);
+    _validarTasaSnapshot('tasaNoEjecucion', _ejecLong.tasaNoEjecucion);
+    _validarTasaSnapshot('pesoFueraCicloEnAgenda', _ejecLong.pesoFueraCicloEnAgenda);
+    _validarTasaSnapshot('tasaAnioActuacionVacio', _calidadLong.tasaAnioActuacionVacio);
+    _validarTasaSnapshot('tasaFechaRealVacia', _calidadLong.tasaFechaRealVacia);
+    _validarTasaSnapshot('tasaFechaRealInvalida', _calidadLong.tasaFechaRealInvalida);
+    if (_baseLong.totalCiclo === 0 && _estadoEjecucion === 'solida') _errorSnapshot('estado_ejecucion_solida_sin_base');
+    if (_comunidadLong.evidenciasVerificables === 0 && _estadoTrazabilidad === 'verificable') _errorSnapshot('trazabilidad_verificable_sin_evidencias');
+    if (_baseLong.totalFueraCiclo > 0 && _estadoTemporalidad === 'ciclo_limpio') _errorSnapshot('ciclo_limpio_con_actuaciones_fuera_ciclo');
+    if (_estadoTemporalidad === 'alta_carga_fuera_ciclo' && _ejecLong.pesoFueraCicloEnAgenda < 25) _errorSnapshot('alta_carga_fuera_ciclo_con_peso_bajo');
+    if (lecturaEvaluativaLongitudinal.fortalezas.indexOf('ejecucion_solida') !== -1 &&
+        lecturaEvaluativaLongitudinal.alertas.indexOf('baja_ejecucion') !== -1) _errorSnapshot('fortaleza_y_alerta_ejecucion_incompatibles');
+    if (lecturaEvaluativaLongitudinal.fortalezas.indexOf('ciclo_limpio') !== -1 &&
+        lecturaEvaluativaLongitudinal.alertas.indexOf('alta_carga_fuera_ciclo') !== -1) _errorSnapshot('fortaleza_y_alerta_temporalidad_incompatibles');
+    if (lecturaEvaluativaLongitudinal.fortalezas.indexOf('trazabilidad_verificable') !== -1 &&
+        lecturaEvaluativaLongitudinal.alertas.indexOf('baja_trazabilidad_verificable') !== -1) _errorSnapshot('fortaleza_y_alerta_trazabilidad_incompatibles');
+    if (diagnosticoVivo && _baseLong.totalFueraCiclo > 0) _advertenciaSnapshot('diagnostico_vivo_sobre_agenda_completa_con_fuera_ciclo');
+    if (_baseLong.totalCiclo === 0 && lecturaEvaluativaLongitudinal.fortalezas.length > 0) _advertenciaSnapshot('fortalezas_evaluativas_sin_actuaciones_del_ciclo');
+    if (ciclo === 'multi-anual') _advertenciaSnapshot('ciclo_multi_anual');
+    if (aniosActuaciones.length > 1) _advertenciaSnapshot('varios_anios_en_agenda');
+    if (aniosActuaciones.length > 0 && aniosActuaciones.indexOf(cicloEvaluado) === -1) _advertenciaSnapshot('ciclo_evaluado_no_incluido_en_anios_actuaciones');
+    if (lecturaEvaluativaLongitudinal.limitaciones.indexOf('lectura_comunitaria_no_filtrada_por_ciclo') !== -1) _advertenciaSnapshot('trazabilidad_basada_en_lectura_comunitaria_no_filtrada_por_ciclo');
+
     var iss = null;
     try {
         iss = _clonar(eval_calcularISS());
@@ -71199,6 +71248,7 @@ function COMPAS_crearSnapshotEvaluacion() {
         actuacionesFueraCiclo: actuacionesFueraCiclo,
         indicadoresLongitudinales: indicadoresLongitudinales,
         lecturaEvaluativaLongitudinal: lecturaEvaluativaLongitudinal,
+        validacionSnapshotEvaluacion: validacionSnapshotEvaluacion,
         accionesAgenda: accionesAgendaSnapshot,
         resumenAgenda: resumenAgenda,
         agendaEvaluacionFuente: agendaEvaluacion ? agendaEvaluacion.fuente : 'ninguna',
