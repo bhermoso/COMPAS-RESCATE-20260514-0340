@@ -25507,6 +25507,80 @@ function actuacion_proyectarEvaluacion(actuaciones) {
 
 }
 
+function actuacion_clasificarCicloEvaluacion(act, ciclo) {
+    var cicloStr = (ciclo !== undefined && ciclo !== null && String(ciclo).trim())
+        ? String(ciclo).trim()
+        : String(new Date().getFullYear());
+    var fechaInicioCicloISO = cicloStr + '-01-01';
+    var fechaFinCicloISO = cicloStr + '-12-31';
+    var advertencias = [];
+    var a = (act && typeof act === 'object') ? act : {};
+    var anioActuacion = (a.anio !== undefined && a.anio !== null) ? String(a.anio).trim() : '';
+    var estado = (a.estado || 'planificada').toString().trim().toLowerCase();
+    var fechaReal = (a.fechaReal !== undefined && a.fechaReal !== null) ? String(a.fechaReal).trim() : '';
+    var fechaPrevista = (a.fechaPrevista !== undefined && a.fechaPrevista !== null) ? String(a.fechaPrevista).trim() : '';
+    var pertenece = anioActuacion === cicloStr;
+    var estadoCiclo = 'no_pertenece';
+
+    if (!anioActuacion) advertencias.push('anio_actuacion_vacio');
+    if (!pertenece) {
+        return {
+            pertenece: false,
+            ciclo: cicloStr,
+            criterio: 'actuacion.anio',
+            anioActuacion: anioActuacion,
+            estado: estado,
+            estadoCiclo: estadoCiclo,
+            fechaReal: fechaReal,
+            fechaPrevista: fechaPrevista,
+            fechaInicioCicloISO: fechaInicioCicloISO,
+            fechaFinCicloISO: fechaFinCicloISO,
+            advertencias: advertencias
+        };
+    }
+
+    if (estado === 'finalizada') {
+        if (!fechaReal) {
+            estadoCiclo = 'finalizada_sin_fecha';
+            advertencias.push('fecha_real_vacia');
+        } else {
+            var fechaRealObj = new Date(fechaReal);
+            if (isNaN(fechaRealObj.getTime())) {
+                estadoCiclo = 'finalizada_sin_fecha';
+                advertencias.push('fecha_real_invalida');
+            } else {
+                var fechaRealISO = fechaRealObj.toISOString().slice(0, 10);
+                estadoCiclo = (fechaRealISO >= fechaInicioCicloISO && fechaRealISO <= fechaFinCicloISO)
+                    ? 'finalizada_dentro_ciclo'
+                    : 'finalizada_fuera_ciclo';
+            }
+        }
+    } else if (estado === 'en ejecucion') {
+        estadoCiclo = 'en_ejecucion';
+    } else if (estado === 'suspendida') {
+        estadoCiclo = 'suspendida';
+    } else {
+        estadoCiclo = 'pendiente';
+    }
+
+    return {
+        pertenece: true,
+        ciclo: cicloStr,
+        criterio: 'actuacion.anio',
+        anioActuacion: anioActuacion,
+        estado: estado,
+        estadoCiclo: estadoCiclo,
+        fechaReal: fechaReal,
+        fechaPrevista: fechaPrevista,
+        fechaInicioCicloISO: fechaInicioCicloISO,
+        fechaFinCicloISO: fechaFinCicloISO,
+        advertencias: advertencias
+    };
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.clasificarCicloEvaluacion = actuacion_clasificarCicloEvaluacion;
+
 /**
  * Proyección pura del array de actuaciones para DIAGNÓSTICO COMUNITARIO VIVO.
  * Lee campos estructurados y legacy sin mutar actuaciones ni persistir resultados.
