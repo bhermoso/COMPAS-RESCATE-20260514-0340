@@ -71273,9 +71273,20 @@ function COMPAS_crearSnapshotEvaluacion() {
     };
 }
 
+function COMPAS_obtenerSnapshotEvaluacionActual() {
+    try {
+        if (typeof COMPAS_crearSnapshotEvaluacion !== 'function') return null;
+        return COMPAS_crearSnapshotEvaluacion();
+    } catch(e) {
+        console.warn('[COMPÁS EVALUACIÓN] obtenerSnapshotEvaluacionActual falló:', e);
+        return null;
+    }
+}
+
 window.COMPAS = window.COMPAS || {};
+window.COMPAS.obtenerSnapshotEvaluacionActual = COMPAS_obtenerSnapshotEvaluacionActual;
 window.COMPAS.auditarSnapshotEvaluacion = function() {
-    return COMPAS_crearSnapshotEvaluacion();
+    return COMPAS_obtenerSnapshotEvaluacionActual();
 };
 
 window.COMPAS.auditarPlanMunicipioActual = function() {
