@@ -77355,7 +77355,7 @@ function COMPAS_construirLecturaTerritorialV1(analisis) {
 
         meta: {
             fuentes:      [],
-            subversion:   '1.2',
+            subversion:   '1.3',
             confianza:    null,
             advertencias: []
         },
@@ -77369,6 +77369,19 @@ function COMPAS_construirLecturaTerritorialV1(analisis) {
             alertasCoherencia:       [],    // string[]
             soportePrioridades:      [],    // {lineaId, soporteObservacional, soporteParticipativo, soporteSalutogenico, triangulada, confianza}
             resumen:                 []     // string[] máx. 5
+        },
+
+        evidencia: {
+            nivelGlobal: null,
+            distribucion: {},
+            incertidumbreGlobal: null,
+            dependenciasCriticas: [],
+            inferenciasFragiles: [],
+            inferenciasRobustas: [],
+            vaciosCriticos: [],
+            matrizSoporte: {},
+            trazabilidadFuentes: {},
+            advertenciasEpistemicas: []
         }
     };
 
@@ -78047,6 +78060,189 @@ function COMPAS_construirLecturaTerritorialV1(analisis) {
         }
         aud.resumen = _res.slice(0, 5);
 
+        // ── 13. GRADIENTES DE EVIDENCIA E INCERTIDUMBRE (v1.3) ──
+        // Sistema pasivo: no decide, no persiste, no eleva confianza.
+        var ev = lectura.evidencia;
+        ev.distribucion = {
+            observacional: 0,
+            inferencial: 0,
+            hipotetico: 0,
+            orientativo: 0,
+            triangulado: 0,
+            fragil: 0
+        };
+        ev.matrizSoporte = {
+            prioridades: { fuerte: 0, moderado: 0, debil: 0 },
+            interpretaciones: { fuerte: 0, moderado: 0, debil: 0 },
+            orientaciones: { fuerte: 0, moderado: 0, debil: 0 },
+            vulnerabilidades: { fuerte: 0, moderado: 0, debil: 0 }
+        };
+        ev.trazabilidadFuentes = {};
+
+        function _evFuentes(item) {
+            var f = [];
+            if (item && Array.isArray(item.origenes)) f = f.concat(item.origenes);
+            if (item && Array.isArray(item.fuentes)) f = f.concat(item.fuentes);
+            if (item && item.fuente) f.push(item.fuente);
+            f = f.filter(Boolean).map(function(x){ return String(x); });
+            return f.filter(function(x, i){ return f.indexOf(x) === i; });
+        }
+        function _evRegistrarFuente(fuente, grupo) {
+            if (!fuente) return;
+            if (!ev.trazabilidadFuentes[fuente]) ev.trazabilidadFuentes[fuente] = {};
+            ev.trazabilidadFuentes[fuente][grupo] = (ev.trazabilidadFuentes[fuente][grupo] || 0) + 1;
+        }
+        function _evSoporte(item) {
+            var fuentes = _evFuentes(item);
+            if (fuentes.length >= 3) return 'fuerte';
+            if (fuentes.length >= 2 || item && item.confianza === 'media') return 'moderado';
+            return 'debil';
+        }
+        function _evFragil(item) {
+            var fuentes = _evFuentes(item);
+            return !!(item && (
+                item.requiereTriangulacion ||
+                item.confianza === 'baja' ||
+                fuentes.length <= 1 ||
+                (item.tipo === 'inferencia' && !item.soporte) ||
+                (item.pesoInterpretativo != null && item.pesoInterpretativo > 0.75 && fuentes.length < 2)
+            ));
+        }
+        function _evTriangulado(item) {
+            var fuentes = _evFuentes(item);
+            return fuentes.length >= 2 || (item && item.fuente === 'multi-fuente') || /triangul/i.test(String(item && item.soporte || ''));
+        }
+        function _evAddVacio(tipo, impacto, texto) {
+            ev.vaciosCriticos.push({ tipo: tipo, impacto: impacto, texto: texto });
+        }
+        function _evAddAdvertencia(texto) {
+            if (ev.advertenciasEpistemicas.indexOf(texto) === -1) ev.advertenciasEpistemicas.push(texto);
+        }
+
+        [
+            ['observaciones', obs],
+            ['interpretaciones', int_],
+            ['tensiones', ten],
+            ['activos', act],
+            ['vulnerabilidades', vul],
+            ['oportunidades', opp],
+            ['incertidumbres', inc],
+            ['orientaciones', ori]
+        ].forEach(function(par) {
+            (par[1] || []).forEach(function(item) {
+                var tipo = item && item.tipo;
+                if (tipo === 'observacion') ev.distribucion.observacional++;
+                else if (tipo === 'inferencia') ev.distribucion.inferencial++;
+                else if (tipo === 'hipotesis') ev.distribucion.hipotetico++;
+                else if (tipo === 'orientacion') ev.distribucion.orientativo++;
+                if (_evTriangulado(item)) ev.distribucion.triangulado++;
+                if (_evFragil(item)) ev.distribucion.fragil++;
+                _evFuentes(item).forEach(function(f){ _evRegistrarFuente(f, par[0]); });
+
+                if ((tipo === 'inferencia' || tipo === 'hipotesis') && _evFragil(item)) {
+                    ev.inferenciasFragiles.push({
+                        texto: item.texto,
+                        categoria: item.categoria,
+                        soporte: item.soporte || null,
+                        fuentes: _evFuentes(item),
+                        motivoFragilidad: item.requiereTriangulacion ? 'requiere_triangulacion' : 'soporte_limitado'
+                    });
+                } else if (tipo === 'inferencia' && _evFuentes(item).length >= 3 && !item.requiereTriangulacion) {
+                    ev.inferenciasRobustas.push({
+                        texto: item.texto,
+                        soporte: item.soporte || null,
+                        fuentes: _evFuentes(item),
+                        triangulada: true
+                    });
+                }
+            });
+        });
+
+        (pri || []).forEach(function(p) {
+            var soporte = (p.origenes || p.fuentes || []).length >= 3 ? 'fuerte'
+                : ((p.origenes || p.fuentes || []).length >= 2 ? 'moderado' : 'debil');
+            ev.distribucion.orientativo++;
+            if ((p.origenes || p.fuentes || []).length >= 2) ev.distribucion.triangulado++;
+            if (soporte === 'debil') ev.distribucion.fragil++;
+            ev.matrizSoporte.prioridades[soporte]++;
+            (p.origenes || p.fuentes || []).forEach(function(f){ _evRegistrarFuente(f, 'prioridades'); });
+        });
+
+        int_.forEach(function(item){ ev.matrizSoporte.interpretaciones[_evSoporte(item)]++; });
+        ori.forEach(function(item){ ev.matrizSoporte.orientaciones[_evSoporte(item)]++; });
+        vul.forEach(function(item){ ev.matrizSoporte.vulnerabilidades[_evSoporte(item)]++; });
+
+        if (!_tieneDPC) _evAddVacio('sin_participacion', 'alto', 'Sin datos de participacion ciudadana; la lectura comunitaria queda limitada.');
+        if (_actCom === 0) _evAddVacio('sin_activos', 'alto', 'No se identifican activos comunitarios explicitos.');
+        _evAddVacio('sin_longitudinalidad', 'alto', 'No hay seguimiento temporal integrado en LT1.');
+        _evAddVacio('sin_gobernanza', 'medio', 'La gobernanza local no aparece como fuente de datos.');
+        if (!_tieneEstudios) _evAddVacio('sin_estudios', 'medio', 'Sin estudios complementarios locales registrados.');
+        if (!_tieneSOC && !_tieneIBSE) _evAddVacio('sin_soporte_comunitario_bienestar', 'medio', 'Sin soporte salutogenico o bienestar subjetivo.');
+        _evAddVacio('sin_seguimiento_anual', 'medio', 'No hay trazabilidad anual de cambios territoriales.');
+
+        if (_tieneSOC && !_tieneDPC && !_tieneIBSE) {
+            ev.dependenciasCriticas.push({
+                tipo: 'dependencia_fuente_salutogenica',
+                fuentePrincipal: 'perfil_SOC',
+                impacto: 'medio',
+                texto: 'La lectura depende de SOC sin triangulacion comunitaria o IBSE.'
+            });
+        }
+        if (_tienePropuesta && !_tieneDPC) {
+            ev.dependenciasCriticas.push({
+                tipo: 'prioridad_sin_participacion',
+                fuentePrincipal: 'propuestaEPVSA',
+                impacto: 'alto',
+                texto: 'Las prioridades no cuentan con soporte participativo documentado.'
+            });
+        }
+        if (aud.equilibrioFuentes === 'predominio_inferencial' || aud.equilibrioFuentes === 'predominio_epidemiologico') {
+            ev.dependenciasCriticas.push({
+                tipo: 'lectura_fuente_dominante',
+                fuentePrincipal: aud.equilibrioFuentes,
+                impacto: 'medio',
+                texto: 'La lectura presenta dependencia de una familia de fuentes.'
+            });
+        }
+        if (nFuentes <= 1) {
+            ev.dependenciasCriticas.push({
+                tipo: 'fuente_unica',
+                fuentePrincipal: meta.fuentes[0] || 'ninguna',
+                impacto: 'alto',
+                texto: 'La lectura se apoya en una sola familia de fuentes.'
+            });
+        }
+
+        _evAddAdvertencia('La lectura no permite establecer relaciones causales.');
+        if (!_tieneDPC) _evAddAdvertencia('La ausencia de participacion limita la validacion comunitaria.');
+        if (!_tieneEstudios) _evAddAdvertencia('La evidencia longitudinal y complementaria es insuficiente.');
+        if (_actCom === 0) _evAddAdvertencia('Las inferencias salutogenicas requieren triangulacion adicional.');
+        if (_tienePropuesta && nFuentes < 3) _evAddAdvertencia('Las prioridades exceden parcialmente el soporte observacional.');
+        _evAddAdvertencia('La ausencia de gobernanza limita la interpretacion territorial.');
+
+        var _triRatio = (ev.distribucion.observacional + ev.distribucion.inferencial + ev.distribucion.hipotetico + ev.distribucion.orientativo) > 0
+            ? ev.distribucion.triangulado / (ev.distribucion.observacional + ev.distribucion.inferencial + ev.distribucion.hipotetico + ev.distribucion.orientativo)
+            : 0;
+        var _hayContradicciones = aud.contradicciones.length > 0 || aud.riesgosInterpretativos.length > 2;
+        if (nFuentes >= 4 && _tieneDPC && (_tieneIBSE || _tieneSOC) && _triRatio >= 0.25 && !_hayContradicciones && ev.vaciosCriticos.length <= 3) {
+            ev.nivelGlobal = 'moderado';
+        } else if (nFuentes >= 2 && _triRatio > 0 && ev.vaciosCriticos.length <= 5) {
+            ev.nivelGlobal = 'preliminar';
+        } else {
+            ev.nivelGlobal = 'exploratorio';
+        }
+
+        var _fragRatio = (ev.distribucion.fragil + ev.distribucion.triangulado) > 0
+            ? ev.distribucion.fragil / (ev.distribucion.fragil + ev.distribucion.triangulado)
+            : 1;
+        if (ev.vaciosCriticos.length >= 5 || ev.dependenciasCriticas.length >= 2 || _fragRatio > 0.6 || aud.contradicciones.length > 0) {
+            ev.incertidumbreGlobal = 'alta';
+        } else if (ev.vaciosCriticos.length >= 3 || ev.dependenciasCriticas.length === 1 || _fragRatio > 0.35) {
+            ev.incertidumbreGlobal = 'media';
+        } else {
+            ev.incertidumbreGlobal = 'baja';
+        }
+
     } catch(err) {
         meta.advertencias.push('Error interno en COMPAS_construirLecturaTerritorialV1: ' + (err && err.message ? err.message : String(err)));
         console.error('[COMPAS] COMPAS_construirLecturaTerritorialV1:', err);
@@ -78245,6 +78441,14 @@ window.COMPAS_construirLecturaTerritorialV1 = COMPAS_construirLecturaTerritorial
             + '</div>';
     }
 
+    function _renderMatrizSoporte(matriz) {
+        if (!matriz) return '—';
+        return Object.keys(matriz).map(function(k) {
+            var m = matriz[k] || {};
+            return k + ': F' + (m.fuerte || 0) + '/M' + (m.moderado || 0) + '/D' + (m.debil || 0);
+        }).join(' · ');
+    }
+
     window.COMPAS_renderLT1Debug = function() {
         var panel = document.getElementById('compas-lt1-debug');
         var body  = document.getElementById('compas-lt1-debug-body');
@@ -78296,6 +78500,29 @@ window.COMPAS_construirLecturaTerritorialV1 = COMPAS_construirLecturaTerritorial
             + (lec.meta.advertencias && lec.meta.advertencias.length
                 ? lec.meta.advertencias.map(function(a){ return '<div class="lt1-warn">&#9888; ' + _esc(a) + '</div>'; }).join('')
                 : '<div class="lt1-row"><span class="lt1-key">advertencias</span><span class="lt1-val" style="color:#94a3b8;">ninguna</span></div>')
+            + '</div>';
+
+        // Evidencia e incertidumbre (v1.3)
+        var ev = lec.evidencia || {};
+        var dist = ev.distribucion || {};
+        html += '<div class="lt1-section">'
+            + '<div class="lt1-section-title">Evidencia e incertidumbre</div>'
+            + '<div class="lt1-row"><span class="lt1-key">nivel global</span><span class="lt1-val">' + _esc(ev.nivelGlobal) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">incertidumbre</span><span class="lt1-val">' + _esc(ev.incertidumbreGlobal) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">distribución</span><span class="lt1-val">'
+            + 'obs:' + (dist.observacional || 0)
+            + ' inf:' + (dist.inferencial || 0)
+            + ' hip:' + (dist.hipotetico || 0)
+            + ' ori:' + (dist.orientativo || 0)
+            + ' tri:' + (dist.triangulado || 0)
+            + ' frag:' + (dist.fragil || 0)
+            + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">dependencias</span><span class="lt1-val">' + ((ev.dependenciasCriticas || []).length) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">inf. frágiles</span><span class="lt1-val">' + ((ev.inferenciasFragiles || []).length) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">inf. robustas</span><span class="lt1-val">' + ((ev.inferenciasRobustas || []).length) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">vacíos críticos</span><span class="lt1-val">' + ((ev.vaciosCriticos || []).length) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">matriz soporte</span><span class="lt1-val">' + _esc(_renderMatrizSoporte(ev.matrizSoporte)) + '</span></div>'
+            + ((ev.advertenciasEpistemicas || []).slice(0, 3).map(function(a){ return '<div class="lt1-warn" style="color:#8a5a00;">&rsaquo; ' + _esc(a) + '</div>'; }).join(''))
             + '</div>';
 
         // Contadores
