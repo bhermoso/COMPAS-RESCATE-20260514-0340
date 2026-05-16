@@ -78055,6 +78055,233 @@ window.COMPAS_crearEstructuraLongitudinalTemporalV1 = COMPAS_crearEstructuraLong
 window.COMPAS_validarEstructuraLongitudinalTemporalV1 = COMPAS_validarEstructuraLongitudinalTemporalV1;
 window.COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1 = COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1;
 
+// ---------------------------------------------------------------------------
+// LECTURA LONGITUDINAL TERRITORIAL MUNICIPAL COMPAS v1
+// Proposito: organizar lectura documental/territorial prudente entre ciclos.
+// Sin evolucion sanitaria, scoring, ranking, causalidad, indicadores sinteticos ni IA.
+// ---------------------------------------------------------------------------
+
+function COMPAS_lltV1_copiarLecturaTematica(val) {
+    if (!val || typeof val !== 'object') {
+        return { resumen: '', indiciosDocumentales: [], cautelas: [] };
+    }
+    return {
+        resumen: val.resumen || '',
+        indiciosDocumentales: Array.isArray(val.indiciosDocumentales) ? val.indiciosDocumentales.slice() : [],
+        cautelas: Array.isArray(val.cautelas) ? val.cautelas.slice() : []
+    };
+}
+
+function COMPAS_crearLecturaLongitudinalTerritorialV1(datos) {
+    datos = datos || {};
+    return {
+        contrato: 'lectura_longitudinal_territorial_v1',
+        municipio: datos.municipio || '',
+        fechaLectura: datos.fechaLectura || new Date().toISOString(),
+        version: datos.version || 'lectura_longitudinal_territorial_v1',
+        estructuraTemporalReferencia: datos.estructuraTemporalReferencia || null,
+        cicloAnalizado: datos.cicloAnalizado || '',
+        ciclosComparados: Array.isArray(datos.ciclosComparados) ? datos.ciclosComparados.slice() : [],
+        continuidadesDetectadas: Array.isArray(datos.continuidadesDetectadas) ? datos.continuidadesDetectadas.slice() : [],
+        cambiosDocumentales: Array.isArray(datos.cambiosDocumentales) ? datos.cambiosDocumentales.slice() : [],
+        lagunasPersistentes: Array.isArray(datos.lagunasPersistentes) ? datos.lagunasPersistentes.slice() : [],
+        lagunasNuevas: Array.isArray(datos.lagunasNuevas) ? datos.lagunasNuevas.slice() : [],
+        lagunasResueltas: Array.isArray(datos.lagunasResueltas) ? datos.lagunasResueltas.slice() : [],
+        riesgosComparabilidad: Array.isArray(datos.riesgosComparabilidad) ? datos.riesgosComparabilidad.slice() : [],
+        cautelasMetodologicas: Array.isArray(datos.cautelasMetodologicas) ? datos.cautelasMetodologicas.slice() : [],
+        lecturaDesigualdades: COMPAS_lltV1_copiarLecturaTematica(datos.lecturaDesigualdades),
+        lecturaParticipacion: COMPAS_lltV1_copiarLecturaTematica(datos.lecturaParticipacion),
+        lecturaIntersectorialidad: COMPAS_lltV1_copiarLecturaTematica(datos.lecturaIntersectorialidad),
+        lecturaMulticulturalidad: COMPAS_lltV1_copiarLecturaTematica(datos.lecturaMulticulturalidad),
+        lecturaVulnerabilidadTerritorial: COMPAS_lltV1_copiarLecturaTematica(datos.lecturaVulnerabilidadTerritorial),
+        utilidadObservatorio: datos.utilidadObservatorio || 'no_valorada',
+        utilidadEvaluacion: datos.utilidadEvaluacion || 'no_valorada',
+        utilidadLT1: datos.utilidadLT1 || 'no_valorada',
+        utilidadMejoramiento: datos.utilidadMejoramiento || 'no_valorada',
+        limitesInterpretacion: Array.isArray(datos.limitesInterpretacion) ? datos.limitesInterpretacion.slice() : []
+    };
+}
+
+function COMPAS_validarLecturaLongitudinalTerritorialV1(lectura) {
+    var errores = [];
+    var advertencias = [];
+    var validarEstructura = (window.COMPAS && window.COMPAS.longitudinalTemporalV1)
+        ? window.COMPAS.longitudinalTemporalV1.validarEstructura
+        : null;
+
+    function validarBloqueTematico(nombre, bloque) {
+        if (!bloque || typeof bloque !== 'object') {
+            errores.push(nombre + '_no_objeto');
+            return;
+        }
+        if (!bloque.resumen) advertencias.push(nombre + '_sin_resumen');
+        if (!Array.isArray(bloque.indiciosDocumentales)) advertencias.push(nombre + '_indicios_no_array');
+        if (!Array.isArray(bloque.cautelas)) advertencias.push(nombre + '_cautelas_no_array');
+    }
+
+    if (!lectura || typeof lectura !== 'object') errores.push('lectura_no_objeto');
+    if (lectura && lectura.contrato !== 'lectura_longitudinal_territorial_v1') advertencias.push('contrato_no_declarado');
+    if (lectura && !lectura.municipio) errores.push('municipio_obligatorio');
+    if (lectura && !lectura.fechaLectura) advertencias.push('fechaLectura_no_declarada');
+    if (lectura && !lectura.version) advertencias.push('version_no_declarada');
+    if (lectura && !lectura.estructuraTemporalReferencia) errores.push('estructuraTemporalReferencia_obligatoria');
+    if (lectura && !lectura.cicloAnalizado) errores.push('cicloAnalizado_obligatorio');
+    if (lectura && !Array.isArray(lectura.ciclosComparados)) errores.push('ciclosComparados_no_array');
+    if (lectura && !Array.isArray(lectura.continuidadesDetectadas)) advertencias.push('continuidadesDetectadas_no_array');
+    if (lectura && !Array.isArray(lectura.cambiosDocumentales)) advertencias.push('cambiosDocumentales_no_array');
+    if (lectura && !Array.isArray(lectura.lagunasPersistentes)) advertencias.push('lagunasPersistentes_no_array');
+    if (lectura && !Array.isArray(lectura.lagunasNuevas)) advertencias.push('lagunasNuevas_no_array');
+    if (lectura && !Array.isArray(lectura.lagunasResueltas)) advertencias.push('lagunasResueltas_no_array');
+    if (lectura && !Array.isArray(lectura.riesgosComparabilidad)) advertencias.push('riesgosComparabilidad_no_array');
+    if (lectura && !Array.isArray(lectura.cautelasMetodologicas)) advertencias.push('cautelasMetodologicas_no_array');
+    if (lectura && !Array.isArray(lectura.limitesInterpretacion)) advertencias.push('limitesInterpretacion_no_array');
+
+    if (lectura && lectura.estructuraTemporalReferencia && typeof validarEstructura === 'function') {
+        var valEst = validarEstructura(lectura.estructuraTemporalReferencia);
+        if (!valEst.valido) errores.push('estructuraTemporalReferencia_invalida');
+        (valEst.errores || []).forEach(function(err) {
+            errores.push('estructuraTemporal_' + err);
+        });
+        (valEst.advertencias || []).forEach(function(adv) {
+            advertencias.push('estructuraTemporal_' + adv);
+        });
+        if (lectura.cicloAnalizado && lectura.estructuraTemporalReferencia.cicloActual &&
+            lectura.cicloAnalizado !== lectura.estructuraTemporalReferencia.cicloActual) {
+            advertencias.push('cicloAnalizado_distinto_cicloActual_referencia');
+        }
+        if (lectura.cicloAnalizado && Array.isArray(lectura.estructuraTemporalReferencia.ciclos) &&
+            lectura.estructuraTemporalReferencia.ciclos.indexOf(lectura.cicloAnalizado) === -1) {
+            advertencias.push('cicloAnalizado_no_en_estructura_referencia');
+        }
+    } else if (lectura && lectura.estructuraTemporalReferencia) {
+        advertencias.push('longitudinal_temporal_no_disponible');
+    }
+
+    if (lectura) {
+        validarBloqueTematico('lecturaDesigualdades', lectura.lecturaDesigualdades);
+        validarBloqueTematico('lecturaParticipacion', lectura.lecturaParticipacion);
+        validarBloqueTematico('lecturaIntersectorialidad', lectura.lecturaIntersectorialidad);
+        validarBloqueTematico('lecturaMulticulturalidad', lectura.lecturaMulticulturalidad);
+        validarBloqueTematico('lecturaVulnerabilidadTerritorial', lectura.lecturaVulnerabilidadTerritorial);
+    }
+
+    return {
+        version: 'validacion_lectura_longitudinal_territorial_v1',
+        valido: errores.length === 0,
+        errores: errores,
+        advertencias: advertencias
+    };
+}
+
+function COMPAS_obtenerEjemploLecturaLongitudinalTerritorialV1() {
+    var estructuraRef = (typeof COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1 === 'function')
+        ? COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1()
+        : null;
+
+    return COMPAS_crearLecturaLongitudinalTerritorialV1({
+        municipio: 'Atarfe',
+        fechaLectura: '2026-01-15T00:00:00.000Z',
+        version: 'lectura_longitudinal_territorial_v1',
+        estructuraTemporalReferencia: estructuraRef,
+        cicloAnalizado: '2026',
+        ciclosComparados: [],
+        continuidadesDetectadas: [
+            {
+                ambito: 'inventario_documental',
+                descripcion: 'El catalogo y la auditoria del ciclo 2026 comparten el mismo nucleo de fuentes estadisticas municipales',
+                referenciaDocumental: 'estructuraTemporalReferencia.catalogosPorCiclo.2026',
+                sinInferenciaEvolucion: true
+            },
+            {
+                ambito: 'corte_temporal',
+                descripcion: 'El corte inicial 2026 queda registrado como linea base documental del ciclo',
+                referenciaDocumental: 'estructuraTemporalReferencia.cortesTemporales.corte_inicial_2026',
+                sinInferenciaEvolucion: true
+            }
+        ],
+        cambiosDocumentales: estructuraRef && Array.isArray(estructuraRef.cambiosDocumentales)
+            ? estructuraRef.cambiosDocumentales.slice()
+            : [],
+        lagunasPersistentes: estructuraRef && Array.isArray(estructuraRef.lagunasPersistentes)
+            ? estructuraRef.lagunasPersistentes.slice()
+            : [
+                'sin repositorio municipal unificado de documentos',
+                'sin serie local anual integrada de seguimiento'
+            ],
+        lagunasNuevas: estructuraRef && Array.isArray(estructuraRef.lagunasNuevas)
+            ? estructuraRef.lagunasNuevas.slice()
+            : [],
+        lagunasResueltas: [],
+        riesgosComparabilidad: [
+            'comparar ciclos futuros sin homologar cortes temporales',
+            'interpretar cambios documentales como mejora o deterioro de resultados',
+            'extrapolar lecturas tematicas sin triangulacion participativa'
+        ],
+        cautelasMetodologicas: [
+            'No calcular evolucion sanitaria ni inferir causalidad desde esta lectura',
+            'No emitir recomendaciones automaticas ni rankings municipales',
+            'Usar solo como organizacion prudente de evidencia documental disponible'
+        ],
+        lecturaDesigualdades: {
+            resumen: 'La documentacion disponible del corte inicial 2026 sugiere presencia de desigualdades en fuentes estadisticas y de vulnerabilidad; lectura exploratoria.',
+            indiciosDocumentales: [
+                'fuentes ERACIS/PLIZD y SIMA/IECA incorporadas al ciclo 2026',
+                'auditoria territorial marca desigualdades como dimension presente'
+            ],
+            cautelas: ['No equivaler disponibilidad documental con magnitud de brechas poblacionales']
+        },
+        lecturaParticipacion: {
+            resumen: 'Participacion comunitaria con cobertura documental limitada en el corte inicial.',
+            indiciosDocumentales: [
+                'auditoria 2026 registra participacion como no plenamente documentada'
+            ],
+            cautelas: ['Ausencia documental no implica ausencia de participacion real en el territorio']
+        },
+        lecturaIntersectorialidad: {
+            resumen: 'Varias fuentes del ciclo 2026 aportan lectura intersectorial a nivel documental.',
+            indiciosDocumentales: [
+                'fuentes estadisticas y catalogo municipal con categorias cruzadas salud-empleo-demografia'
+            ],
+            cautelas: ['No inferir coordinacion operativa intersectorial solo desde coexistencia de fuentes']
+        },
+        lecturaMulticulturalidad: {
+            resumen: 'Multiculturalidad poco representada en el inventario documental del corte inicial.',
+            indiciosDocumentales: [
+                'auditoria 2026 sin multiculturalidad activa en fuentes nucleares'
+            ],
+            cautelas: ['Laguna documental no debe leerse como inexistencia de diversidad cultural']
+        },
+        lecturaVulnerabilidadTerritorial: {
+            resumen: 'La vulnerabilidad territorial aparece como eje documental recurrente en fuentes y auditoria del ciclo 2026.',
+            indiciosDocumentales: [
+                'informe epidemiologico municipal y ERACIS presentes en fuentesPorCiclo.2026',
+                'catalogo y auditoria marcan vulnerabilidad como dimension relevante'
+            ],
+            cautelas: ['No convertir esta lectura en indicador sintetico de riesgo territorial']
+        },
+        utilidadObservatorio: 'media',
+        utilidadEvaluacion: 'baja',
+        utilidadLT1: 'alta',
+        utilidadMejoramiento: 'media',
+        limitesInterpretacion: [
+            'Lectura longitudinal territorial v1: solo organizacion documental prudente',
+            'No sustituye evaluacion sanitaria, LT1 interpretativo ni motor de mejoramiento',
+            'Requiere triangulacion futura antes de comparar con otros ciclos o municipios'
+        ]
+    });
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.lecturaLongitudinalTerritorialV1 = {
+    version: 'lectura_longitudinal_territorial_v1',
+    crearLectura: COMPAS_crearLecturaLongitudinalTerritorialV1,
+    validarLectura: COMPAS_validarLecturaLongitudinalTerritorialV1,
+    ejemplo: COMPAS_obtenerEjemploLecturaLongitudinalTerritorialV1
+};
+window.COMPAS_crearLecturaLongitudinalTerritorialV1 = COMPAS_crearLecturaLongitudinalTerritorialV1;
+window.COMPAS_validarLecturaLongitudinalTerritorialV1 = COMPAS_validarLecturaLongitudinalTerritorialV1;
+window.COMPAS_obtenerEjemploLecturaLongitudinalTerritorialV1 = COMPAS_obtenerEjemploLecturaLongitudinalTerritorialV1;
+
 function _lt1_tieneArray(v) {
     return Array.isArray(v) && v.length > 0;
 }
