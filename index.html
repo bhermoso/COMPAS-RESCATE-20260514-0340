@@ -77280,11 +77280,13 @@ window.prioV4Abrir=prioV4Abrir;window.prioV4Cerrar=prioV4Cerrar;window.prioV4Act
 <script>
 
 // ────────────────────────────────────────────────────────────────────
-// CONTRATO INTERPRETATIVO TERRITORIAL COMPÁS v1
-// Versión: lectura_territorial_v1
+// CONTRATO INTERPRETATIVO TERRITORIAL COMPÁS v1.1
+// Versión: lectura_territorial_v1  |  meta.subversion: '1.1'
 // Principios: prudencia, triangulación, salutogénesis, trazabilidad.
 // Diferenciación explícita: observación / inferencia / hipótesis /
 //   orientación / prioridad.
+// Campos por ítem (v1.1): categoria, soporte, requiereTriangulacion,
+//   pesoInterpretativo, origenes.
 // ────────────────────────────────────────────────────────────────────
 
 // ── Helpers internos (privados, prefijo _lt1_) ────────────────────
@@ -77298,46 +77300,67 @@ function _lt1_num(v, fallback) {
     return isNaN(n) ? (fallback !== undefined ? fallback : null) : n;
 }
 
-// Añade un ítem solo si la condición es verdadera.
-// tipo: 'observacion' | 'inferencia' | 'hipotesis' | 'orientacion'
-function _lt1_push(arr, tipo, texto, fuente, confianza) {
+// Añade un ítem trazable con campos semánticos opcionales (v1.1).
+// opts: { categoria, soporte, requiereTriangulacion, pesoInterpretativo, origenes }
+function _lt1_push(arr, tipo, texto, fuente, confianza, opts) {
     if (!texto) return;
     arr.push({
-        tipo:      tipo,
-        texto:     texto,
-        fuente:    fuente    || null,
-        confianza: confianza || 'baja'   // baja | media | alta
+        tipo:                  tipo,
+        texto:                 texto,
+        fuente:                fuente    || null,
+        confianza:             confianza || 'baja',
+        categoria:             (opts && opts.categoria)                        || null,
+        soporte:               (opts && opts.soporte)                          || null,
+        requiereTriangulacion: !!(opts && opts.requiereTriangulacion),
+        pesoInterpretativo:    (opts && opts.pesoInterpretativo != null) ? opts.pesoInterpretativo : null,
+        origenes:              (opts && Array.isArray(opts.origenes))    ? opts.origenes : []
     });
+}
+
+// Clasifica la categoría de una oportunidad por palabras clave en área/texto
+function _lt1_catOportunidad(area, texto) {
+    var s = ((area || '') + ' ' + (texto || '')).toLowerCase();
+    if (/particip|ciudadan|vecin/.test(s))             return 'participacion';
+    if (/invest|estudio|evidenci|longitud/.test(s))    return 'investigacion_local';
+    if (/mapeo|activo|recurso|inventar/.test(s))       return 'mapeo_activos';
+    if (/gobernanz|institucion|coordinac/.test(s))     return 'gobernanza';
+    if (/prescripci|comunitari|social|derivac/.test(s)) return 'prescripcion_social';
+    return 'seguimiento_anual';
+}
+
+// Determina si una fortaleza señala un activo comunitario (vs. fortaleza genérica)
+function _lt1_esActivoComunitario(area, texto) {
+    var s = ((area || '') + ' ' + (texto || '')).toLowerCase();
+    return /vecinal|comunitar|particip|red |asociac|voluntar|colectiv|informal|grupo/.test(s);
 }
 
 // ── Función principal ─────────────────────────────────────────────
 
 function COMPAS_construirLecturaTerritorialV1(analisis) {
 
-    // Contrato base — siempre se devuelve esta estructura completa
     var lectura = {
-        version:  'lectura_territorial_v1',
-        municipio: null,
-        fechaISO:  new Date().toISOString(),
+        version:   'lectura_territorial_v1',
+        municipio:  null,
+        fechaISO:   new Date().toISOString(),
 
-        observaciones:    [],   // hechos derivados directamente de datos disponibles
-        interpretaciones: [],   // lecturas contextuales con soporte triangulado
-        tensiones:        [],   // contradicciones, asimetrías o paradojas detectadas
-        activos:          [],   // recursos, capacidades, fortalezas del territorio
-        vulnerabilidades: [],   // condiciones de riesgo o fragilidad identificadas
-        oportunidades:    [],   // posibilidades de acción con soporte en los datos
-        incertidumbres:   [],   // vacíos de información o inferencias débiles
-        orientaciones:    [],   // líneas de acción tentativas (no prescripciones)
-        prioridades:      [],   // síntesis de convergencia entre fuentes
+        observaciones:    [],
+        interpretaciones: [],
+        tensiones:        [],
+        activos:          [],
+        vulnerabilidades: [],
+        oportunidades:    [],
+        incertidumbres:   [],
+        orientaciones:    [],
+        prioridades:      [],
 
         meta: {
-            fuentes:      [],   // fuentes efectivamente usadas en esta lectura
-            confianza:    null, // 'baja' | 'media' | 'alta' — calculada al final
-            advertencias: []    // limitaciones metodológicas explícitas
+            fuentes:      [],
+            subversion:   '1.1',
+            confianza:    null,
+            advertencias: []
         }
     };
 
-    // Alias de trabajo
     var obs  = lectura.observaciones;
     var int_ = lectura.interpretaciones;
     var ten  = lectura.tensiones;
@@ -77352,42 +77375,41 @@ function COMPAS_construirLecturaTerritorialV1(analisis) {
     try {
 
         // ── 0. Contexto ───────────────────────────────────────────────
-        var an     = analisis || {};
-        var base   = an.renderCientifico || an;
-        var ibse   = window.datosIBSE   || null;
-        var dpc    = window.datosParticipacionCiudadana || null;
+        var an       = analisis || {};
+        var base     = an.renderCientifico || an;
+        var ibse     = window.datosIBSE   || null;
+        var dpc      = window.datosParticipacionCiudadana || null;
         var estudios = Array.isArray(window.estudiosComplementarios)
                        ? window.estudiosComplementarios : [];
-        var v3     = window.analisisActualV3 || null;
+        var v3       = window.analisisActualV3 || null;
 
-        // Nombre del municipio
         if (typeof getNombreMunicipio === 'function' && typeof getMunicipioActual === 'function') {
             lectura.municipio = getNombreMunicipio(getMunicipioActual()) || null;
         }
 
         // ── 1. Registro de fuentes disponibles ────────────────────────
-        var _tienePropuesta = _lt1_tieneArray(base.propuestaEPVSA);
-        var _tieneConcl     = _lt1_tieneArray(an.conclusiones);
-        var _tieneRec       = _lt1_tieneArray(an.recomendaciones);
-        var _tieneNarrativa = !!(base.narrativa && base.narrativa.contexto);
-        var _tieneSOC       = !!(base.perfilSOC  && base.perfilSOC.global);
-        var _tieneIBSE      = !!(ibse && (_lt1_num(ibse.n) > 0 || _lt1_num(ibse.n_bruto) > 0));
-        var _tieneDPC       = !!(dpc  && (dpc.temasFreq || dpc.habFreq || dpc.colFreq));
-        var _tieneEstudios  = estudios.length > 0;
+        var _tienePropuesta        = _lt1_tieneArray(base.propuestaEPVSA);
+        var _tieneConcl            = _lt1_tieneArray(an.conclusiones);
+        var _tieneRec              = _lt1_tieneArray(an.recomendaciones);
+        var _tieneNarrativa        = !!(base.narrativa && base.narrativa.contexto);
+        var _tieneSOC              = !!(base.perfilSOC  && base.perfilSOC.global);
+        var _tieneIBSE             = !!(ibse && (_lt1_num(ibse.n) > 0 || _lt1_num(ibse.n_bruto) > 0));
+        var _tieneDPC              = !!(dpc  && (dpc.temasFreq || dpc.habFreq || dpc.colFreq));
+        var _tieneEstudios         = estudios.length > 0;
         var _tieneAlertasInequidad = _lt1_tieneArray(base.alertasInequidad);
         var _tieneFortalezas       = _lt1_tieneArray(base.fortalezas);
         var _tieneOportunidades    = _lt1_tieneArray(base.oportunidades);
         var _tienePatrones         = _lt1_tieneArray(base.patronesTransversales);
 
-        if (_tienePropuesta)       meta.fuentes.push('propuestaEPVSA');
-        if (_tieneConcl)           meta.fuentes.push('conclusiones');
-        if (_tieneRec)             meta.fuentes.push('recomendaciones');
-        if (_tieneNarrativa)       meta.fuentes.push('narrativa_cientifica');
-        if (_tieneSOC)             meta.fuentes.push('perfil_SOC');
-        if (_tieneIBSE)            meta.fuentes.push('IBSE');
-        if (_tieneDPC)             meta.fuentes.push('participacion_ciudadana');
-        if (_tieneEstudios)        meta.fuentes.push('estudios_complementarios');
-        if (_tieneAlertasInequidad)meta.fuentes.push('alertas_inequidad');
+        if (_tienePropuesta)        meta.fuentes.push('propuestaEPVSA');
+        if (_tieneConcl)            meta.fuentes.push('conclusiones');
+        if (_tieneRec)              meta.fuentes.push('recomendaciones');
+        if (_tieneNarrativa)        meta.fuentes.push('narrativa_cientifica');
+        if (_tieneSOC)              meta.fuentes.push('perfil_SOC');
+        if (_tieneIBSE)             meta.fuentes.push('IBSE');
+        if (_tieneDPC)              meta.fuentes.push('participacion_ciudadana');
+        if (_tieneEstudios)         meta.fuentes.push('estudios_complementarios');
+        if (_tieneAlertasInequidad) meta.fuentes.push('alertas_inequidad');
 
         var nFuentes = meta.fuentes.length;
 
@@ -77397,21 +77419,21 @@ function COMPAS_construirLecturaTerritorialV1(analisis) {
             return lectura;
         }
 
-        // ── 2. Observaciones — hechos directos sin interpretación ─────
+        // ── 2. Observaciones — hechos directos ────────────────────────
 
         // 2a. Participación ciudadana
         if (_tieneDPC) {
             var nPart = dpc.totalParticipantes || dpc.n || '?';
-            _lt1_push(obs,
-                'observacion',
+            _lt1_push(obs, 'observacion',
                 'Se dispone de datos de priorización ciudadana con ' + nPart + ' participante(s).',
-                'participacion_ciudadana', 'media'
+                'participacion_ciudadana', 'media',
+                { categoria: 'comunitaria', origenes: ['participacion_ciudadana'] }
             );
         } else {
-            _lt1_push(inc,
-                'hipotesis',
+            _lt1_push(inc, 'hipotesis',
                 'No se dispone de datos de priorización ciudadana. Las prioridades reflejan exclusivamente análisis técnico.',
-                'sistema', 'alta'
+                'sistema', 'alta',
+                { categoria: 'metodologica', origenes: ['sistema'] }
             );
         }
 
@@ -77422,150 +77444,362 @@ function COMPAS_construirLecturaTerritorialV1(analisis) {
             var texIBSE = 'Se dispone de datos IBSE (n=' + nIBSE + ')';
             if (scIBSE !== null) texIBSE += ' con puntuación global de ' + scIBSE.toFixed(1) + '/100';
             texIBSE += '.';
-            _lt1_push(obs, 'observacion', texIBSE, 'IBSE', 'media');
+            _lt1_push(obs, 'observacion', texIBSE, 'IBSE', 'media',
+                { categoria: 'diagnostica', origenes: ['IBSE'] }
+            );
+        } else {
+            _lt1_push(inc, 'hipotesis',
+                'Sin datos IBSE disponibles. La medición de bienestar subjetivo no puede integrarse en esta lectura.',
+                'sistema', 'alta',
+                { categoria: 'metodologica', origenes: ['sistema'] }
+            );
         }
 
         // 2c. Propuesta EPVSA
         if (_tienePropuesta) {
-            _lt1_push(obs,
-                'observacion',
+            _lt1_push(obs, 'observacion',
                 'El análisis técnico ha generado una propuesta de prioridades para ' +
                 base.propuestaEPVSA.length + ' línea(s) estratégica(s) EPVSA.',
-                'propuestaEPVSA', 'alta'
+                'propuestaEPVSA', 'alta',
+                { categoria: 'estrategica', origenes: ['propuestaEPVSA'] }
             );
         }
 
-        // 2d. Alertas de inequidad
+        // 2d. Alertas de inequidad → vulnerabilidades clasificadas
         if (_tieneAlertasInequidad) {
             base.alertasInequidad.forEach(function(al) {
-                _lt1_push(vul,
-                    'observacion',
-                    'Alerta de inequidad detectada: ' + al.mensaje +
+                var msg    = al.mensaje || '';
+                var msgLow = msg.toLowerCase();
+                var catVul = /genero|sexo|mujer|hombre/.test(msgLow)        ? 'social'
+                           : /territori|barrio|zona|rural|urbano/.test(msgLow) ? 'territorial'
+                           : /edad|mayor|joven|infan/.test(msgLow)          ? 'social'
+                           : 'social';
+                _lt1_push(vul, 'observacion',
+                    'Alerta de inequidad detectada: ' + msg +
                     ' (' + (al.valor != null ? al.valor.toFixed(1) + '%' : '?') +
                     ', umbral ' + al.umbral + '%). Severidad: ' + al.severidad + '.',
-                    'alertas_inequidad', 'alta'
+                    'alertas_inequidad', 'alta',
+                    {
+                        categoria:             catVul,
+                        soporte:               'alertas_inequidad',
+                        requiereTriangulacion: al.severidad !== 'alta',
+                        origenes:              ['alertas_inequidad']
+                    }
                 );
             });
         }
 
-        // ── 3. Perfil SOC — lectura interpretativa prudente ───────────
+        // ── 3. Perfil SOC — interpretación salutogénica prudente ──────
         if (_tieneSOC) {
             var soc  = base.perfilSOC;
             var gSOC = soc.global;
-            _lt1_push(obs,
-                'observacion',
+            _lt1_push(obs, 'observacion',
                 'El Perfil de Sentido de Coherencia (Antonovsky) arroja una puntuación global de ' +
                 gSOC.puntuacion + '/100 (' + gSOC.nivel + ').',
-                'perfil_SOC', 'media'
+                'perfil_SOC', 'media',
+                { categoria: 'salutogenica', origenes: ['perfil_SOC'] }
             );
 
-            // Dimensión más débil → vulnerabilidad potencial
+            // Dimensión más débil → inferencia salutogénica
             var dims = [
-                { k: 'comprensibilidad',  d: soc.comprensibilidad  || {} },
-                { k: 'manejabilidad',     d: soc.manejabilidad     || {} },
-                { k: 'significatividad',  d: soc.significatividad  || {} }
+                { k: 'comprensibilidad', d: soc.comprensibilidad || {} },
+                { k: 'manejabilidad',    d: soc.manejabilidad    || {} },
+                { k: 'significatividad', d: soc.significatividad || {} }
             ];
             var minDim = dims.reduce(function(a, b) {
                 return (_lt1_num(a.d.puntuacion, 999) <= _lt1_num(b.d.puntuacion, 999)) ? a : b;
             });
             if (minDim.d.nivel && minDim.d.nivel !== 'alto') {
-                _lt1_push(int_,
-                    'inferencia',
-                    'La dimensión de ' + minDim.k + ' presenta el valor más bajo del perfil SOC. ' +
-                    'Esto puede indicar dificultades en la capacidad de ' +
-                    (minDim.k === 'comprensibilidad' ? 'dar sentido a las situaciones adversas'
-                     : minDim.k === 'manejabilidad'  ? 'movilizar recursos frente a retos'
-                     : 'encontrar significado en los esfuerzos colectivos') + '. ' +
-                    'Inferencia de nivel ' + (minDim.d.nivel || '?') + '; requiere triangulación.',
-                    'perfil_SOC', 'baja'
+                var texDim = minDim.k === 'comprensibilidad'
+                    ? 'dificultades en la capacidad de dar sentido a las situaciones adversas'
+                    : minDim.k === 'manejabilidad'
+                    ? 'limitaciones en la capacidad de movilizar recursos frente a retos'
+                    : 'fragilidad en el sentido de significado de los esfuerzos colectivos';
+                _lt1_push(int_, 'inferencia',
+                    'Inferencia salutogénica: la dimensión de ' + minDim.k +
+                    ' presenta el valor más bajo del perfil SOC (' + (minDim.d.puntuacion || '?') + '/100). ' +
+                    'Esto puede asociarse con ' + texDim + '. ' +
+                    'No implica causalidad directa; requiere triangulación con otras fuentes.',
+                    'perfil_SOC', 'baja',
+                    {
+                        categoria:             'salutogenica',
+                        soporte:               'perfil_SOC_dimension',
+                        requiereTriangulacion: true,
+                        origenes:              ['perfil_SOC']
+                    }
                 );
             }
 
-            // SOC global bajo → vulnerabilidad
+            // SOC global bajo → vulnerabilidad comunitaria
             if (gSOC.nivel === 'bajo') {
-                _lt1_push(vul,
-                    'inferencia',
-                    'El perfil SOC global bajo sugiere que los recursos de afrontamiento colectivo ' +
-                    'pueden estar comprometidos en este territorio. Esta inferencia debe contrastarse ' +
-                    'con otras fuentes antes de usarse como base de recomendaciones.',
-                    'perfil_SOC', 'baja'
+                _lt1_push(vul, 'inferencia',
+                    'Inferencia salutogénica: perfil SOC global bajo. Los recursos de afrontamiento colectivo ' +
+                    'pueden estar comprometidos en este territorio. ' +
+                    'Esta inferencia depende de una sola fuente cuantitativa y debe contrastarse ' +
+                    'con observación directa y participación ciudadana antes de fundamentar recomendaciones.',
+                    'perfil_SOC', 'baja',
+                    {
+                        categoria:             'comunitaria',
+                        soporte:               'perfil_SOC_global',
+                        requiereTriangulacion: true,
+                        origenes:              ['perfil_SOC']
+                    }
+                );
+            }
+
+            // Interpretación comunitaria si hay SOC + DPC (triangulación)
+            if (_tieneDPC) {
+                var nP2 = dpc.totalParticipantes || dpc.n || 0;
+                _lt1_push(int_, 'inferencia',
+                    'Interpretación comunitaria: la combinación de perfil SOC (' + gSOC.nivel + ') ' +
+                    'con datos de participación ciudadana (n=' + nP2 + ') permite una lectura multi-fuente. ' +
+                    'La congruencia o divergencia entre ambas fuentes es indicador de robustez del diagnóstico.',
+                    'multi-fuente', 'media',
+                    {
+                        categoria:             'comunitaria',
+                        soporte:               'triangulacion_SOC_DPC',
+                        requiereTriangulacion: false,
+                        origenes:              ['perfil_SOC', 'participacion_ciudadana']
+                    }
                 );
             }
         } else {
-            _lt1_push(inc,
-                'hipotesis',
+            _lt1_push(inc, 'hipotesis',
                 'Sin perfil SOC disponible. La dimensión salutogénica de la lectura territorial queda limitada.',
-                'sistema', 'alta'
+                'sistema', 'alta',
+                { categoria: 'metodologica', origenes: ['sistema'] }
             );
         }
 
-        // ── 4. Fortalezas territoriales ───────────────────────────────
+        // ── 4. Fortalezas: activos comunitarios vs. fortalezas genéricas
         if (_tieneFortalezas) {
+            var tieneActivoCom = false;
             base.fortalezas.slice(0, 5).forEach(function(f) {
-                _lt1_push(act,
-                    'observacion',
-                    'Activo identificado en ' + (f.area || 'área sin especificar') + ': ' + f.texto + '.',
-                    'narrativa_cientifica', 'media'
+                var esActivo = _lt1_esActivoComunitario(f.area, f.texto);
+                if (esActivo) tieneActivoCom = true;
+                _lt1_push(act, 'observacion',
+                    (esActivo ? 'Activo comunitario potencial en ' : 'Fortaleza general en ') +
+                    (f.area || 'área sin especificar') + ': ' + f.texto + '.',
+                    'narrativa_cientifica', 'media',
+                    {
+                        categoria:             esActivo ? 'activo_comunitario' : 'fortaleza_generica',
+                        soporte:               f.area || null,
+                        requiereTriangulacion: !esActivo,
+                        origenes:              ['narrativa_cientifica']
+                    }
                 );
             });
+            if (!tieneActivoCom) {
+                _lt1_push(inc, 'hipotesis',
+                    'Las fortalezas identificadas son de carácter general. No se detectan activos comunitarios explícitos ' +
+                    '(redes vecinales, asociaciones, grupos informales). Se recomienda mapeo complementario.',
+                    'narrativa_cientifica', 'media',
+                    { categoria: 'metodologica', origenes: ['narrativa_cientifica'] }
+                );
+            }
+        } else {
+            _lt1_push(inc, 'hipotesis',
+                'Sin fortalezas ni activos territoriales identificados en los datos disponibles. ' +
+                'No es posible derivar activos comunitarios. Se recomienda mapeo de activos como primer paso.',
+                'sistema', 'alta',
+                { categoria: 'metodologica', origenes: ['sistema'] }
+            );
         }
 
-        // ── 5. Oportunidades narrativas ───────────────────────────────
+        // ── 5. Oportunidades clasificadas por tipo ────────────────────
         if (_tieneOportunidades) {
             base.oportunidades.slice(0, 5).forEach(function(o) {
-                _lt1_push(opp,
-                    'observacion',
-                    'Oportunidad en ' + (o.area || 'área sin especificar') + ': ' + o.texto + '.',
-                    'narrativa_cientifica', 'media'
+                var cat = _lt1_catOportunidad(o.area, o.texto);
+                _lt1_push(opp, 'observacion',
+                    'Oportunidad (' + cat + ') en ' + (o.area || 'área sin especificar') + ': ' + o.texto + '.',
+                    'narrativa_cientifica', 'media',
+                    { categoria: cat, origenes: ['narrativa_cientifica'] }
                 );
             });
         }
 
-        // ── 6. Patrones transversales → tensiones potenciales ─────────
+        // Oportunidades estructurales estándar derivadas del vacío metodológico
+        _lt1_push(opp, 'orientacion',
+            'Mapeo de activos comunitarios: identificación sistemática de recursos vecinales, ' +
+            'asociativos e informales como base de prescripción social.',
+            'sistema', 'baja',
+            { categoria: 'mapeo_activos', origenes: ['sistema'] }
+        );
+        if (!_tieneEstudios) {
+            _lt1_push(opp, 'orientacion',
+                'Investigación local: impulso de estudios complementarios con datos propios del territorio ' +
+                'para reducir dependencia de indicadores agregados.',
+                'sistema', 'baja',
+                { categoria: 'investigacion_local', origenes: ['sistema'] }
+            );
+        }
+        _lt1_push(opp, 'orientacion',
+            'Seguimiento anual: establecimiento de un ciclo de seguimiento de indicadores de bienestar ' +
+            'territorial para dar continuidad a este diagnóstico.',
+            'sistema', 'baja',
+            { categoria: 'seguimiento_anual', origenes: ['sistema'] }
+        );
+
+        // ── 6. Patrones transversales → tensiones enriquecidas ────────
         if (_tienePatrones) {
             base.patronesTransversales.forEach(function(p) {
                 if (p.tipo === 'tension' || p.tipo === 'riesgo') {
-                    _lt1_push(ten,
-                        'inferencia',
+                    _lt1_push(ten, 'inferencia',
                         'Patrón transversal detectado (' + p.tipo + '): ' + p.nombre +
                         (p.narrativa ? ' — ' + p.narrativa : '') + '.',
-                        'narrativa_cientifica', 'baja'
+                        'narrativa_cientifica', 'baja',
+                        {
+                            categoria:             p.tipo === 'tension' ? 'contradiccion' : 'riesgo',
+                            requiereTriangulacion: true,
+                            origenes:              ['narrativa_cientifica']
+                        }
                     );
                 }
             });
         }
 
-        // ── 7. Prioridades — síntesis de convergencia ─────────────────
+        // Tensiones cruzadas detectables entre fuentes
+
+        // T1: Alertas de inequidad + SOC global bajo → convergencia de riesgo
+        if (_tieneAlertasInequidad && _tieneSOC && base.perfilSOC.global.nivel === 'bajo') {
+            _lt1_push(ten, 'inferencia',
+                'Convergencia de riesgo: se detectan simultáneamente alertas de inequidad y perfil SOC global bajo. ' +
+                'Esta convergencia sugiere que los determinantes estructurales de inequidad pueden estar erosionando ' +
+                'los recursos de afrontamiento colectivo. La interpretación es provisional y requiere triangulación.',
+                'multi-fuente', 'baja',
+                {
+                    categoria:             'convergencia',
+                    requiereTriangulacion: true,
+                    origenes:              ['alertas_inequidad', 'perfil_SOC']
+                }
+            );
+        }
+
+        // T2: Prioridades técnicas sin validación ciudadana
+        if (_tienePropuesta && !_tieneDPC) {
+            _lt1_push(ten, 'hipotesis',
+                'Tensión metodológica: se han generado prioridades técnicas (propuestaEPVSA) sin datos de ' +
+                'participación ciudadana. El riesgo de divergencia entre la perspectiva técnica y las ' +
+                'prioridades percibidas por la comunidad no puede descartarse.',
+                'sistema', 'media',
+                {
+                    categoria:             'metodologica',
+                    requiereTriangulacion: true,
+                    origenes:              ['propuestaEPVSA', 'sistema']
+                }
+            );
+        }
+
+        // T3: Recomendaciones sin cobertura de alertas de inequidad
+        if (_tieneAlertasInequidad && _tieneRec) {
+            var alertasMsgs = base.alertasInequidad.map(function(a) { return (a.mensaje || '').toLowerCase(); });
+            var recTexts    = an.recomendaciones.map(function(r) {
+                return ((r.orientacion || r.titulo || r.texto || '')).toLowerCase();
+            });
+            var sinCobertura = alertasMsgs.some(function(am) {
+                var token = am.split(' ')[0];
+                return token && !recTexts.some(function(rt) { return rt.indexOf(token) !== -1; });
+            });
+            if (sinCobertura) {
+                _lt1_push(ten, 'hipotesis',
+                    'Posible tensión: alguna alerta de inequidad detectada puede no tener correspondencia directa ' +
+                    'en las recomendaciones generadas. Se recomienda revisar la cobertura de las recomendaciones ' +
+                    'respecto a los patrones de inequidad identificados.',
+                    'multi-fuente', 'baja',
+                    {
+                        categoria:             'contradiccion',
+                        requiereTriangulacion: true,
+                        origenes:              ['alertas_inequidad', 'recomendaciones']
+                    }
+                );
+            }
+        }
+
+        // ── 7. Prioridades con origenes y pesoInterpretativo ──────────
         if (_tienePropuesta) {
+            var nTriang = [_tieneDPC, _tieneIBSE, _tieneSOC, _tieneAlertasInequidad].filter(Boolean).length;
             base.propuestaEPVSA.forEach(function(p) {
+                var rel     = _lt1_num(p.relevancia);
+                var pesoInt = rel !== null
+                    ? Math.round(rel * (1 + nTriang * 0.05) * 100) / 100
+                    : null;
+                var origPri = [
+                    'propuestaEPVSA',
+                    _tieneDPC  ? 'participacion_ciudadana' : null,
+                    _tieneIBSE ? 'IBSE'                   : null,
+                    _tieneSOC  ? 'perfil_SOC'              : null
+                ].filter(Boolean);
                 pri.push({
-                    lineaId:   p.lineaId,
-                    relevancia: _lt1_num(p.relevancia),
-                    fuentes:   meta.fuentes.filter(function(f) {
-                        return f === 'propuestaEPVSA' || f === 'participacion_ciudadana';
-                    }),
-                    confianza: (_tieneDPC && _tieneIBSE) ? 'media'
-                               : _tieneDPC || _tieneIBSE ? 'baja'
-                               : 'baja'
+                    lineaId:            p.lineaId,
+                    relevancia:         rel,
+                    fuentes:            meta.fuentes.filter(function(f) {
+                                            return f === 'propuestaEPVSA' || f === 'participacion_ciudadana';
+                                        }),
+                    confianza:          (_tieneDPC && _tieneIBSE) ? 'media'
+                                        : (_tieneDPC || _tieneIBSE) ? 'baja' : 'baja',
+                    origenes:           origPri,
+                    pesoInterpretativo: pesoInt
                 });
             });
         }
 
-        // ── 8. Orientaciones básicas desde recomendaciones actuales ───
+        // ── 8. Orientaciones desde recomendaciones y gobernanza ───────
         if (_tieneRec) {
             an.recomendaciones.slice(0, 4).forEach(function(rec) {
                 var texto = rec.orientacion || rec.titulo || rec.texto || null;
                 if (texto) {
-                    _lt1_push(ori,
-                        'orientacion',
-                        texto,
-                        'recomendaciones', 'media'
+                    _lt1_push(ori, 'orientacion', texto, 'recomendaciones', 'media',
+                        {
+                            categoria: rec.linea_accion_municipal ? 'institucional' : 'comunitaria',
+                            soporte:   rec.activo || rec.linea_accion_municipal || null,
+                            origenes:  ['recomendaciones']
+                        }
                     );
                 }
             });
         }
 
-        // ── 9. Advertencias metodológicas ─────────────────────────────
+        // Orientación de gobernanza territorial (siempre pertinente)
+        _lt1_push(ori, 'orientacion',
+            'Gobernanza territorial: impulsar espacios de coordinación interinstitucional para articular ' +
+            'las prioridades identificadas con los recursos disponibles en el territorio.',
+            'sistema', 'baja',
+            { categoria: 'gobernanza', origenes: ['sistema'] }
+        );
+
+        // Prescripción social/comunitaria si hay datos de bienestar
+        if (_tieneIBSE || _tieneSOC) {
+            _lt1_push(ori, 'orientacion',
+                'Prescripción social/comunitaria: los indicadores de bienestar disponibles apuntan a la ' +
+                'pertinencia de articular recursos comunitarios como complemento a las intervenciones clínicas.',
+                'sistema', 'baja',
+                { categoria: 'prescripcion_social', origenes: ['sistema'] }
+            );
+        }
+
+        // ── 9. Incertidumbres metodológicas reforzadas ─────────────────
+        if (!_tieneEstudios) {
+            _lt1_push(inc, 'hipotesis',
+                'Sin estudios complementarios registrados. Puede existir información territorial relevante ' +
+                '(datos censales, historias de salud, informes municipales) no integrada en este diagnóstico.',
+                'sistema', 'alta',
+                { categoria: 'metodologica', origenes: ['sistema'] }
+            );
+        }
+        _lt1_push(inc, 'hipotesis',
+            'Sin datos de gobernanza disponibles. La capacidad institucional para implementar las ' +
+            'orientaciones identificadas no puede evaluarse en este diagnóstico.',
+            'sistema', 'media',
+            { categoria: 'institucional', origenes: ['sistema'] }
+        );
+        _lt1_push(inc, 'hipotesis',
+            'Sin evidencia longitudinal. El diagnóstico refleja un momento puntual; ' +
+            'la evolución temporal de los indicadores es desconocida.',
+            'sistema', 'alta',
+            { categoria: 'metodologica', origenes: ['sistema'] }
+        );
+
+        // ── 10. Advertencias metodológicas ────────────────────────────
         if (!_tieneDPC && !_tieneIBSE) {
             meta.advertencias.push(
                 'Sin participación ciudadana ni datos IBSE. La lectura se basa exclusivamente en análisis técnico. ' +
@@ -77582,8 +77816,13 @@ function COMPAS_construirLecturaTerritorialV1(analisis) {
                 'Sin estudios complementarios registrados. Puede existir información territorial relevante no integrada.'
             );
         }
+        if (!_tieneFortalezas) {
+            meta.advertencias.push(
+                'Sin fortalezas ni activos territoriales identificados. El mapeo de activos comunitarios es una prioridad metodológica.'
+            );
+        }
 
-        // ── 10. Confianza global ──────────────────────────────────────
+        // ── 11. Confianza global ──────────────────────────────────────
         var _nFuentesClave = [_tienePropuesta, _tieneDPC, _tieneIBSE, _tieneSOC].filter(Boolean).length;
         meta.confianza = _nFuentesClave >= 3 ? 'media'
                        : _nFuentesClave >= 1 ? 'baja'
