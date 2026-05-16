@@ -3669,6 +3669,133 @@
 
 
 
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 07 DIAGNÓSTICO TERRITORIAL v2 — bloque institucional
+                 Convivencia: display:none hasta activación. Legacy intacto arriba.
+                 ═══════════════════════════════════════════════════════════════════ -->
+            <div class="acordeon-item" id="at2-bloque"
+                 style="margin-bottom:0.75rem; border:1px solid #e2e8f0; display:none;">
+
+              <div class="acordeon-header"
+                   onclick="toggleAcordeon(this); at2_actualizarFuentes();"
+                   style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:#0074c8; font-weight:700; font-size:0.88rem;">
+                  07 Conclusiones, recomendaciones y prioridades
+                </span>
+                <span class="flecha">▼</span>
+              </div>
+
+              <div class="acordeon-contenido" id="seccion-analisis-territorial-v2">
+
+                <!-- ── ESTADO INICIAL ─────────────────────────────────────────── -->
+                <div id="at2-inicial" style="padding:1.5rem 1.75rem;">
+
+                  <!-- Cabecera documental -->
+                  <div style="border-left:3px solid #0074c8; padding-left:0.9rem; margin-bottom:1.25rem;">
+                    <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase;
+                                letter-spacing:0.08em; color:#0074c8; margin-bottom:0.2rem;">
+                      Síntesis del diagnóstico territorial
+                    </div>
+                    <div style="font-size:0.78rem; color:#64748b; line-height:1.5;">
+                      Se generarán conclusiones, recomendaciones y propuesta de prioridades
+                      integrando las fuentes de diagnóstico disponibles en el sistema.
+                    </div>
+                  </div>
+
+                  <!-- Lectura metodológica de fuentes — texto, sin checkboxes -->
+                  <div id="at2-fuentes-lectura"
+                       style="font-size:0.78rem; color:#64748b; line-height:1.7;
+                              padding:0.75rem 1rem; border:1px solid #e2e8f0;
+                              border-radius:4px; margin-bottom:1.25rem;">
+                  </div>
+
+                  <!-- Botón único -->
+                  <button id="at2-btn-generar" onclick="at2_generar()"
+                          style="background:white; color:#0074c8; border:1px solid #0074c8;
+                                 padding:0.5rem 1.1rem; border-radius:4px; font-size:0.82rem;
+                                 font-weight:700; cursor:pointer;">
+                    Generar síntesis territorial
+                  </button>
+
+                </div><!-- /at2-inicial -->
+
+                <!-- ── ESTADO PROCESO ──────────────────────────────────────────── -->
+                <div id="at2-proceso" style="display:none; padding:1.5rem 1.75rem;">
+                  <div style="height:2px; background:#e2e8f0; border-radius:1px; overflow:hidden;
+                              margin-bottom:0.75rem;">
+                    <div id="at2-proceso-barra"
+                         style="height:100%; width:0%; background:#0074c8;
+                                transition:width 0.4s ease;"></div>
+                  </div>
+                  <p id="at2-proceso-texto"
+                     style="font-size:0.78rem; color:#64748b; margin:0;">
+                    Procesando fuentes disponibles…
+                  </p>
+                </div><!-- /at2-proceso -->
+
+                <!-- ── RESULTADO ───────────────────────────────────────────────── -->
+                <div id="at2-resultado" style="display:none; padding:1.5rem 1.75rem;">
+
+                  <!-- Metadatos del documento -->
+                  <div style="font-size:0.7rem; color:#94a3b8; margin-bottom:1.5rem;
+                              padding-bottom:0.6rem; border-bottom:1px solid #e2e8f0;">
+                    <span id="at2-meta-fecha"></span>
+                    <span id="at2-meta-fuentes"></span>
+                  </div>
+
+                  <!-- Sección 1: Conclusiones -->
+                  <div style="margin-bottom:1.75rem;">
+                    <div style="font-size:0.7rem; font-weight:800; letter-spacing:0.08em;
+                                text-transform:uppercase; color:#0074c8; margin-bottom:0.75rem;
+                                padding-bottom:0.35rem; border-bottom:1px solid #e2e8f0;">
+                      Conclusiones
+                    </div>
+                    <div id="at2-conclusiones"
+                         style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                  </div>
+
+                  <!-- Sección 2: Recomendaciones -->
+                  <div style="margin-bottom:1.75rem;">
+                    <div style="font-size:0.7rem; font-weight:800; letter-spacing:0.08em;
+                                text-transform:uppercase; color:#94d40b; margin-bottom:0.75rem;
+                                padding-bottom:0.35rem; border-bottom:1px solid #e2e8f0;">
+                      Recomendaciones
+                    </div>
+                    <div id="at2-recomendaciones"
+                         style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                  </div>
+
+                  <!-- Sección 3: Prioridades propuestas -->
+                  <div>
+                    <div style="font-size:0.7rem; font-weight:800; letter-spacing:0.08em;
+                                text-transform:uppercase; color:#ffb61b; margin-bottom:0.75rem;
+                                padding-bottom:0.35rem; border-bottom:1px solid #e2e8f0;">
+                      Prioridades propuestas para el plan de acción
+                    </div>
+                    <div id="at2-prioridades"
+                         style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                    <div style="margin-top:0.75rem; font-size:0.75rem; color:#64748b;
+                                border-left:3px solid #ffb61b; padding-left:0.75rem;">
+                      Esta propuesta puede incorporarse al plan de acción en el Tab 3.
+                    </div>
+                  </div>
+
+                  <!-- Acción secundaria -->
+                  <div style="margin-top:1.5rem; padding-top:0.75rem; border-top:1px solid #e2e8f0;">
+                    <button onclick="at2_regenerar()"
+                            style="background:none; border:none; color:#64748b; font-size:0.75rem;
+                                   cursor:pointer; padding:0; text-decoration:underline;">
+                      Regenerar síntesis
+                    </button>
+                  </div>
+
+                </div><!-- /at2-resultado -->
+
+              </div><!-- /seccion-analisis-territorial-v2 -->
+            </div><!-- /at2-bloque -->
+
+
+
         </div><!-- fin contenido-perfil-dinamico -->
 
 
@@ -77141,6 +77268,279 @@ function prioV4Actualizar(){var estN=0;try{var cpE=window.COMPAS&&window.COMPAS.
 window.prioV4Abrir=prioV4Abrir;window.prioV4Cerrar=prioV4Cerrar;window.prioV4Actualizar=prioV4Actualizar;window.prioV4IncorporarTematica=prioV4IncorporarTematica;
 </script>
 <!-- === /MODAL PRIORIZACIÓN COMPÁS v4 === -->
+
+<script>
+// ── AT2: coexistencia legacy / v2 ────────────────────────────────────
+// Cambiar a true para activar el bloque v2 y ocultar el legacy.
+// Llamar at2_aplicarFlag() desde consola tras cambiar el valor.
+var _AT2_ACTIVO = false;
+
+function at2_aplicarFlag() {
+    var legacy = document.querySelector('.acordeon-item:has(#seccion-analisis-ia)');
+    if (!legacy) {
+        // fallback: buscar por contenido del acordeón
+        var contenido = document.getElementById('seccion-analisis-ia');
+        legacy = contenido ? contenido.closest('.acordeon-item') : null;
+    }
+    var v2 = document.getElementById('at2-bloque');
+    if (legacy) legacy.style.display = _AT2_ACTIVO ? 'none' : '';
+    if (v2)     v2.style.display     = _AT2_ACTIVO ? ''     : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', at2_aplicarFlag);
+
+// ── AT2: helper documental ────────────────────────────────────────────
+function at2_itemDoc(contenidoHTML, accentColor) {
+    return '<div style="border:1px solid #e2e8f0; border-left:3px solid ' + accentColor + '; border-radius:3px; padding:0.65rem 0.9rem; margin-bottom:0.6rem;">' + contenidoHTML + '</div>';
+}
+
+// ── AT2: renderer documental ──────────────────────────────────────────
+function renderizarResultadoTerritorialV2(r) {
+
+    var elInicial   = document.getElementById('at2-inicial');
+    var elProceso   = document.getElementById('at2-proceso');
+    var elResultado = document.getElementById('at2-resultado');
+    if (elInicial)   elInicial.style.display   = 'none';
+    if (elProceso)   elProceso.style.display   = 'none';
+    if (elResultado) elResultado.style.display = 'block';
+
+    var analisis = r || {};
+    var baseSci  = analisis.renderCientifico || analisis;
+    var icp      = _calcularICP(baseSci);
+
+    // ── Meta ──────────────────────────────────────────────────────────
+    var elFecha   = document.getElementById('at2-meta-fecha');
+    var elFuentes = document.getElementById('at2-meta-fuentes');
+    var fecha = (r && r.fechaGeneracion)
+        ? (function(){ try { return new Date(r.fechaGeneracion).toLocaleString('es-ES'); } catch(e){ return r.fechaGeneracion; } })()
+        : new Date().toLocaleString('es-ES');
+    if (elFecha) elFecha.textContent = 'Generado: ' + fecha;
+    var fMeta = [];
+    if (icp.tienePT) fMeta.push('Priorización ciudadana');
+    if (icp.tienePE) fMeta.push('Análisis técnico EPVSA');
+    if (icp.tienePR) fMeta.push('Diagnóstico RELAS');
+    if (elFuentes) elFuentes.textContent = fMeta.length ? ' · ' + fMeta.join(' · ') : '';
+
+    // ── Conclusiones ──────────────────────────────────────────────────
+    var elConc = document.getElementById('at2-conclusiones');
+    if (elConc) {
+        var htmlConc = '<div style="font-size:0.68rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:#0074c8; padding-bottom:0.35rem; border-bottom:1px solid #e2e8f0; margin-bottom:0.75rem;">Conclusiones del diagnóstico</div>';
+
+        if (baseSci && baseSci.narrativa && baseSci.narrativa.contexto) {
+            var n = baseSci.narrativa;
+
+            // Perfil SOC
+            if (baseSci.perfilSOC && baseSci.perfilSOC.global) {
+                var soc    = baseSci.perfilSOC;
+                var socCol = soc.global.nivel === 'alto' ? '#94d40b' : soc.global.nivel === 'medio' ? '#ffb61b' : '#dc143c';
+                var dimH   = ['comprensibilidad','manejabilidad','significatividad'].map(function(dim) {
+                    var d   = soc[dim] || {};
+                    var dc  = d.nivel === 'alto' ? '#94d40b' : d.nivel === 'medio' ? '#ffb61b' : '#dc143c';
+                    var lbl = dim === 'comprensibilidad' ? 'Comprensibilidad' : dim === 'manejabilidad' ? 'Manejabilidad' : 'Significatividad';
+                    return '<div style="text-align:center; padding:0.35rem; border:1px solid #e2e8f0; border-radius:3px;">'
+                        + '<div style="font-size:1.15rem; font-weight:900; color:' + dc + ';">' + (d.puntuacion || '—') + '</div>'
+                        + '<div style="font-size:0.62rem; color:#64748b; margin-top:1px;">' + lbl + '</div>'
+                        + '<div style="font-size:0.6rem; color:#94a3b8;">' + (d.interpretacion || '') + '</div>'
+                        + '</div>';
+                }).join('');
+                htmlConc += at2_itemDoc(
+                    '<div style="font-size:0.7rem; font-weight:700; color:' + socCol + '; margin-bottom:0.45rem;">Sentido de Coherencia (Antonovsky)</div>'
+                    + '<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:0.4rem; margin-bottom:0.4rem;">' + dimH + '</div>'
+                    + '<div style="font-size:0.78rem; color:#1e293b; font-weight:600;">Global: ' + soc.global.puntuacion + '/100 — ' + soc.global.interpretacion + '</div>',
+                    socCol
+                );
+            }
+
+            // Alertas de inequidad
+            if (baseSci.alertasInequidad && baseSci.alertasInequidad.length) {
+                htmlConc += at2_itemDoc(
+                    '<div style="font-size:0.7rem; font-weight:700; color:#dc143c; margin-bottom:0.4rem;">Alertas de inequidad</div>'
+                    + baseSci.alertasInequidad.map(function(al) {
+                        return '<div style="font-size:0.78rem; color:#1e293b; margin-bottom:0.2rem;">· <strong>' + al.mensaje + '</strong>: '
+                            + al.valor.toFixed(1) + '% (umbral: ' + al.umbral + '%) — Severidad: ' + al.severidad + '</div>';
+                    }).join(''),
+                    '#dc143c'
+                );
+            }
+
+            // Contexto
+            htmlConc += at2_itemDoc(
+                '<div style="font-size:0.7rem; font-weight:700; color:#0074c8; margin-bottom:0.35rem;">Contexto del análisis</div>'
+                + '<p style="margin:0; font-size:0.82rem; color:#1e293b; line-height:1.55;">' + n.contexto + '</p>',
+                '#0074c8'
+            );
+
+            // Fortalezas
+            if (baseSci.fortalezas && baseSci.fortalezas.length) {
+                var tagsF = baseSci.fortalezas.slice(0,6).map(function(f) {
+                    return '<span style="display:inline-block; background:white; border:1px solid rgba(148,212,11,.35); color:#5a8200; padding:0.1rem 0.45rem; border-radius:3px; font-size:0.69rem; margin:0.12rem 0.12rem 0 0;">' + f.area + ': ' + f.texto + '</span>';
+                }).join('');
+                htmlConc += at2_itemDoc(
+                    '<div style="font-size:0.7rem; font-weight:700; color:#5a8200; margin-bottom:0.35rem;">Activos y fortalezas</div>'
+                    + '<p style="margin:0 0 0.4rem; font-size:0.82rem; color:#1e293b; line-height:1.55;">' + n.activos + '</p>'
+                    + '<div>' + tagsF + '</div>',
+                    '#94d40b'
+                );
+            }
+
+            // Oportunidades
+            if (baseSci.oportunidades && baseSci.oportunidades.length) {
+                var tagsO = baseSci.oportunidades.slice(0,6).map(function(o) {
+                    return '<span style="display:inline-block; background:white; border:1px solid rgba(255,182,27,.35); color:#8a5a00; padding:0.1rem 0.45rem; border-radius:3px; font-size:0.69rem; margin:0.12rem 0.12rem 0 0;">' + o.area + ': ' + o.texto + '</span>';
+                }).join('');
+                htmlConc += at2_itemDoc(
+                    '<div style="font-size:0.7rem; font-weight:700; color:#8a5a00; margin-bottom:0.35rem;">Oportunidades de mejora</div>'
+                    + '<p style="margin:0 0 0.4rem; font-size:0.82rem; color:#1e293b; line-height:1.55;">' + n.oportunidades + '</p>'
+                    + '<div>' + tagsO + '</div>',
+                    '#ffb61b'
+                );
+            }
+
+            // Patrones transversales
+            if (baseSci.patronesTransversales && baseSci.patronesTransversales.length) {
+                var patH = baseSci.patronesTransversales.map(function(p) {
+                    var pc = p.tipo === 'fortaleza' ? '#94d40b' : p.tipo === 'oportunidad' ? '#ffb61b' : '#00acd9';
+                    return '<div style="margin:0.3rem 0; font-size:0.8rem;">'
+                        + '<span style="font-size:0.7rem; font-weight:700; color:' + pc + ';">' + p.nombre + '</span>'
+                        + '<span style="color:#1e293b;"> — ' + p.narrativa + '</span></div>';
+                }).join('');
+                htmlConc += at2_itemDoc(
+                    '<div style="font-size:0.7rem; font-weight:700; color:#0074c8; margin-bottom:0.35rem;">Patrones transversales</div>' + patH,
+                    '#00acd9'
+                );
+            }
+
+            // Síntesis
+            htmlConc += at2_itemDoc(
+                '<div style="font-size:0.7rem; font-weight:700; color:#0074c8; margin-bottom:0.35rem;">Síntesis salutogénica</div>'
+                + '<p style="margin:0; font-size:0.82rem; color:#1e293b; line-height:1.55;">' + n.sintesis + '</p>',
+                '#0074c8'
+            );
+
+        } else {
+            // Fallback: r.conclusiones[]
+            var concArr = (r && r.conclusiones) ? r.conclusiones : [];
+            if (concArr.length) {
+                concArr.forEach(function(c, i) {
+                    var num   = String(i+1).padStart(2,'0');
+                    var tit   = c.titulo || c.texto || '';
+                    var body  = '<div style="font-size:0.68rem; color:#94a3b8; margin-bottom:0.25rem;">Conclusión ' + num + '</div>'
+                        + (tit                 ? '<div style="font-size:0.82rem; font-weight:600; color:#1e293b; margin-bottom:0.3rem;">' + tit + '</div>' : '')
+                        + (c.interpretacion    ? '<div style="font-size:0.78rem; color:#475569; line-height:1.5; margin-bottom:0.2rem;">' + c.interpretacion + '</div>' : '')
+                        + (c.base_analitica    ? '<div style="font-size:0.73rem; color:#64748b; margin-bottom:0.15rem;"><strong>Base analítica:</strong> ' + c.base_analitica + '</div>' : '')
+                        + (c.oportunidad_accion? '<div style="font-size:0.73rem; color:#64748b;"><strong>Oportunidad de acción:</strong> ' + c.oportunidad_accion + '</div>' : '');
+                    htmlConc += at2_itemDoc(body, '#0074c8');
+                });
+            } else {
+                htmlConc += '<div style="font-size:0.78rem; color:#94a3b8; font-style:italic;">Sin conclusiones disponibles.</div>';
+            }
+        }
+        elConc.innerHTML = htmlConc;
+    }
+
+    // ── Recomendaciones ───────────────────────────────────────────────
+    var elRec = document.getElementById('at2-recomendaciones');
+    if (elRec) {
+        var AT2_COLS = ['#0074c8','#00acd9','#94d40b','#ffb61b','#ff6600','#dc143c'];
+        var AT2_TEXT = ['#0074c8','#006080','#5a8200','#8a5a00','#cc4400','#a01030'];
+        var htmlRec  = '<div style="font-size:0.68rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:#94d40b; padding-bottom:0.35rem; border-bottom:1px solid #e2e8f0; margin-bottom:0.75rem;">Recomendaciones estratégicas</div>';
+        var recArr   = (r && r.recomendaciones) ? r.recomendaciones : [];
+        if (recArr.length) {
+            recArr.forEach(function(rec, i) {
+                var col = AT2_COLS[i % AT2_COLS.length];
+                var ct  = AT2_TEXT[i % AT2_TEXT.length];
+                var ori = rec.orientacion || rec.titulo || '';
+                var act = rec.activo || rec.activo_capacidad || '';
+                var lin = rec.linea_accion_municipal || rec.linea_accion || '';
+                var leg = (!act && !lin && rec.texto) ? rec.texto : '';
+                var body= (ori  ? '<div style="font-size:0.82rem; font-weight:700; color:' + ct + '; margin-bottom:0.35rem;">' + ori + '</div>' : '')
+                        + (act  ? '<div style="font-size:0.75rem; color:#64748b; margin-bottom:0.2rem;"><strong style="color:#475569;">Activo relacionado:</strong> ' + act + '</div>' : '')
+                        + (lin  ? '<div style="font-size:0.75rem; color:#64748b; margin-bottom:0.2rem;"><strong style="color:#475569;">Línea municipal:</strong> ' + lin + '</div>' : '')
+                        + (leg  ? '<div style="font-size:0.78rem; color:#475569; line-height:1.5;">' + leg + '</div>' : '');
+                htmlRec += at2_itemDoc(body, col);
+            });
+        } else {
+            htmlRec += '<div style="font-size:0.78rem; color:#94a3b8; font-style:italic;">Sin recomendaciones disponibles.</div>';
+        }
+        elRec.innerHTML = htmlRec;
+    }
+
+    // ── Prioridades ───────────────────────────────────────────────────
+    var elPri = document.getElementById('at2-prioridades');
+    if (elPri) {
+        var htmlPri = '<div style="font-size:0.68rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:#ffb61b; padding-bottom:0.35rem; border-bottom:1px solid #e2e8f0; margin-bottom:0.75rem;">Propuesta de prioridades EPVSA</div>';
+
+        var _idsP = (baseSci && Array.isArray(baseSci.propuestaEPVSA))
+            ? baseSci.propuestaEPVSA.map(function(p){ return +p.lineaId; }).filter(Boolean)
+            : [];
+        var lineasV = (_idsP.length && Array.isArray(icp.lineas))
+            ? icp.lineas.filter(function(le){ return _idsP.indexOf(+le.lineaId) !== -1; })
+            : (Array.isArray(icp.lineas) ? icp.lineas : []);
+
+        // Fuentes integradas
+        var fPri = [];
+        if (icp.tienePT) fPri.push('Priorización ciudadana (' + icp.wT + '%)');
+        if (icp.tienePE) fPri.push('Análisis técnico EPVSA (' + icp.wE + '%)');
+        if (icp.tienePR) fPri.push('Diagnóstico RELAS (' + icp.wR + '%)');
+        if (fPri.length) {
+            htmlPri += at2_itemDoc(
+                '<span style="font-size:0.72rem; color:#64748b;"><strong style="color:#1e293b;">Fuentes integradas:</strong> ' + fPri.join(' · ') + '</span>',
+                '#ffb61b'
+            );
+        }
+
+        // Tabla de convergencia
+        if (lineasV.length) {
+            var thPT = icp.tienePT ? '<th style="text-align:center; padding:0.4rem 0.5rem; color:#0074c8; font-size:0.7rem; font-weight:600;">Ciudadanía<br><span style="color:#94a3b8; font-weight:400;">' + icp.wT + '%</span></th>' : '';
+            var thPE = icp.tienePE ? '<th style="text-align:center; padding:0.4rem 0.5rem; color:#00acd9; font-size:0.7rem; font-weight:600;">Técnico<br><span style="color:#94a3b8; font-weight:400;">' + icp.wE + '%</span></th>' : '';
+            var thPR = icp.tienePR ? '<th style="text-align:center; padding:0.4rem 0.5rem; color:#94d40b; font-size:0.7rem; font-weight:600;">RELAS<br><span style="color:#94a3b8; font-weight:400;">' + icp.wR + '%</span></th>' : '';
+            var rowsH = lineasV.map(function(le, idx) {
+                var bg   = idx % 2 === 0 ? 'white' : '#f8fafc';
+                var tdPT = icp.tienePT ? '<td style="padding:0.4rem 0.5rem; text-align:center; font-weight:700; color:#0074c8;">' + Math.round(le.pt*100) + '</td>' : '';
+                var tdPE = icp.tienePE ? '<td style="padding:0.4rem 0.5rem; text-align:center; font-weight:700; color:#00acd9;">' + Math.round(le.pe*100) + '</td>' : '';
+                var tdPR = icp.tienePR ? '<td style="padding:0.4rem 0.5rem; text-align:center; font-weight:700; color:#5a8200;">'  + Math.round(le.pr*100) + '</td>' : '';
+                return '<tr style="background:' + bg + '; border-bottom:1px solid #f1f5f9;">'
+                    + '<td style="padding:0.4rem 0.75rem;"><strong style="font-size:0.78rem; color:' + le.nc + ';">' + le.cod + '</strong><br><span style="font-size:0.68rem; color:#64748b;">' + le.nombre + '</span></td>'
+                    + tdPT + tdPE + tdPR
+                    + '<td style="padding:0.4rem 0.5rem; text-align:center; border-left:2px solid #e2e8f0;">'
+                    + '<div style="font-size:1rem; font-weight:900; color:' + le.nc + ';">' + Math.round(le.icp*100) + '</div>'
+                    + '<div style="font-size:0.6rem; font-weight:700; color:' + le.nc + ';">' + le.nivel + '</div>'
+                    + '</td></tr>';
+            }).join('');
+            htmlPri += '<div style="overflow-x:auto; margin-bottom:0.75rem;">'
+                + '<table style="width:100%; border-collapse:collapse; font-size:0.75rem;">'
+                + '<thead><tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">'
+                + '<th style="text-align:left; padding:0.4rem 0.75rem; color:#64748b; font-weight:600; font-size:0.7rem;">Línea EPVSA</th>'
+                + thPT + thPE + thPR
+                + '<th style="text-align:center; padding:0.4rem 0.5rem; color:#1e293b; font-weight:700; border-left:2px solid #e2e8f0; font-size:0.7rem;">ICP</th>'
+                + '</tr></thead><tbody>' + rowsH + '</tbody></table></div>';
+        } else {
+            htmlPri += '<div style="font-size:0.78rem; color:#94a3b8; font-style:italic; margin-bottom:0.75rem;">Sin datos de prioridad disponibles.</div>';
+        }
+
+        // Colectivos prioritarios
+        if (icp.colectivos && icp.colectivos.length) {
+            var colH = icp.colectivos.map(function(col) {
+                return '<span style="display:inline-block; background:white; border:1px solid #e2e8f0; border-left:3px solid #0074c8; color:#1e293b; padding:0.2rem 0.6rem; border-radius:3px; font-size:0.72rem; font-weight:600; margin:0.12rem 0.12rem 0 0;">'
+                    + col.nombre
+                    + (col.pct ? '<span style="font-size:0.65rem; color:#94a3b8; font-weight:400;"> · ' + col.pct + '%</span>' : '')
+                    + '</span>';
+            }).join('');
+            htmlPri += '<div style="margin-bottom:0.75rem;">'
+                + '<div style="font-size:0.68rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.35rem;">Colectivos prioritarios</div>'
+                + '<div>' + colH + '</div></div>';
+        }
+
+        // Nota metodológica
+        htmlPri += at2_itemDoc(
+            '<p style="margin:0; font-size:0.72rem; color:#64748b;">ICP = wT·PT + wE·PE + wR·PR. Cada fuente normalizada a [0,1]. Carácter orientativo; no sustituye valoración técnica.</p>',
+            '#ffb61b'
+        );
+
+        elPri.innerHTML = htmlPri;
+    }
+}
+</script>
 
 </body>
 
