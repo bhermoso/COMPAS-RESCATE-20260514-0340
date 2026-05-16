@@ -77291,6 +77291,209 @@ window.prioV4Abrir=prioV4Abrir;window.prioV4Cerrar=prioV4Cerrar;window.prioV4Act
 
 // ── Helpers internos (privados, prefijo _lt1_) ────────────────────
 
+// ---------------------------------------------------------------------------
+// CONTRATO DE FUENTES TERRITORIALES COMPAS v1
+// Proposito: registrar fuentes documentales/estadisticas/comunitarias de forma
+// serializable, trazable y reutilizable por LT1, observatorio, evaluacion y
+// futura capa de mejoramiento municipal. No persiste, no renderiza, no puntua.
+// ---------------------------------------------------------------------------
+
+var COMPAS_FUENTES_TERRITORIALES_TIPOS_V1 = [
+    'estructural',
+    'estrategica',
+    'longitudinal',
+    'comunitaria',
+    'operativa',
+    'interpretativa'
+];
+
+var COMPAS_FUENTES_TERRITORIALES_NIVELES_EVIDENCIA_V1 = {
+    0: 'verdad sanitaria basal',
+    1: 'evidencia poblacional objetiva',
+    2: 'lectura territorial estructurada',
+    3: 'accion local operativa',
+    4: 'bienestar/percepcion',
+    5: 'interpretacion prudente'
+};
+
+function COMPAS_crearFuenteTerritorialV1(datos) {
+    datos = datos || {};
+    return {
+        contrato: 'fuente_territorial_v1',
+        id: datos.id || null,
+        nombre: datos.nombre || '',
+        tipoFuente: datos.tipoFuente || 'interpretativa',
+        nivelEvidencia: (datos.nivelEvidencia !== undefined && datos.nivelEvidencia !== null) ? datos.nivelEvidencia : 5,
+        organismo: datos.organismo || '',
+        territorialidad: datos.territorialidad || '',
+        periodicidad: datos.periodicidad || '',
+        fecha: datos.fecha || '',
+        url: datos.url || '',
+        descripcion: datos.descripcion || '',
+        areasTematicas: Array.isArray(datos.areasTematicas) ? datos.areasTematicas.slice() : [],
+        barrios: Array.isArray(datos.barrios) ? datos.barrios.slice() : [],
+        colectivos: Array.isArray(datos.colectivos) ? datos.colectivos.slice() : [],
+        desigualdades: !!datos.desigualdades,
+        participacion: !!datos.participacion,
+        intersectorialidad: !!datos.intersectorialidad,
+        multiculturalidad: !!datos.multiculturalidad,
+        vulnerabilidadTerritorial: !!datos.vulnerabilidadTerritorial,
+        accionComunitaria: !!datos.accionComunitaria,
+        longitudinal: !!datos.longitudinal,
+        calidadMetodologica: datos.calidadMetodologica || 'no_valorada',
+        utilidadLT1: datos.utilidadLT1 || 'no_valorada',
+        utilidadObservatorio: datos.utilidadObservatorio || 'no_valorada',
+        utilidadEvaluacion: datos.utilidadEvaluacion || 'no_valorada',
+        utilidadMejoramiento: datos.utilidadMejoramiento || 'no_valorada',
+        reutilizableAutomaticamente: !!datos.reutilizableAutomaticamente,
+        observacionesMetodologicas: datos.observacionesMetodologicas || ''
+    };
+}
+
+function COMPAS_validarFuenteTerritorialV1(fuente) {
+    var errores = [];
+    var advertencias = [];
+    var tipos = COMPAS_FUENTES_TERRITORIALES_TIPOS_V1;
+    var niveles = COMPAS_FUENTES_TERRITORIALES_NIVELES_EVIDENCIA_V1;
+
+    if (!fuente || typeof fuente !== 'object') errores.push('fuente_no_objeto');
+    if (fuente && fuente.contrato !== 'fuente_territorial_v1') advertencias.push('contrato_no_declarado');
+    if (fuente && !fuente.id) errores.push('id_obligatorio');
+    if (fuente && !fuente.nombre) errores.push('nombre_obligatorio');
+    if (fuente && tipos.indexOf(fuente.tipoFuente) === -1) errores.push('tipoFuente_no_valido');
+    if (fuente && !Object.prototype.hasOwnProperty.call(niveles, String(fuente.nivelEvidencia))) errores.push('nivelEvidencia_no_valido');
+    if (fuente && !fuente.organismo) advertencias.push('organismo_no_declarado');
+    if (fuente && !fuente.territorialidad) advertencias.push('territorialidad_no_declarada');
+    if (fuente && fuente.reutilizableAutomaticamente && !fuente.url) advertencias.push('reutilizable_sin_url');
+
+    return {
+        version: 'validacion_fuente_territorial_v1',
+        valido: errores.length === 0,
+        errores: errores,
+        advertencias: advertencias
+    };
+}
+
+function COMPAS_obtenerEjemplosFuentesTerritorialesV1() {
+    return [
+        COMPAS_crearFuenteTerritorialV1({
+            id: 'informe_epidemiologico_municipal',
+            nombre: 'Informe epidemiologico municipal',
+            tipoFuente: 'estructural',
+            nivelEvidencia: 0,
+            organismo: 'Sistema sanitario publico',
+            territorialidad: 'municipal/distrito sanitario',
+            periodicidad: 'periodica',
+            areasTematicas: ['salud poblacional', 'mortalidad', 'morbilidad', 'determinantes'],
+            desigualdades: true,
+            longitudinal: true,
+            calidadMetodologica: 'alta',
+            utilidadLT1: 'alta',
+            utilidadObservatorio: 'alta',
+            utilidadEvaluacion: 'media',
+            utilidadMejoramiento: 'alta',
+            reutilizableAutomaticamente: false,
+            observacionesMetodologicas: 'Fuente basal; no sustituye la lectura comunitaria ni permite causalidad local automatica.'
+        }),
+        COMPAS_crearFuenteTerritorialV1({
+            id: 'eracis_plizd',
+            nombre: 'ERACIS/PLIZD',
+            tipoFuente: 'estrategica',
+            nivelEvidencia: 2,
+            organismo: 'Administracion local/autonomica',
+            territorialidad: 'zona desfavorecida/barrio',
+            periodicidad: 'plurianual',
+            areasTematicas: ['vulnerabilidad social', 'empleo', 'educacion', 'servicios sociales', 'gobernanza'],
+            barrios: ['zona desfavorecida'],
+            desigualdades: true,
+            participacion: true,
+            intersectorialidad: true,
+            vulnerabilidadTerritorial: true,
+            accionComunitaria: true,
+            longitudinal: true,
+            calidadMetodologica: 'media_alta',
+            utilidadLT1: 'alta',
+            utilidadObservatorio: 'alta',
+            utilidadEvaluacion: 'media',
+            utilidadMejoramiento: 'alta',
+            reutilizableAutomaticamente: false,
+            observacionesMetodologicas: 'Muy util para gobernanza y capacidad territorial; requiere contrastar implementacion real.'
+        }),
+        COMPAS_crearFuenteTerritorialV1({
+            id: 'sima_ieca',
+            nombre: 'SIMA/IECA',
+            tipoFuente: 'longitudinal',
+            nivelEvidencia: 1,
+            organismo: 'IECA',
+            territorialidad: 'municipal',
+            periodicidad: 'anual/continua',
+            url: 'https://www.juntadeandalucia.es/institutodeestadisticaycartografia/sima/',
+            areasTematicas: ['demografia', 'actividad economica', 'mercado laboral', 'equipamientos'],
+            desigualdades: true,
+            longitudinal: true,
+            calidadMetodologica: 'alta',
+            utilidadLT1: 'media',
+            utilidadObservatorio: 'alta',
+            utilidadEvaluacion: 'media',
+            utilidadMejoramiento: 'media',
+            reutilizableAutomaticamente: true,
+            observacionesMetodologicas: 'Fuente estadistica objetiva; necesita interpretacion territorial y comparacion prudente.'
+        }),
+        COMPAS_crearFuenteTerritorialV1({
+            id: 'argos',
+            nombre: 'ARGOS',
+            tipoFuente: 'longitudinal',
+            nivelEvidencia: 1,
+            organismo: 'Servicio Andaluz de Empleo',
+            territorialidad: 'municipal',
+            periodicidad: 'periodica',
+            areasTematicas: ['empleo', 'paro registrado', 'contratacion', 'perfil laboral'],
+            desigualdades: true,
+            longitudinal: true,
+            calidadMetodologica: 'alta',
+            utilidadLT1: 'media',
+            utilidadObservatorio: 'alta',
+            utilidadEvaluacion: 'media',
+            utilidadMejoramiento: 'media',
+            reutilizableAutomaticamente: false,
+            observacionesMetodologicas: 'Aporta contexto socioeconomico; no debe traducirse directamente a impacto en salud.'
+        }),
+        COMPAS_crearFuenteTerritorialV1({
+            id: 'ibse_compas',
+            nombre: 'IBSE COMPAS',
+            tipoFuente: 'interpretativa',
+            nivelEvidencia: 5,
+            organismo: 'COMPAS',
+            territorialidad: 'municipal',
+            periodicidad: 'segun ejecucion',
+            areasTematicas: ['bienestar salutogenico', 'lectura territorial', 'priorizacion prudente'],
+            participacion: false,
+            intersectorialidad: false,
+            longitudinal: false,
+            calidadMetodologica: 'exploratoria',
+            utilidadLT1: 'media',
+            utilidadObservatorio: 'baja',
+            utilidadEvaluacion: 'baja',
+            utilidadMejoramiento: 'media',
+            reutilizableAutomaticamente: true,
+            observacionesMetodologicas: 'Capa interpretativa auxiliar; requiere triangulacion con fuentes objetivas y comunitarias.'
+        })
+    ];
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.contratoFuentesTerritorialesV1 = {
+    version: 'fuentes_territoriales_v1',
+    tiposFuente: COMPAS_FUENTES_TERRITORIALES_TIPOS_V1.slice(),
+    nivelesEvidencia: COMPAS_FUENTES_TERRITORIALES_NIVELES_EVIDENCIA_V1,
+    crearFuente: COMPAS_crearFuenteTerritorialV1,
+    validarFuente: COMPAS_validarFuenteTerritorialV1,
+    ejemplos: COMPAS_obtenerEjemplosFuentesTerritorialesV1
+};
+window.COMPAS_crearFuenteTerritorialV1 = COMPAS_crearFuenteTerritorialV1;
+window.COMPAS_validarFuenteTerritorialV1 = COMPAS_validarFuenteTerritorialV1;
+window.COMPAS_obtenerEjemplosFuentesTerritorialesV1 = COMPAS_obtenerEjemplosFuentesTerritorialesV1;
+
 function _lt1_tieneArray(v) {
     return Array.isArray(v) && v.length > 0;
 }
