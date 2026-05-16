@@ -79816,6 +79816,327 @@ window.COMPAS_crearContratoEvaluacionLongitudinalPrudenteV1 = COMPAS_crearContra
 window.COMPAS_validarContratoEvaluacionLongitudinalPrudenteV1 = COMPAS_validarContratoEvaluacionLongitudinalPrudenteV1;
 window.COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1 = COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1;
 
+// ---------------------------------------------------------------------------
+// MATRIZ LONGITUDINAL DE COMPARABILIDAD DOCUMENTAL COMPAS v1
+// Proposito: determinar que puede compararse, bajo que condiciones y con que cautelas.
+// Sin IA, scoring, rankings, inferencia causal ni recomendaciones politicas.
+// ---------------------------------------------------------------------------
+
+var COMPAS_MLCV1_ESTADOS_COMPARABILIDAD = [
+    'comparable',
+    'comparable_con_cautela',
+    'no_comparable',
+    'insuficiente_informacion'
+];
+
+var COMPAS_MLCV1_DIMENSIONES_MINIMAS = [
+    'temporal',
+    'territorial',
+    'documental',
+    'instrumental',
+    'poblacional',
+    'operativa'
+];
+
+function COMPAS_mlcV1_copiarArray(val) {
+    return Array.isArray(val) ? val.slice() : [];
+}
+
+function COMPAS_mlcV1_copiarDimension(val) {
+    var estado = (val && val.estado) ? val.estado : 'insuficiente_informacion';
+    if (COMPAS_MLCV1_ESTADOS_COMPARABILIDAD.indexOf(estado) === -1) estado = 'insuficiente_informacion';
+    return {
+        estado: estado,
+        descripcion: (val && val.descripcion) ? val.descripcion : '',
+        condiciones: COMPAS_mlcV1_copiarArray(val && val.condiciones),
+        cautelas: COMPAS_mlcV1_copiarArray(val && val.cautelas),
+        fragilidad: (val && val.fragilidad) ? val.fragilidad : 'no_declarada'
+    };
+}
+
+function COMPAS_mlcV1_copiarDimensionesComparabilidad(val) {
+    var out = {};
+    COMPAS_MLCV1_DIMENSIONES_MINIMAS.forEach(function(dim) {
+        out[dim] = COMPAS_mlcV1_copiarDimension(val && val[dim]);
+    });
+    return out;
+}
+
+function COMPAS_mlcV1_congelarContratoPrudente(contrato) {
+    if (!contrato || typeof contrato !== 'object') return null;
+    return {
+        contrato: contrato.contrato || null,
+        version: contrato.version || null,
+        generadoISO: contrato.generadoISO || null,
+        congeladoEn: 'matriz_longitudinal_comparabilidad_v1'
+    };
+}
+
+function COMPAS_crearMatrizLongitudinalComparabilidadV1(datos) {
+    datos = datos || {};
+    var fuenteContratoPrudente = datos.fuenteContratoPrudente || null;
+    var validarContrato = (window.COMPAS && window.COMPAS.contratoEvaluacionLongitudinalPrudenteV1)
+        ? window.COMPAS.contratoEvaluacionLongitudinalPrudenteV1.validarContrato
+        : null;
+    var cautelasMetodologicas = COMPAS_mlcV1_copiarArray(datos.cautelasMetodologicas);
+    var riesgosInvalidacion = COMPAS_mlcV1_copiarArray(datos.riesgosInvalidacion);
+    var limites = COMPAS_mlcV1_copiarArray(datos.limites);
+    var contratoAceptado = false;
+    var contratoParcial = false;
+    var validacionContrato = null;
+
+    if (fuenteContratoPrudente && typeof validarContrato === 'function') {
+        validacionContrato = validarContrato(fuenteContratoPrudente);
+        contratoAceptado = !!(validacionContrato && validacionContrato.valido);
+        contratoParcial = !!(validacionContrato && !validacionContrato.valido);
+    } else if (fuenteContratoPrudente) {
+        contratoParcial = true;
+    }
+
+    if (!fuenteContratoPrudente) {
+        cautelasMetodologicas.push('Matriz generada sin contrato metodologico prudente de referencia');
+        limites.push('No usar para comparaciones sin vincular contratoEvaluacionLongitudinalPrudenteV1');
+    } else if (contratoParcial) {
+        cautelasMetodologicas.push('Contrato prudente de referencia incompleto o con advertencias');
+    }
+
+    if (fuenteContratoPrudente && Array.isArray(fuenteContratoPrudente.riesgosInvalidacion)) {
+        fuenteContratoPrudente.riesgosInvalidacion.forEach(function(r) {
+            if (riesgosInvalidacion.indexOf(r) === -1) riesgosInvalidacion.push(r);
+        });
+    }
+    if (fuenteContratoPrudente && Array.isArray(fuenteContratoPrudente.cautelasMetodologicas)) {
+        fuenteContratoPrudente.cautelasMetodologicas.forEach(function(c) {
+            if (cautelasMetodologicas.indexOf(c) === -1) cautelasMetodologicas.push(c);
+        });
+    }
+
+    if (cautelasMetodologicas.length === 0) {
+        cautelasMetodologicas.push('Matriz documental pasiva; no implica mejora, deterioro ni ranking');
+    }
+    if (riesgosInvalidacion.length === 0) {
+        riesgosInvalidacion.push('comparar dimensiones marcadas como no_comparable o insuficiente_informacion');
+    }
+    if (limites.length === 0) {
+        limites.push('No sustituye evaluacion real/exploratoria ni LT1 interpretativo');
+    }
+
+    return {
+        contrato: 'matriz_longitudinal_comparabilidad_v1',
+        version: datos.version || 'matriz_longitudinal_comparabilidad_v1',
+        generadoISO: datos.generadoISO || new Date().toISOString(),
+        fuenteContratoPrudente: COMPAS_mlcV1_congelarContratoPrudente(fuenteContratoPrudente),
+        dimensionesComparabilidad: COMPAS_mlcV1_copiarDimensionesComparabilidad(datos.dimensionesComparabilidad),
+        reglasComparacion: COMPAS_mlcV1_copiarArray(datos.reglasComparacion),
+        comparacionesPermitidas: COMPAS_mlcV1_copiarArray(datos.comparacionesPermitidas),
+        comparacionesCondicionadas: COMPAS_mlcV1_copiarArray(datos.comparacionesCondicionadas),
+        comparacionesNoPermitidas: COMPAS_mlcV1_copiarArray(datos.comparacionesNoPermitidas),
+        factoresFragilidad: COMPAS_mlcV1_copiarArray(datos.factoresFragilidad),
+        cautelasMetodologicas: cautelasMetodologicas,
+        riesgosInvalidacion: riesgosInvalidacion,
+        criteriosHomologacion: COMPAS_mlcV1_copiarArray(datos.criteriosHomologacion),
+        criteriosExclusion: COMPAS_mlcV1_copiarArray(datos.criteriosExclusion),
+        utilidadObservatorio: datos.utilidadObservatorio || 'no_valorada',
+        utilidadEvaluacion: datos.utilidadEvaluacion || 'no_valorada',
+        utilidadMejoramiento: datos.utilidadMejoramiento || 'no_valorada',
+        limites: limites,
+        trazabilidad: {
+            capa: 'matriz_longitudinal_comparabilidad_v1',
+            generadoPor: 'COMPAS_crearMatrizLongitudinalComparabilidadV1',
+            contratoPrudentePresente: !!fuenteContratoPrudente,
+            contratoPrudenteAceptado: contratoAceptado,
+            contratoPrudenteParcial: contratoParcial,
+            validacionContratoPrudente: validacionContrato,
+            estadosPermitidos: COMPAS_MLCV1_ESTADOS_COMPARABILIDAD.slice(),
+            sinInferenciaCausal: true
+        }
+    };
+}
+
+function COMPAS_validarMatrizLongitudinalComparabilidadV1(matriz) {
+    var errores = [];
+    var advertencias = [];
+    var arraysCriticos = [
+        'reglasComparacion',
+        'comparacionesPermitidas',
+        'comparacionesCondicionadas',
+        'comparacionesNoPermitidas',
+        'factoresFragilidad',
+        'cautelasMetodologicas',
+        'riesgosInvalidacion',
+        'criteriosHomologacion',
+        'criteriosExclusion',
+        'limites'
+    ];
+
+    if (!matriz || typeof matriz !== 'object') errores.push('matriz_no_objeto');
+    if (matriz && matriz.contrato !== 'matriz_longitudinal_comparabilidad_v1') advertencias.push('contrato_no_declarado');
+    if (matriz && !matriz.version) advertencias.push('version_no_declarada');
+    if (matriz && !matriz.generadoISO) advertencias.push('generadoISO_no_declarado');
+    if (matriz && matriz.fuenteContratoPrudente === undefined) advertencias.push('fuenteContratoPrudente_no_declarada');
+    if (matriz && (!matriz.trazabilidad || typeof matriz.trazabilidad !== 'object')) advertencias.push('trazabilidad_no_objeto');
+
+    arraysCriticos.forEach(function(campo) {
+        if (matriz && !Array.isArray(matriz[campo])) errores.push(campo + '_no_array');
+    });
+
+    if (matriz && (!matriz.dimensionesComparabilidad || typeof matriz.dimensionesComparabilidad !== 'object')) {
+        errores.push('dimensionesComparabilidad_no_objeto');
+    } else if (matriz) {
+        COMPAS_MLCV1_DIMENSIONES_MINIMAS.forEach(function(dim) {
+            if (!matriz.dimensionesComparabilidad[dim]) {
+                advertencias.push('dimension_' + dim + '_ausente');
+            } else {
+                var d = matriz.dimensionesComparabilidad[dim];
+                if (COMPAS_MLCV1_ESTADOS_COMPARABILIDAD.indexOf(d.estado) === -1) {
+                    errores.push('dimension_' + dim + '_estado_no_valido');
+                }
+            }
+        });
+    }
+
+    if (matriz && Array.isArray(matriz.reglasComparacion) && matriz.reglasComparacion.length === 0) {
+        advertencias.push('sin_reglas_comparacion');
+    }
+    if (matriz && Array.isArray(matriz.limites) && matriz.limites.length === 0) advertencias.push('sin_limites');
+    if (matriz && Array.isArray(matriz.cautelasMetodologicas) && matriz.cautelasMetodologicas.length === 0) {
+        advertencias.push('sin_cautelas_metodologicas');
+    }
+    if (matriz && !matriz.fuenteContratoPrudente) advertencias.push('sin_contrato_prudente_referencia');
+
+    if (matriz) {
+        try {
+            JSON.stringify(matriz);
+        } catch (e) {
+            errores.push('no_serializable_json');
+        }
+    }
+
+    return {
+        version: 'validacion_matriz_longitudinal_comparabilidad_v1',
+        valido: errores.length === 0,
+        errores: errores,
+        advertencias: advertencias
+    };
+}
+
+function COMPAS_obtenerEjemploMatrizLongitudinalComparabilidadV1() {
+    var contratoPrudente = (typeof COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1 === 'function')
+        ? COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1()
+        : null;
+
+    return COMPAS_crearMatrizLongitudinalComparabilidadV1({
+        generadoISO: '2026-01-15T00:00:00.000Z',
+        fuenteContratoPrudente: contratoPrudente,
+        dimensionesComparabilidad: {
+            temporal: {
+                estado: 'comparable_con_cautela',
+                descripcion: 'Comparacion entre ciclos y cortes homologados',
+                condiciones: ['misma fechaCorteISO o ventana declarada', 'ciclo identificado en estructura temporal'],
+                cautelas: ['No inferir evolucion sanitaria desde cambios documentales'],
+                fragilidad: 'media'
+            },
+            territorial: {
+                estado: 'comparable_con_cautela',
+                descripcion: 'Comparacion entre municipios con criterios explicitos',
+                condiciones: ['consolidacion u observatorio validos', 'criterios de exclusion declarados'],
+                cautelas: ['No usar como ranking supramunicipal'],
+                fragilidad: 'media_alta'
+            },
+            documental: {
+                estado: 'comparable',
+                descripcion: 'Comparacion de inventarios, lagunas y continuidad documental',
+                condiciones: ['fuentes con contrato territorial v1', 'auditoria o catalogo referenciados'],
+                cautelas: ['Distinguir disponibilidad documental de magnitud poblacional'],
+                fragilidad: 'baja_media'
+            },
+            instrumental: {
+                estado: 'comparable_con_cautela',
+                descripcion: 'Comparacion de nucleos de fuentes e instrumentos entre ciclos',
+                condiciones: ['estabilidad instrumental declarada en consolidacion'],
+                cautelas: ['Recuento de fuentes no implica estabilidad epidemiologica'],
+                fragilidad: 'media'
+            },
+            poblacional: {
+                estado: 'insuficiente_informacion',
+                descripcion: 'Comparacion de resultados poblacionales no cubierta por esta matriz',
+                condiciones: [],
+                cautelas: ['Requiere evidencia epidemiologica independiente'],
+                fragilidad: 'alta'
+            },
+            operativa: {
+                estado: 'no_comparable',
+                descripcion: 'Seguimiento operativo no homologable solo desde capas documentales',
+                condiciones: [],
+                cautelas: ['No mezclar con seguimiento documental'],
+                fragilidad: 'alta'
+            }
+        },
+        reglasComparacion: [
+            'Solo comparar dimensiones con estado comparable o comparable_con_cautela',
+            'Registrar fragilidad y cautelas antes de cualquier lectura evaluativa posterior',
+            'Excluir explicitamente dimensiones no_comparable e insuficiente_informacion'
+        ],
+        comparacionesPermitidas: [
+            { tipo: 'mismo_municipio_mismo_ciclo', dimensiones: ['documental', 'instrumental'] },
+            { tipo: 'snapshots_misma_fecha_corte', dimensiones: ['temporal', 'documental'] }
+        ],
+        comparacionesCondicionadas: [
+            { tipo: 'municipios_distintos_mismo_ciclo', dimensiones: ['territorial', 'documental'], condicion: 'criteriosHomologacion cumplidos' },
+            { tipo: 'ciclos_distintos_mismo_municipio', dimensiones: ['temporal', 'documental'], condicion: 'cortes temporales homologados' }
+        ],
+        comparacionesNoPermitidas: [
+            { tipo: 'resultados_poblacionales_sin_diseno', dimensiones: ['poblacional'] },
+            { tipo: 'ejecucion_operativa_sin_evidencia', dimensiones: ['operativa'] },
+            { tipo: 'ranking_municipal', dimensiones: ['territorial'] }
+        ],
+        factoresFragilidad: [
+            'lagunas persistentes no homologadas',
+            'fuentes con periodicidad mixta sin declaracion',
+            'observatorio con un solo municipio integrado',
+            'ausencia de snapshot con fecha de corte'
+        ],
+        cautelasMetodologicas: [
+            'Matriz pasiva; no activa evaluacion automatica',
+            'Compatible con contratoEvaluacionLongitudinalPrudenteV1'
+        ],
+        riesgosInvalidacion: [
+            'usar estado comparable ignorando cautelas de la dimension',
+            'comparar poblacional u operativa desde capas solo documentales'
+        ],
+        criteriosHomologacion: [
+            'Contrato prudente v1 valido como referencia',
+            'Ciclo y corte temporal declarados',
+            'Cadena longitudinal con diagnostico validoGlobal preferente'
+        ],
+        criteriosExclusion: [
+            'Dimension con estado no_comparable',
+            'Consolidacion municipal invalida',
+            'Sin trazabilidad de fuente en snapshot u observatorio'
+        ],
+        utilidadObservatorio: 'alta',
+        utilidadEvaluacion: 'media',
+        utilidadMejoramiento: 'alta',
+        limites: [
+            'No calcular indicadores sanitarios ni inferir mejora o deterioro',
+            'No emitir recomendaciones politicas ni rankings'
+        ]
+    });
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.matrizLongitudinalComparabilidadV1 = {
+    version: 'matriz_longitudinal_comparabilidad_v1',
+    crearMatriz: COMPAS_crearMatrizLongitudinalComparabilidadV1,
+    validarMatriz: COMPAS_validarMatrizLongitudinalComparabilidadV1,
+    ejemplo: COMPAS_obtenerEjemploMatrizLongitudinalComparabilidadV1,
+    estadosComparabilidad: COMPAS_MLCV1_ESTADOS_COMPARABILIDAD.slice(),
+    dimensionesMinimas: COMPAS_MLCV1_DIMENSIONES_MINIMAS.slice()
+};
+window.COMPAS_crearMatrizLongitudinalComparabilidadV1 = COMPAS_crearMatrizLongitudinalComparabilidadV1;
+window.COMPAS_validarMatrizLongitudinalComparabilidadV1 = COMPAS_validarMatrizLongitudinalComparabilidadV1;
+window.COMPAS_obtenerEjemploMatrizLongitudinalComparabilidadV1 = COMPAS_obtenerEjemploMatrizLongitudinalComparabilidadV1;
+
 function _lt1_tieneArray(v) {
     return Array.isArray(v) && v.length > 0;
 }
