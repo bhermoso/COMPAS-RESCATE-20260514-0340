@@ -71198,6 +71198,16 @@ function COMPAS_crearSnapshotEvaluacion() {
     if (_baseLong.totalCiclo === 0) lecturaEvaluativaLongitudinal.limitaciones.push('sin_actuaciones_del_ciclo');
     if (_comunidadLong.alcance === 'agenda_completa_cargada') lecturaEvaluativaLongitudinal.limitaciones.push('lectura_comunitaria_no_filtrada_por_ciclo');
 
+    var lecturaContratoSnapshot = {
+        contrato: 'lectura_snapshot_evaluacion_v1',
+        cicloEvaluado: cicloEvaluado,
+        totalActuacionesCiclo: _baseLong.totalCiclo,
+        totalActuacionesFueraCiclo: _baseLong.totalFueraCiclo,
+        estadoTemporalidad: _baseLong.clasificaciones && _baseLong.clasificaciones.temporalidad ? _baseLong.clasificaciones.temporalidad.estado : null,
+        estadoTrazabilidad: _baseLong.clasificaciones && _baseLong.clasificaciones.trazabilidad ? _baseLong.clasificaciones.trazabilidad.estado : null,
+        nivelEjecucion: _baseLong.clasificaciones && _baseLong.clasificaciones.ejecucion ? _baseLong.clasificaciones.ejecucion.estado : null
+    };
+
     var contratoSnapshotEvaluacion = 'snapshot_evaluacion_v1';
 
     var validacionSnapshotEvaluacion = {
@@ -71215,6 +71225,12 @@ function COMPAS_crearSnapshotEvaluacion() {
     }
     if (contratoSnapshotEvaluacion !== 'snapshot_evaluacion_v1') {
         _errorSnapshot('contrato_snapshot_evaluacion_invalido');
+    }
+    if (lecturaContratoSnapshot.contrato !== 'lectura_snapshot_evaluacion_v1') {
+        _errorSnapshot('lectura_contrato_snapshot_invalida');
+    }
+    if (typeof lecturaContratoSnapshot.totalActuacionesCiclo !== 'number') {
+        _advertenciaSnapshot('lectura_contrato_snapshot_total_ciclo_no_numerico');
     }
     var _contratoAgendaEval = agendaEvaluacion && agendaEvaluacion.contratoAgendaEvaluacion;
     var _validacionAgendaEval = agendaEvaluacion && agendaEvaluacion.validacionAgendaEvaluacion;
@@ -71314,6 +71330,7 @@ function COMPAS_crearSnapshotEvaluacion() {
     return {
         version: 'snapshot_evaluacion_v0',
         contratoSnapshotEvaluacion: contratoSnapshotEvaluacion,
+        lecturaContratoSnapshot: lecturaContratoSnapshot,
         fechaISO: generadoISO,
         contratoLongitudinal: 'evaluacion_longitudinal_v1',
         generadoISO: generadoISO,
