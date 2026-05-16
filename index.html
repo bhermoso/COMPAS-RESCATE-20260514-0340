@@ -77494,6 +77494,125 @@ window.COMPAS_crearFuenteTerritorialV1 = COMPAS_crearFuenteTerritorialV1;
 window.COMPAS_validarFuenteTerritorialV1 = COMPAS_validarFuenteTerritorialV1;
 window.COMPAS_obtenerEjemplosFuentesTerritorialesV1 = COMPAS_obtenerEjemplosFuentesTerritorialesV1;
 
+// ---------------------------------------------------------------------------
+// AUDITORIA DOCUMENTAL TERRITORIAL MUNICIPAL COMPAS v1
+// Proposito: agrupar fuentes territoriales validadas para auditorias
+// municipales pasivas, sin generar scoring, ranking ni causalidad automatica.
+// ---------------------------------------------------------------------------
+
+function COMPAS_crearAuditoriaTerritorialV1(datos) {
+    datos = datos || {};
+    var fuentes = Array.isArray(datos.fuentes) ? datos.fuentes.slice() : [];
+    return {
+        contrato: 'auditoria_territorial_v1',
+        municipio: datos.municipio || '',
+        fecha: datos.fecha || new Date().toISOString(),
+        fuentes: fuentes,
+        coberturaTematica: Array.isArray(datos.coberturaTematica) ? datos.coberturaTematica.slice() : [],
+        desigualdades: !!datos.desigualdades,
+        participacion: !!datos.participacion,
+        intersectorialidad: !!datos.intersectorialidad,
+        multiculturalidad: !!datos.multiculturalidad,
+        vulnerabilidadTerritorial: !!datos.vulnerabilidadTerritorial,
+        calidadGlobal: datos.calidadGlobal || 'no_valorada',
+        lagunasDetectadas: Array.isArray(datos.lagunasDetectadas) ? datos.lagunasDetectadas.slice() : [],
+        observacionesMetodologicas: datos.observacionesMetodologicas || '',
+        utilidadLT1: datos.utilidadLT1 || 'no_valorada',
+        utilidadObservatorio: datos.utilidadObservatorio || 'no_valorada',
+        utilidadEvaluacion: datos.utilidadEvaluacion || 'no_valorada',
+        utilidadMejoramiento: datos.utilidadMejoramiento || 'no_valorada'
+    };
+}
+
+function COMPAS_validarAuditoriaTerritorialV1(auditoria) {
+    var errores = [];
+    var advertencias = [];
+    var validarFuente = (window.COMPAS && window.COMPAS.contratoFuentesTerritorialesV1)
+        ? window.COMPAS.contratoFuentesTerritorialesV1.validarFuente
+        : null;
+
+    if (!auditoria || typeof auditoria !== 'object') errores.push('auditoria_no_objeto');
+    if (auditoria && auditoria.contrato !== 'auditoria_territorial_v1') advertencias.push('contrato_no_declarado');
+    if (auditoria && !auditoria.municipio) errores.push('municipio_obligatorio');
+    if (auditoria && !auditoria.fecha) advertencias.push('fecha_no_declarada');
+    if (auditoria && !Array.isArray(auditoria.fuentes)) errores.push('fuentes_no_array');
+    if (auditoria && Array.isArray(auditoria.fuentes) && auditoria.fuentes.length === 0) advertencias.push('sin_fuentes');
+    if (auditoria && !Array.isArray(auditoria.coberturaTematica)) advertencias.push('coberturaTematica_no_array');
+    if (auditoria && !Array.isArray(auditoria.lagunasDetectadas)) advertencias.push('lagunasDetectadas_no_array');
+
+    if (auditoria && Array.isArray(auditoria.fuentes) && typeof validarFuente === 'function') {
+        auditoria.fuentes.forEach(function(fuente, idx) {
+            var val = validarFuente(fuente);
+            if (!val.valido) errores.push('fuente_' + idx + '_invalida');
+            (val.errores || []).forEach(function(err) {
+                errores.push('fuente_' + idx + '_' + err);
+            });
+            (val.advertencias || []).forEach(function(adv) {
+                advertencias.push('fuente_' + idx + '_' + adv);
+            });
+        });
+    } else if (auditoria && Array.isArray(auditoria.fuentes) && auditoria.fuentes.length > 0) {
+        advertencias.push('contrato_fuentes_no_disponible');
+    }
+
+    return {
+        version: 'validacion_auditoria_territorial_v1',
+        valido: errores.length === 0,
+        errores: errores,
+        advertencias: advertencias
+    };
+}
+
+function COMPAS_obtenerEjemploAuditoriaTerritorialV1() {
+    var fuentesBase = (typeof COMPAS_obtenerEjemplosFuentesTerritorialesV1 === 'function')
+        ? COMPAS_obtenerEjemplosFuentesTerritorialesV1()
+        : [];
+    var fuentes = fuentesBase.filter(function(fuente) {
+        return ['informe_epidemiologico_municipal', 'eracis_plizd', 'sima_ieca', 'argos'].indexOf(fuente.id) !== -1;
+    });
+
+    return COMPAS_crearAuditoriaTerritorialV1({
+        municipio: 'Municipio piloto',
+        fecha: new Date().toISOString(),
+        fuentes: fuentes,
+        coberturaTematica: [
+            'salud poblacional',
+            'vulnerabilidad social',
+            'empleo',
+            'demografia',
+            'gobernanza',
+            'determinantes sociales'
+        ],
+        desigualdades: true,
+        participacion: true,
+        intersectorialidad: true,
+        multiculturalidad: false,
+        vulnerabilidadTerritorial: true,
+        calidadGlobal: 'media_alta',
+        lagunasDetectadas: [
+            'sin mapa completo de activos comunitarios',
+            'sin series locales de seguimiento anual integradas',
+            'sin evidencia comunitaria homogenea para todos los barrios'
+        ],
+        observacionesMetodologicas: 'Ejemplo simplificado; sirve para trazabilidad documental, no para ranking municipal ni inferencia causal.',
+        utilidadLT1: 'alta',
+        utilidadObservatorio: 'alta',
+        utilidadEvaluacion: 'media',
+        utilidadMejoramiento: 'alta'
+    });
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.auditoriaTerritorialV1 = {
+    version: 'auditoria_territorial_v1',
+    crearAuditoria: COMPAS_crearAuditoriaTerritorialV1,
+    validarAuditoria: COMPAS_validarAuditoriaTerritorialV1,
+    ejemplo: COMPAS_obtenerEjemploAuditoriaTerritorialV1
+};
+window.COMPAS_crearAuditoriaTerritorialV1 = COMPAS_crearAuditoriaTerritorialV1;
+window.COMPAS_validarAuditoriaTerritorialV1 = COMPAS_validarAuditoriaTerritorialV1;
+window.COMPAS_obtenerEjemploAuditoriaTerritorialV1 = COMPAS_obtenerEjemploAuditoriaTerritorialV1;
+
 function _lt1_tieneArray(v) {
     return Array.isArray(v) && v.length > 0;
 }
