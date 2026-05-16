@@ -77603,6 +77603,292 @@ window.COMPAS_construirLecturaTerritorialV1 = COMPAS_construirLecturaTerritorial
 </script>
 <!-- === /CAPA INTERPRETATIVA TERRITORIAL COMPÁS v1 === -->
 
+<!-- ================================================================
+     VISOR DEBUG LT1 — herramienta técnica pasiva
+     No modifica estado. No llama a Firebase. No toca AT2 ni motores.
+     Activar desde consola: COMPAS_renderLT1Debug()
+     ================================================================ -->
+<style>
+#compas-lt1-debug {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    width: 480px;
+    max-width: calc(100vw - 32px);
+    max-height: 70vh;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #0074c8;
+    border-radius: 6px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.10);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 12px;
+    z-index: 9800;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+#compas-lt1-debug.lt1-open { display: flex; }
+#compas-lt1-debug-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #0074c8;
+    color: #fff;
+    flex-shrink: 0;
+    gap: 8px;
+}
+#compas-lt1-debug-header span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+#compas-lt1-debug-header button {
+    background: rgba(255,255,255,.18);
+    border: none;
+    color: #fff;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+#compas-lt1-debug-header button:hover { background: rgba(255,255,255,.32); }
+#compas-lt1-debug-body {
+    overflow-y: auto;
+    padding: 10px 12px;
+    flex: 1;
+    color: #334155;
+}
+#compas-lt1-debug-body::-webkit-scrollbar { width: 4px; }
+#compas-lt1-debug-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+.lt1-section {
+    margin-bottom: 10px;
+    border-left: 2px solid #e2e8f0;
+    padding-left: 8px;
+}
+.lt1-section-title {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #0074c8;
+    margin-bottom: 4px;
+}
+.lt1-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 3px;
+    font-size: 11px;
+    line-height: 1.4;
+}
+.lt1-key  { color: #94a3b8; flex-shrink: 0; min-width: 100px; }
+.lt1-val  { color: #1e293b; font-weight: 600; word-break: break-word; }
+.lt1-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 3px;
+    padding: 4px 7px;
+    margin-bottom: 4px;
+    font-size: 11px;
+}
+.lt1-item-tipo {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: 1px 5px;
+    border-radius: 2px;
+    margin-bottom: 3px;
+    background: #e2e8f0;
+    color: #475569;
+}
+.lt1-item-tipo.observacion  { background: rgba(0,116,200,.1);  color: #0074c8; }
+.lt1-item-tipo.inferencia   { background: rgba(148,212,11,.12); color: #5a8200; }
+.lt1-item-tipo.hipotesis    { background: rgba(255,182,27,.12); color: #8a5a00; }
+.lt1-item-tipo.orientacion  { background: rgba(220,20,60,.08);  color: #a01030; }
+.lt1-item-texto { color: #1e293b; line-height: 1.45; margin-bottom: 2px; }
+.lt1-item-meta  { color: #94a3b8; font-size: 10px; }
+.lt1-warn { color: #dc143c; font-size: 11px; margin-bottom: 3px; }
+.lt1-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 3px;
+    padding: 2px 7px;
+    margin: 2px 2px 2px 0;
+    font-size: 10px;
+    font-weight: 700;
+    color: #475569;
+}
+.lt1-counter .lt1-n { color: #0074c8; font-size: 12px; margin-left: 2px; }
+.lt1-sin-datos {
+    text-align: center;
+    padding: 20px 10px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-style: italic;
+}
+</style>
+
+<div id="compas-lt1-debug">
+    <div id="compas-lt1-debug-header">
+        <span>&#128270; LT1 Debug — Lectura Territorial v1</span>
+        <div style="display:flex;gap:5px;">
+            <button onclick="COMPAS_renderLT1Debug()">Actualizar lectura LT1</button>
+            <button onclick="document.getElementById('compas-lt1-debug').classList.remove('lt1-open')">&#x2715;</button>
+        </div>
+    </div>
+    <div id="compas-lt1-debug-body">
+        <div class="lt1-sin-datos">Ejecuta COMPAS_renderLT1Debug() en consola para cargar.</div>
+    </div>
+</div>
+
+<script>
+(function() {
+
+    function _esc(s) {
+        if (s == null) return '—';
+        return String(s)
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;');
+    }
+
+    function _tipoClass(t) {
+        var allowed = ['observacion','inferencia','hipotesis','orientacion'];
+        return allowed.indexOf(t) !== -1 ? t : '';
+    }
+
+    function _renderItem(item) {
+        if (!item) return '';
+        return '<div class="lt1-item">'
+            + '<span class="lt1-item-tipo ' + _tipoClass(item.tipo || '') + '">' + _esc(item.tipo) + '</span>'
+            + '<div class="lt1-item-texto">' + _esc(item.texto) + '</div>'
+            + '<div class="lt1-item-meta">fuente: ' + _esc(item.fuente) + ' &nbsp;·&nbsp; confianza: ' + _esc(item.confianza) + '</div>'
+            + '</div>';
+    }
+
+    function _renderArr(label, arr) {
+        if (!Array.isArray(arr) || arr.length === 0) return '';
+        var items = arr.slice(0, 2).map(_renderItem).join('');
+        var more  = arr.length > 2
+            ? '<div style="font-size:10px;color:#94a3b8;padding-left:4px;">… y ' + (arr.length - 2) + ' más</div>'
+            : '';
+        return '<div class="lt1-section">'
+            + '<div class="lt1-section-title">' + _esc(label) + ' <span style="color:#94a3b8;font-weight:400;">(' + arr.length + ')</span></div>'
+            + items + more
+            + '</div>';
+    }
+
+    window.COMPAS_renderLT1Debug = function() {
+        var panel = document.getElementById('compas-lt1-debug');
+        var body  = document.getElementById('compas-lt1-debug-body');
+        if (!panel || !body) return;
+
+        panel.classList.add('lt1-open');
+
+        // 1. Función no disponible
+        if (typeof window.COMPAS_construirLecturaTerritorialV1 !== 'function') {
+            body.innerHTML = '<div class="lt1-warn">&#9888; COMPAS_construirLecturaTerritorialV1 no disponible.</div>';
+            return;
+        }
+
+        // 2. Sin analisisActual
+        if (!window.analisisActual) {
+            body.innerHTML = '<div class="lt1-section">'
+                + '<div class="lt1-section-title">Estado</div>'
+                + '<div class="lt1-row"><span class="lt1-key">LT1</span><span class="lt1-val" style="color:#94d40b;">disponible</span></div>'
+                + '<div class="lt1-row"><span class="lt1-key">analisisActual</span><span class="lt1-val" style="color:#dc143c;">no disponible</span></div>'
+                + '<div class="lt1-row"><span class="lt1-key">Lectura</span><span class="lt1-val" style="color:#94a3b8;">no se puede construir con datos reales</span></div>'
+                + '</div>';
+            return;
+        }
+
+        // 3. Construir lectura
+        var lec;
+        try {
+            lec = window.COMPAS_construirLecturaTerritorialV1(window.analisisActual);
+        } catch(e) {
+            body.innerHTML = '<div class="lt1-warn">&#9888; Error al ejecutar LT1: ' + _esc(e && e.message ? e.message : String(e)) + '</div>';
+            return;
+        }
+
+        var html = '';
+
+        // Meta
+        html += '<div class="lt1-section">'
+            + '<div class="lt1-section-title">Identificaci&oacute;n</div>'
+            + '<div class="lt1-row"><span class="lt1-key">version</span><span class="lt1-val">' + _esc(lec.version) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">municipio</span><span class="lt1-val">' + _esc(lec.municipio) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">fechaISO</span><span class="lt1-val">' + _esc(lec.fechaISO ? lec.fechaISO.slice(0,19).replace('T',' ') : null) + '</span></div>'
+            + '</div>';
+
+        // Metadatos de calidad
+        html += '<div class="lt1-section">'
+            + '<div class="lt1-section-title">Metadatos de calidad</div>'
+            + '<div class="lt1-row"><span class="lt1-key">confianza</span><span class="lt1-val">' + _esc(lec.meta.confianza) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">fuentes</span><span class="lt1-val">' + _esc((lec.meta.fuentes || []).join(', ') || '—') + '</span></div>'
+            + (lec.meta.advertencias && lec.meta.advertencias.length
+                ? lec.meta.advertencias.map(function(a){ return '<div class="lt1-warn">&#9888; ' + _esc(a) + '</div>'; }).join('')
+                : '<div class="lt1-row"><span class="lt1-key">advertencias</span><span class="lt1-val" style="color:#94a3b8;">ninguna</span></div>')
+            + '</div>';
+
+        // Contadores
+        var ARRAYS = [
+            ['observaciones', lec.observaciones],
+            ['interpretaciones', lec.interpretaciones],
+            ['tensiones', lec.tensiones],
+            ['activos', lec.activos],
+            ['vulnerabilidades', lec.vulnerabilidades],
+            ['oportunidades', lec.oportunidades],
+            ['incertidumbres', lec.incertidumbres],
+            ['orientaciones', lec.orientaciones],
+            ['prioridades', lec.prioridades]
+        ];
+
+        html += '<div class="lt1-section"><div class="lt1-section-title">Contadores</div><div style="display:flex;flex-wrap:wrap;">';
+        ARRAYS.forEach(function(pair) {
+            var n = Array.isArray(pair[1]) ? pair[1].length : 0;
+            html += '<span class="lt1-counter">' + _esc(pair[0]) + '<span class="lt1-n">' + n + '</span></span>';
+        });
+        html += '</div></div>';
+
+        // Detalle de los primeros 2 ítems por array
+        ARRAYS.forEach(function(pair) {
+            if (pair[0] === 'prioridades') {
+                // prioridades tienen estructura distinta
+                if (!Array.isArray(pair[1]) || pair[1].length === 0) return;
+                html += '<div class="lt1-section">'
+                    + '<div class="lt1-section-title">prioridades <span style="color:#94a3b8;font-weight:400;">(' + pair[1].length + ')</span></div>';
+                pair[1].slice(0, 2).forEach(function(p) {
+                    html += '<div class="lt1-item">'
+                        + '<div class="lt1-item-texto">LE' + _esc(p.lineaId) + ' &nbsp;·&nbsp; relevancia: ' + (p.relevancia != null ? p.relevancia.toFixed(2) : '—') + ' &nbsp;·&nbsp; confianza: ' + _esc(p.confianza) + '</div>'
+                        + '<div class="lt1-item-meta">fuentes: ' + _esc((p.fuentes || []).join(', ')) + '</div>'
+                        + '</div>';
+                });
+                if (pair[1].length > 2) html += '<div style="font-size:10px;color:#94a3b8;padding-left:4px;">… y ' + (pair[1].length - 2) + ' más</div>';
+                html += '</div>';
+            } else {
+                html += _renderArr(pair[0], pair[1]);
+            }
+        });
+
+        body.innerHTML = html;
+    };
+
+    window.COMPAS_renderLT1Debug._pasivo = true;
+
+})();
+</script>
+<!-- === /VISOR DEBUG LT1 === -->
+
 <script>
 // ── AT2: coexistencia legacy / v2 ────────────────────────────────────
 // Cambiar a true para activar el bloque v2 y ocultar el legacy.
