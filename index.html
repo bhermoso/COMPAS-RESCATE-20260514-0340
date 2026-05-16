@@ -72509,18 +72509,25 @@ function eval_actualizarJornada() {
         var _clasJornada = _lecLongJornada.clasificaciones || {};
         var _advJornada = (_valSnapJornada.advertencias || []).slice(0, 3);
         var _errJornada = (_valSnapJornada.errores || []).slice(0, 2);
+        var _lcsJornada = _snapshotEvalJornada.lecturaContratoSnapshot || null;
+
+        var _cicloEvaluadoJornada    = (_lcsJornada && _lcsJornada.cicloEvaluado    != null) ? _lcsJornada.cicloEvaluado    : (_snapshotEvalJornada.cicloEvaluado || _resCicloJornada.ciclo || '-');
+        var _totalCicloJornada       = (_lcsJornada && _lcsJornada.totalActuacionesCiclo != null) ? _lcsJornada.totalActuacionesCiclo : (_resCicloJornada.totalCiclo || 0);
+        var _estadoTempJornada       = (_lcsJornada && _lcsJornada.estadoTemporalidad != null) ? _lcsJornada.estadoTemporalidad : (_clasJornada.temporalidad ? _clasJornada.temporalidad.estado : null);
+        var _estadoTrazJornada       = (_lcsJornada && _lcsJornada.estadoTrazabilidad != null) ? _lcsJornada.estadoTrazabilidad : (_clasJornada.trazabilidad ? _clasJornada.trazabilidad.estado : null);
+        var _totalFueraCicloJornada  = (_lcsJornada && _lcsJornada.totalActuacionesFueraCiclo != null) ? _lcsJornada.totalActuacionesFueraCiclo : (_resCicloJornada.totalFueraCiclo || 0);
 
         html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0.7rem 0.85rem;font-size:0.76rem;color:#475569;">';
         html += '<div style="font-weight:700;color:#334155;margin-bottom:0.35rem;">Lectura longitudinal t&#233;cnica del ciclo</div>';
         html += '<div style="display:flex;flex-wrap:wrap;gap:0.45rem 0.8rem;">';
-        html += '<span>Ciclo evaluado: <strong>' + (_snapshotEvalJornada.cicloEvaluado || _resCicloJornada.ciclo || '-') + '</strong></span>';
-        html += '<span>Actuaciones del ciclo: <strong>' + (_resCicloJornada.totalCiclo || 0) + '</strong></span>';
-        if ((_resCicloJornada.totalFueraCiclo || 0) > 0) {
-            html += '<span>Fuera de ciclo: <strong>' + _resCicloJornada.totalFueraCiclo + '</strong></span>';
+        html += '<span>Ciclo evaluado: <strong>' + _cicloEvaluadoJornada + '</strong></span>';
+        html += '<span>Actuaciones del ciclo: <strong>' + _totalCicloJornada + '</strong></span>';
+        if (_totalFueraCicloJornada > 0) {
+            html += '<span>Fuera de ciclo: <strong>' + _totalFueraCicloJornada + '</strong></span>';
         }
         if (_clasJornada.ejecucion) html += '<span>Ejecuci&#243;n: <strong>' + _clasJornada.ejecucion.estado + '</strong></span>';
-        if (_clasJornada.temporalidad) html += '<span>Temporalidad: <strong>' + _clasJornada.temporalidad.estado + '</strong></span>';
-        if (_clasJornada.trazabilidad) html += '<span>Trazabilidad: <strong>' + _clasJornada.trazabilidad.estado + '</strong></span>';
+        if (_estadoTempJornada) html += '<span>Temporalidad: <strong>' + _estadoTempJornada + '</strong></span>';
+        if (_estadoTrazJornada) html += '<span>Trazabilidad: <strong>' + _estadoTrazJornada + '</strong></span>';
         html += '</div>';
 
         if (_errJornada.length || _advJornada.length) {
