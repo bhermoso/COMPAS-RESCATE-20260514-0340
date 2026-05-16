@@ -77668,26 +77668,23 @@ function at2_actualizarFuentes() {
         lineas.push('Priorización ciudadana: <span style="color:#94a3b8;">sin datos</span>');
     }
 
-    // Estudios complementarios + IBSE (IBSE es un estudio complementario basado en instrumento diagnóstico)
-    var _ibse     = window.datosIBSE;
-    var _hayIBSE  = !!(_ibse && ((_ibse.n && _ibse.n > 0) || (_ibse.n_bruto && _ibse.n_bruto > 0) || (_ibse.nValido && _ibse.nValido > 0)));
-    var _nIBSE    = _hayIBSE ? (_ibse.n || _ibse.n_bruto || _ibse.nValido || '?') : null;
-    var _nEstComp = Array.isArray(window.estudiosComplementarios) ? window.estudiosComplementarios.length : 0;
-
-    if (_hayIBSE && _nEstComp > 0) {
-        lineas.push('Estudios complementarios: <strong style="color:#1e293b;">IBSE (n=' + _nIBSE + '), + ' + _nEstComp + ' otro(s)</strong>');
-    } else if (_hayIBSE) {
-        lineas.push('Estudios complementarios: <strong style="color:#1e293b;">IBSE (n=' + _nIBSE + ')</strong>');
-    } else if (_nEstComp > 0) {
-        lineas.push('Estudios complementarios: <strong style="color:#1e293b;">' + _nEstComp + '</strong>');
+    // Estudios complementarios
+    if (window.estudiosComplementarios && window.estudiosComplementarios.length) {
+        lineas.push('Estudios complementarios: <strong style="color:#1e293b;">' + window.estudiosComplementarios.length + '</strong>');
     } else {
-        lineas.push('Estudios complementarios: <span style="color:#94a3b8;">sin datos</span>');
+        lineas.push('Estudios complementarios: <span style="color:#94a3b8;">ninguno</span>');
     }
 
-    // Instrumentos diagnósticos adicionales (excluye IBSE, ya contado arriba)
-    var _esc = (typeof _compasEscalasGet === 'function') ? _compasEscalasGet() : [];
-    if (_esc.length) {
-        lineas.push('Instrumentos diagnósticos: <strong style="color:#1e293b;">' + _esc.length + ' escala(s) adicional(es)</strong>');
+    // IBSE / escalas
+    var _ibse = window.datosIBSE;
+    var _esc  = (typeof _compasEscalasGet === 'function') ? _compasEscalasGet() : [];
+    if ((_ibse && _ibse.n > 0) || _esc.length) {
+        var partes = [];
+        if (_ibse && _ibse.n > 0) partes.push('IBSE n=' + _ibse.n);
+        if (_esc.length) partes.push(_esc.length + ' escala(s) adicional(es)');
+        lineas.push('Escalas diagn\u00f3sticas: <strong style="color:#1e293b;">' + partes.join(', ') + '</strong>');
+    } else {
+        lineas.push('Escalas diagn\u00f3sticas: <span style="color:#94a3b8;">sin datos</span>');
     }
 
     // RELAS
