@@ -77294,6 +77294,161 @@ function at2_itemDoc(contenidoHTML, accentColor) {
     return '<div style="border:1px solid #e2e8f0; border-left:3px solid ' + accentColor + '; border-radius:3px; padding:0.65rem 0.9rem; margin-bottom:0.6rem;">' + contenidoHTML + '</div>';
 }
 
+// ── AT2: funciones puente ─────────────────────────────────────────────
+
+function at2_actualizarFuentes() {
+    var el = document.getElementById('at2-fuentes-lectura');
+    if (!el) return;
+
+    var lineas = [];
+
+    // Municipio seleccionado
+    var mun = (typeof getNombreMunicipio === 'function' && typeof getMunicipioActual === 'function')
+        ? getNombreMunicipio(getMunicipioActual())
+        : null;
+    lineas.push(mun
+        ? 'Municipio: <strong style="color:#1e293b;">' + mun + '</strong>'
+        : 'Municipio: <span style="color:#94a3b8;">no seleccionado</span>'
+    );
+
+    // Análisis previo
+    if (window.analisisActualV3 &&
+        (Array.isArray(window.analisisActualV3.conclusiones) && window.analisisActualV3.conclusiones.length ||
+         Array.isArray(window.analisisActualV3.recomendaciones) && window.analisisActualV3.recomendaciones.length)) {
+        lineas.push('Análisis disponible: <strong style="color:#1e293b;">v3 (síntesis extendida)</strong>');
+    } else if (window.analisisActual) {
+        lineas.push('Análisis disponible: <strong style="color:#1e293b;">análisis actual</strong>');
+    } else {
+        lineas.push('Análisis previo: <span style="color:#94a3b8;">ninguno — se generará al pulsar el botón</span>');
+    }
+
+    // Priorización ciudadana
+    var _dpc = window.datosParticipacionCiudadana;
+    var _epvsa = window.COMPAS && window.COMPAS.prioridades && window.COMPAS.prioridades.epvsa;
+    if (_dpc && (_dpc.temasFreq || _dpc.habFreq)) {
+        var nPart = _dpc.totalParticipantes || _dpc.n || '?';
+        lineas.push('Priorización ciudadana: <strong style="color:#1e293b;">' + nPart + ' participantes</strong>');
+    } else if (_epvsa && (_epvsa.n > 0 || (_epvsa.rankingObjetivos && _epvsa.rankingObjetivos.length))) {
+        lineas.push('Priorización ciudadana (EPVSA): <strong style="color:#1e293b;">disponible</strong>');
+    } else {
+        lineas.push('Priorización ciudadana: <span style="color:#94a3b8;">sin datos</span>');
+    }
+
+    // Estudios complementarios
+    if (window.estudiosComplementarios && window.estudiosComplementarios.length) {
+        lineas.push('Estudios complementarios: <strong style="color:#1e293b;">' + window.estudiosComplementarios.length + '</strong>');
+    } else {
+        lineas.push('Estudios complementarios: <span style="color:#94a3b8;">ninguno</span>');
+    }
+
+    // IBSE / escalas
+    var _ibse = window.datosIBSE;
+    var _esc  = (typeof _compasEscalasGet === 'function') ? _compasEscalasGet() : [];
+    if ((_ibse && _ibse.n > 0) || _esc.length) {
+        var partes = [];
+        if (_ibse && _ibse.n > 0) partes.push('IBSE n=' + _ibse.n);
+        if (_esc.length) partes.push(_esc.length + ' escala(s) adicional(es)');
+        lineas.push('Escalas diagnósticas: <strong style="color:#1e293b;">' + partes.join(', ') + '</strong>');
+    } else {
+        lineas.push('Escalas diagnósticas: <span style="color:#94a3b8;">sin datos</span>');
+    }
+
+    // RELAS
+    if (typeof relas_globalData !== 'undefined' && relas_globalData && relas_globalData._habFreq) {
+        var nR = relas_globalData._n || '?';
+        lineas.push('Diagnóstico RELAS: <strong style="color:#1e293b;">n=' + nR + '</strong>');
+    } else {
+        lineas.push('Diagnóstico RELAS: <span style="color:#94a3b8;">sin datos</span>');
+    }
+
+    el.innerHTML = lineas.map(function(l) {
+        return '<div style="margin-bottom:0.3rem; font-size:0.78rem; color:#64748b;">· ' + l + '</div>';
+    }).join('');
+}
+
+async function at2_generar() {
+    var elInicial   = document.getElementById('at2-inicial');
+    var elProceso   = document.getElementById('at2-proceso');
+    var elResultado = document.getElementById('at2-resultado');
+    var elBarra     = document.getElementById('at2-proceso-barra');
+    var elTexto     = document.getElementById('at2-proceso-texto');
+
+    if (elInicial)   elInicial.style.display   = 'none';
+    if (elResultado) elResultado.style.display = 'none';
+    if (elProceso)   elProceso.style.display   = 'block';
+
+    function _setProgress(pct, msg) {
+        if (elBarra)  elBarra.style.width = pct + '%';
+        if (elTexto)  elTexto.textContent = msg;
+    }
+
+    try {
+        _setProgress(10, 'Leyendo fuentes disponibles…');
+        await new Promise(function(res){ setTimeout(res, 120); });
+
+        _setProgress(25, 'Generando síntesis territorial…');
+
+        // Llamar al motor real si existe
+        if (typeof generarAnalisisIA === 'function') {
+            await generarAnalisisIA();
+        } else {
+            throw new Error('Motor generarAnalisisIA no disponible en este contexto.');
+        }
+
+        _setProgress(85, 'Procesando resultado…');
+        await new Promise(function(res){ setTimeout(res, 200); });
+
+        // Seleccionar objeto de render
+        var obj = null;
+        var v3  = window.analisisActualV3;
+        if (v3 &&
+            ((Array.isArray(v3.conclusiones)    && v3.conclusiones.length)    ||
+             (Array.isArray(v3.recomendaciones) && v3.recomendaciones.length) ||
+             (Array.isArray(v3.propuestaEPVSA)  && v3.propuestaEPVSA.length))) {
+            obj = v3;
+        } else if (window.analisisActual) {
+            obj = window.analisisActual;
+        }
+
+        if (!obj) {
+            throw new Error('No se obtuvo resultado de síntesis. Revisa que los datos del municipio estén cargados.');
+        }
+
+        _setProgress(100, 'Listo.');
+        await new Promise(function(res){ setTimeout(res, 250); });
+
+        if (elProceso) elProceso.style.display = 'none';
+        renderizarResultadoTerritorialV2(obj);
+
+    } catch(err) {
+        _setProgress(0, 'Error: ' + (err && err.message ? err.message : String(err)));
+        console.error('[AT2] at2_generar error:', err);
+        // Mantener proceso visible con el mensaje de error; no rompe la página
+    }
+}
+
+function at2_regenerar() {
+    // Limpia solo la vista AT2; no borra estado global ni Firebase
+    var elResultado = document.getElementById('at2-resultado');
+    var elInicial   = document.getElementById('at2-inicial');
+    var elBarra     = document.getElementById('at2-proceso-barra');
+    var elTexto     = document.getElementById('at2-proceso-texto');
+
+    if (elResultado) elResultado.style.display = 'none';
+    if (elBarra)     elBarra.style.width = '0%';
+    if (elTexto)     elTexto.textContent = 'Procesando fuentes disponibles…';
+
+    // Mostrar estado inicial para que el usuario confirme
+    if (elInicial) elInicial.style.display = 'block';
+    at2_actualizarFuentes();
+    at2_generar();
+}
+
+// Exponer en window
+window.at2_actualizarFuentes = at2_actualizarFuentes;
+window.at2_generar           = at2_generar;
+window.at2_regenerar         = at2_regenerar;
+
 // ── AT2: renderer documental ──────────────────────────────────────────
 function renderizarResultadoTerritorialV2(r) {
 
