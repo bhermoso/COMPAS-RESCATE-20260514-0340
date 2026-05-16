@@ -77769,6 +77769,292 @@ window.COMPAS_crearCatalogoTerritorialV1 = COMPAS_crearCatalogoTerritorialV1;
 window.COMPAS_validarCatalogoTerritorialV1 = COMPAS_validarCatalogoTerritorialV1;
 window.COMPAS_obtenerEjemploCatalogoTerritorialV1 = COMPAS_obtenerEjemploCatalogoTerritorialV1;
 
+// ---------------------------------------------------------------------------
+// ESTRUCTURA LONGITUDINAL TEMPORAL MUNICIPAL COMPAS v1
+// Proposito: organizar ciclos, cortes y ventanas de observacion con trazabilidad
+// documental pasiva. Sin scoring, ranking, causalidad ni indicadores sinteticos.
+// ---------------------------------------------------------------------------
+
+function COMPAS_ltTemporal_copiarArrayPorCiclo(mapa) {
+    var out = {};
+    if (!mapa || typeof mapa !== 'object') return out;
+    Object.keys(mapa).forEach(function(ciclo) {
+        var val = mapa[ciclo];
+        out[ciclo] = Array.isArray(val) ? val.slice() : [];
+    });
+    return out;
+}
+
+function COMPAS_ltTemporal_copiarObjetoPorCiclo(mapa) {
+    var out = {};
+    if (!mapa || typeof mapa !== 'object') return out;
+    Object.keys(mapa).forEach(function(ciclo) {
+        out[ciclo] = mapa[ciclo];
+    });
+    return out;
+}
+
+function COMPAS_crearEstructuraLongitudinalTemporalV1(datos) {
+    datos = datos || {};
+    return {
+        contrato: 'longitudinal_temporal_v1',
+        municipio: datos.municipio || '',
+        fechaCreacion: datos.fechaCreacion || new Date().toISOString(),
+        version: datos.version || 'longitudinal_temporal_v1',
+        cicloActual: datos.cicloActual || '',
+        ciclos: Array.isArray(datos.ciclos) ? datos.ciclos.slice() : [],
+        cortesTemporales: Array.isArray(datos.cortesTemporales) ? datos.cortesTemporales.slice() : [],
+        ventanasObservacion: Array.isArray(datos.ventanasObservacion) ? datos.ventanasObservacion.slice() : [],
+        fuentesPorCiclo: COMPAS_ltTemporal_copiarArrayPorCiclo(datos.fuentesPorCiclo),
+        auditoriasPorCiclo: COMPAS_ltTemporal_copiarObjetoPorCiclo(datos.auditoriasPorCiclo),
+        catalogosPorCiclo: COMPAS_ltTemporal_copiarObjetoPorCiclo(datos.catalogosPorCiclo),
+        cambiosDocumentales: Array.isArray(datos.cambiosDocumentales) ? datos.cambiosDocumentales.slice() : [],
+        lagunasPersistentes: Array.isArray(datos.lagunasPersistentes) ? datos.lagunasPersistentes.slice() : [],
+        lagunasNuevas: Array.isArray(datos.lagunasNuevas) ? datos.lagunasNuevas.slice() : [],
+        lagunasResueltas: Array.isArray(datos.lagunasResueltas) ? datos.lagunasResueltas.slice() : [],
+        riesgosComparabilidad: Array.isArray(datos.riesgosComparabilidad) ? datos.riesgosComparabilidad.slice() : [],
+        observacionesMetodologicas: datos.observacionesMetodologicas || '',
+        utilidadObservatorio: datos.utilidadObservatorio || 'no_valorada',
+        utilidadEvaluacion: datos.utilidadEvaluacion || 'no_valorada',
+        utilidadLT1: datos.utilidadLT1 || 'no_valorada',
+        utilidadMejoramiento: datos.utilidadMejoramiento || 'no_valorada'
+    };
+}
+
+function COMPAS_validarEstructuraLongitudinalTemporalV1(estructura) {
+    var errores = [];
+    var advertencias = [];
+    var validarFuente = (window.COMPAS && window.COMPAS.contratoFuentesTerritorialesV1)
+        ? window.COMPAS.contratoFuentesTerritorialesV1.validarFuente
+        : null;
+    var validarAuditoria = (window.COMPAS && window.COMPAS.auditoriaTerritorialV1)
+        ? window.COMPAS.auditoriaTerritorialV1.validarAuditoria
+        : null;
+    var validarCatalogo = (window.COMPAS && window.COMPAS.catalogoTerritorialV1)
+        ? window.COMPAS.catalogoTerritorialV1.validarCatalogo
+        : null;
+
+    if (!estructura || typeof estructura !== 'object') errores.push('estructura_no_objeto');
+    if (estructura && estructura.contrato !== 'longitudinal_temporal_v1') advertencias.push('contrato_no_declarado');
+    if (estructura && !estructura.municipio) errores.push('municipio_obligatorio');
+    if (estructura && !estructura.fechaCreacion) advertencias.push('fechaCreacion_no_declarada');
+    if (estructura && !estructura.version) advertencias.push('version_no_declarada');
+    if (estructura && !estructura.cicloActual) errores.push('cicloActual_obligatorio');
+    if (estructura && !Array.isArray(estructura.ciclos)) errores.push('ciclos_no_array');
+    if (estructura && Array.isArray(estructura.ciclos) && estructura.ciclos.length === 0) advertencias.push('sin_ciclos');
+    if (estructura && estructura.cicloActual && Array.isArray(estructura.ciclos) && estructura.ciclos.indexOf(estructura.cicloActual) === -1) {
+        advertencias.push('cicloActual_no_listado');
+    }
+    if (estructura && !Array.isArray(estructura.cortesTemporales)) errores.push('cortesTemporales_no_array');
+    if (estructura && !Array.isArray(estructura.ventanasObservacion)) errores.push('ventanasObservacion_no_array');
+    if (estructura && (!estructura.fuentesPorCiclo || typeof estructura.fuentesPorCiclo !== 'object')) errores.push('fuentesPorCiclo_no_objeto');
+    if (estructura && (!estructura.auditoriasPorCiclo || typeof estructura.auditoriasPorCiclo !== 'object')) errores.push('auditoriasPorCiclo_no_objeto');
+    if (estructura && (!estructura.catalogosPorCiclo || typeof estructura.catalogosPorCiclo !== 'object')) errores.push('catalogosPorCiclo_no_objeto');
+    if (estructura && !Array.isArray(estructura.cambiosDocumentales)) advertencias.push('cambiosDocumentales_no_array');
+    if (estructura && !Array.isArray(estructura.lagunasPersistentes)) advertencias.push('lagunasPersistentes_no_array');
+    if (estructura && !Array.isArray(estructura.lagunasNuevas)) advertencias.push('lagunasNuevas_no_array');
+    if (estructura && !Array.isArray(estructura.lagunasResueltas)) advertencias.push('lagunasResueltas_no_array');
+    if (estructura && !Array.isArray(estructura.riesgosComparabilidad)) advertencias.push('riesgosComparabilidad_no_array');
+
+    if (estructura && estructura.fuentesPorCiclo && typeof validarFuente === 'function') {
+        Object.keys(estructura.fuentesPorCiclo).forEach(function(ciclo) {
+            var fuentes = estructura.fuentesPorCiclo[ciclo];
+            if (!Array.isArray(fuentes)) {
+                errores.push('fuentes_ciclo_' + ciclo + '_no_array');
+                return;
+            }
+            fuentes.forEach(function(fuente, idx) {
+                var val = validarFuente(fuente);
+                if (!val.valido) errores.push('fuente_ciclo_' + ciclo + '_' + idx + '_invalida');
+                (val.errores || []).forEach(function(err) {
+                    errores.push('fuente_ciclo_' + ciclo + '_' + idx + '_' + err);
+                });
+                (val.advertencias || []).forEach(function(adv) {
+                    advertencias.push('fuente_ciclo_' + ciclo + '_' + idx + '_' + adv);
+                });
+            });
+        });
+    } else if (estructura && estructura.fuentesPorCiclo && Object.keys(estructura.fuentesPorCiclo).length > 0) {
+        advertencias.push('contrato_fuentes_no_disponible');
+    }
+
+    if (estructura && estructura.auditoriasPorCiclo && typeof validarAuditoria === 'function') {
+        Object.keys(estructura.auditoriasPorCiclo).forEach(function(ciclo) {
+            var auditoria = estructura.auditoriasPorCiclo[ciclo];
+            if (!auditoria || typeof auditoria !== 'object') {
+                errores.push('auditoria_ciclo_' + ciclo + '_no_objeto');
+                return;
+            }
+            var val = validarAuditoria(auditoria);
+            if (!val.valido) errores.push('auditoria_ciclo_' + ciclo + '_invalida');
+            (val.errores || []).forEach(function(err) {
+                errores.push('auditoria_ciclo_' + ciclo + '_' + err);
+            });
+            (val.advertencias || []).forEach(function(adv) {
+                advertencias.push('auditoria_ciclo_' + ciclo + '_' + adv);
+            });
+        });
+    } else if (estructura && estructura.auditoriasPorCiclo && Object.keys(estructura.auditoriasPorCiclo).length > 0) {
+        advertencias.push('auditoria_territorial_no_disponible');
+    }
+
+    if (estructura && estructura.catalogosPorCiclo && typeof validarCatalogo === 'function') {
+        Object.keys(estructura.catalogosPorCiclo).forEach(function(ciclo) {
+            var catalogo = estructura.catalogosPorCiclo[ciclo];
+            if (!catalogo || typeof catalogo !== 'object') {
+                errores.push('catalogo_ciclo_' + ciclo + '_no_objeto');
+                return;
+            }
+            var val = validarCatalogo(catalogo);
+            if (!val.valido) errores.push('catalogo_ciclo_' + ciclo + '_invalida');
+            (val.errores || []).forEach(function(err) {
+                errores.push('catalogo_ciclo_' + ciclo + '_' + err);
+            });
+            (val.advertencias || []).forEach(function(adv) {
+                advertencias.push('catalogo_ciclo_' + ciclo + '_' + adv);
+            });
+        });
+    } else if (estructura && estructura.catalogosPorCiclo && Object.keys(estructura.catalogosPorCiclo).length > 0) {
+        advertencias.push('catalogo_territorial_no_disponible');
+    }
+
+    return {
+        version: 'validacion_longitudinal_temporal_v1',
+        valido: errores.length === 0,
+        errores: errores,
+        advertencias: advertencias
+    };
+}
+
+function COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1() {
+    var fuentesBase = (typeof COMPAS_obtenerEjemplosFuentesTerritorialesV1 === 'function')
+        ? COMPAS_obtenerEjemplosFuentesTerritorialesV1()
+        : [];
+    var fuentes2026 = fuentesBase.filter(function(fuente) {
+        return ['informe_epidemiologico_municipal', 'eracis_plizd', 'sima_ieca'].indexOf(fuente.id) !== -1;
+    });
+
+    var auditoria2026 = (typeof COMPAS_crearAuditoriaTerritorialV1 === 'function')
+        ? COMPAS_crearAuditoriaTerritorialV1({
+            municipio: 'Atarfe',
+            fecha: '2026-01-15T00:00:00.000Z',
+            fuentes: fuentes2026,
+            coberturaTematica: ['salud poblacional', 'vulnerabilidad social', 'empleo', 'demografia'],
+            desigualdades: true,
+            participacion: false,
+            intersectorialidad: true,
+            multiculturalidad: false,
+            vulnerabilidadTerritorial: true,
+            calidadGlobal: 'media',
+            lagunasDetectadas: [
+                'sin inventario homogeneo de activos comunitarios por barrio',
+                'sin serie local anual integrada de seguimiento documental'
+            ],
+            observacionesMetodologicas: 'Auditoria inicial prudente; no implica ranking ni inferencia causal.',
+            utilidadLT1: 'alta',
+            utilidadObservatorio: 'media',
+            utilidadEvaluacion: 'baja',
+            utilidadMejoramiento: 'media'
+        })
+        : null;
+
+    var catalogo2026 = (typeof COMPAS_crearCatalogoTerritorialV1 === 'function')
+        ? COMPAS_crearCatalogoTerritorialV1({
+            municipio: 'Atarfe',
+            fechaActualizacion: '2026-01-15T00:00:00.000Z',
+            fuentes: fuentes2026,
+            categorias: ['salud', 'vulnerabilidad', 'empleo', 'demografia'],
+            coberturaTemporal: 'mixta: anual y segun disponibilidad documental municipal',
+            coberturaTerritorial: 'municipal con posibles desagregaciones por zona',
+            lagunasDocumentales: [
+                'sin repositorio municipal unificado de documentos',
+                'sin trazabilidad completa de actualizaciones entre ciclos'
+            ],
+            lagunasTematicas: ['salud mental comunitaria', 'seguimiento anual de actuaciones locales'],
+            fortalezasDocumentales: [
+                'fuentes estadisticas longitudinales parcialmente disponibles',
+                'base documental para lectura territorial estructurada'
+            ],
+            riesgosInterpretacion: [
+                'mezclar diagnostico documental con ejecucion real',
+                'comparar ciclos sin homologar periodicidad de fuentes'
+            ],
+            observacionesMetodologicas: 'Catalogo inicial para ciclo 2026; uso exploratorio del observatorio.',
+            calidadEstructural: 'media',
+            utilidadLongitudinal: 'alta',
+            utilidadLT1: 'alta',
+            utilidadObservatorio: 'media',
+            utilidadEvaluacion: 'baja',
+            utilidadMejoramiento: 'media'
+        })
+        : null;
+
+    return COMPAS_crearEstructuraLongitudinalTemporalV1({
+        municipio: 'Atarfe',
+        fechaCreacion: '2026-01-15T00:00:00.000Z',
+        version: 'longitudinal_temporal_v1',
+        cicloActual: '2026',
+        ciclos: ['2026'],
+        cortesTemporales: [
+            {
+                id: 'corte_inicial_2026',
+                ciclo: '2026',
+                etiqueta: 'Corte inicial 2026',
+                fechaISO: '2026-01-15T00:00:00.000Z',
+                observaciones: 'Linea base documental prudente; no constituye evaluacion ni scoring.'
+            }
+        ],
+        ventanasObservacion: [
+            {
+                id: 'vo_2026_semestre1',
+                ciclo: '2026',
+                inicio: '2026-01-01',
+                fin: '2026-06-30',
+                proposito: 'Ventana de observacion documental inicial del ciclo 2026'
+            }
+        ],
+        fuentesPorCiclo: { '2026': fuentes2026 },
+        auditoriasPorCiclo: auditoria2026 ? { '2026': auditoria2026 } : {},
+        catalogosPorCiclo: catalogo2026 ? { '2026': catalogo2026 } : {},
+        cambiosDocumentales: [
+            {
+                ciclo: '2026',
+                tipo: 'linea_base',
+                descripcion: 'Apertura del ciclo longitudinal 2026 con inventario documental inicial',
+                referencia: 'corte_inicial_2026'
+            }
+        ],
+        lagunasPersistentes: [
+            'sin repositorio municipal unificado de documentos',
+            'sin serie local anual integrada de seguimiento'
+        ],
+        lagunasNuevas: [
+            'sin homogeneizacion de periodicidad entre fuentes del ciclo 2026'
+        ],
+        lagunasResueltas: [],
+        riesgosComparabilidad: [
+            'comparar ciclos futuros sin homologar cortes temporales',
+            'atribuir cambios documentales a resultados de politica sin triangulacion'
+        ],
+        observacionesMetodologicas: 'Ejemplo prudente para Atarfe, ciclo 2026 y corte inicial; capa pasiva sin scoring, ranking ni causalidad.',
+        utilidadObservatorio: 'media',
+        utilidadEvaluacion: 'baja',
+        utilidadLT1: 'alta',
+        utilidadMejoramiento: 'media'
+    });
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.longitudinalTemporalV1 = {
+    version: 'longitudinal_temporal_v1',
+    crearEstructura: COMPAS_crearEstructuraLongitudinalTemporalV1,
+    validarEstructura: COMPAS_validarEstructuraLongitudinalTemporalV1,
+    ejemplo: COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1
+};
+window.COMPAS_crearEstructuraLongitudinalTemporalV1 = COMPAS_crearEstructuraLongitudinalTemporalV1;
+window.COMPAS_validarEstructuraLongitudinalTemporalV1 = COMPAS_validarEstructuraLongitudinalTemporalV1;
+window.COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1 = COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1;
+
 function _lt1_tieneArray(v) {
     return Array.isArray(v) && v.length > 0;
 }
