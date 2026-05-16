@@ -77355,7 +77355,7 @@ function COMPAS_construirLecturaTerritorialV1(analisis) {
 
         meta: {
             fuentes:      [],
-            subversion:   '1.3',
+            subversion:   '1.4',
             confianza:    null,
             advertencias: []
         },
@@ -77382,6 +77382,46 @@ function COMPAS_construirLecturaTerritorialV1(analisis) {
             matrizSoporte: {},
             trazabilidadFuentes: {},
             advertenciasEpistemicas: []
+        },
+
+        capacidadTerritorial: {
+            capacidadInstitucional: {
+                nivel: null,
+                señales: [],
+                fragilidades: [],
+                soporte: []
+            },
+            capacidadComunitaria: {
+                nivel: null,
+                señales: [],
+                activosDetectados: 0,
+                soporte: []
+            },
+            capacidadOperativa: {
+                nivel: null,
+                señales: [],
+                riesgosSobrecarga: [],
+                soporte: []
+            },
+            sostenibilidadPotencial: {
+                nivel: null,
+                factoresFavorables: [],
+                factoresLimitantes: []
+            },
+            continuidadProbable: {
+                nivel: null,
+                dependenciasCriticas: [],
+                advertencias: []
+            },
+            riesgosImplementacion: [],
+            fragilidadesEstructurales: [],
+            dependenciasCriticas: [],
+            alertasCapacidad: [],
+            meta: {
+                prudencia: 'alta',
+                inferencial: true,
+                requiereTriangulacion: true
+            }
         }
     };
 
@@ -78243,6 +78283,106 @@ function COMPAS_construirLecturaTerritorialV1(analisis) {
             ev.incertidumbreGlobal = 'baja';
         }
 
+        // ── 14. CAPACIDAD TERRITORIAL Y VIABILIDAD LOCAL (v1.4) ──
+        // Lectura inferencial y prudente. No clasifica municipios ni predice exito.
+        var cap = lectura.capacidadTerritorial;
+        function _capNivel(favorables, limitantes) {
+            if (favorables <= 0 && limitantes > 0) return 'senales_fragiles';
+            if (favorables >= 4 && limitantes <= 1) return 'senales_razonables';
+            if (favorables >= 2 && limitantes <= 3) return 'senales_parciales';
+            return 'senales_limitadas';
+        }
+        function _capAdd(arr, texto) {
+            if (arr.indexOf(texto) === -1) arr.push(texto);
+        }
+        function _capRiesgo(tipo, impacto, texto, soporte) {
+            cap.riesgosImplementacion.push({ tipo: tipo, impacto: impacto, texto: texto, soporte: soporte || [] });
+        }
+        function _capDependencia(tipo, fuentePrincipal, impacto, texto) {
+            cap.dependenciasCriticas.push({ tipo: tipo, fuentePrincipal: fuentePrincipal, impacto: impacto, texto: texto });
+        }
+
+        if (nFuentes >= 3) _capAdd(cap.capacidadInstitucional.señales, 'Diversidad minima de fuentes disponible.');
+        if (_tieneDPC) _capAdd(cap.capacidadInstitucional.señales, 'Existe soporte de participacion ciudadana.');
+        if (_tieneEstudios) _capAdd(cap.capacidadInstitucional.señales, 'Hay estudios complementarios registrados.');
+        if (_tieneRec) _capAdd(cap.capacidadInstitucional.señales, 'Existen recomendaciones operativas para orientar accion local.');
+        if (aud.soportePrioridades.some(function(p){ return p.triangulada; })) _capAdd(cap.capacidadInstitucional.señales, 'Algunas prioridades aparecen trianguladas.');
+        cap.capacidadInstitucional.soporte = meta.fuentes.slice();
+        if (!_tieneDPC) _capAdd(cap.capacidadInstitucional.fragilidades, 'Ausencia de participacion documentada.');
+        if (!_tieneEstudios) _capAdd(cap.capacidadInstitucional.fragilidades, 'Sin estudios complementarios locales.');
+        if (ev.incertidumbreGlobal === 'alta') _capAdd(cap.capacidadInstitucional.fragilidades, 'Incertidumbre interpretativa alta.');
+        if (aud.equilibrioFuentes === 'predominio_inferencial') _capAdd(cap.capacidadInstitucional.fragilidades, 'Predominio inferencial sobre observacion directa.');
+        _capAdd(cap.capacidadInstitucional.fragilidades, 'La gobernanza local no esta documentada como fuente.');
+
+        cap.capacidadComunitaria.activosDetectados = _actCom;
+        if (_tieneDPC) _capAdd(cap.capacidadComunitaria.señales, 'Participacion ciudadana disponible.');
+        if (_actCom > 0) _capAdd(cap.capacidadComunitaria.señales, 'Se observan activos comunitarios potenciales.');
+        if (_tieneFortalezas) _capAdd(cap.capacidadComunitaria.señales, 'Hay fortalezas territoriales descritas.');
+        if (opp.some(function(o){ return o.categoria === 'participacion' || o.categoria === 'mapeo_activos' || o.categoria === 'prescripcion_social'; })) _capAdd(cap.capacidadComunitaria.señales, 'Aparecen oportunidades de base comunitaria.');
+        if (_tieneSOC || _tieneIBSE) _capAdd(cap.capacidadComunitaria.señales, 'Existe soporte de bienestar o lectura salutogenica.');
+        cap.capacidadComunitaria.soporte = ['participacion_ciudadana', 'activos', 'fortalezas', 'IBSE', 'perfil_SOC'].filter(function(f) {
+            return (f === 'participacion_ciudadana' && _tieneDPC) ||
+                   (f === 'activos' && _actCom > 0) ||
+                   (f === 'fortalezas' && _tieneFortalezas) ||
+                   (f === 'IBSE' && _tieneIBSE) ||
+                   (f === 'perfil_SOC' && _tieneSOC);
+        });
+        if (_actCom === 0) _capAdd(cap.fragilidadesEstructurales, 'No se identifican activos comunitarios explicitos.');
+        if (_tienePropuesta && !_tieneDPC) _capAdd(cap.fragilidadesEstructurales, 'Prioridades sin soporte comunitario documentado.');
+
+        if (_tienePropuesta && base.propuestaEPVSA.length <= 3) _capAdd(cap.capacidadOperativa.señales, 'Numero de prioridades acotado.');
+        if (_tieneRec) _capAdd(cap.capacidadOperativa.señales, 'Existen recomendaciones que podrian orientar la accion.');
+        if (aud.soportePrioridades.length && aud.soportePrioridades.filter(function(p){ return p.triangulada; }).length > 0) _capAdd(cap.capacidadOperativa.señales, 'Alguna prioridad cuenta con soporte triangulado.');
+        cap.capacidadOperativa.soporte = ['propuestaEPVSA', 'recomendaciones', 'soportePrioridades'].filter(function(f) {
+            return (f === 'propuestaEPVSA' && _tienePropuesta) ||
+                   (f === 'recomendaciones' && _tieneRec) ||
+                   (f === 'soportePrioridades' && aud.soportePrioridades.length > 0);
+        });
+        if (_tienePropuesta && base.propuestaEPVSA.length > 3 && nFuentes < 3) {
+            _capAdd(cap.capacidadOperativa.riesgosSobrecarga, 'Muchas prioridades con triangulacion limitada.');
+            _capRiesgo('sobrecarga_prioridades', 'medio', 'Se observan señales compatibles con sobrecarga operativa potencial.', ['propuestaEPVSA']);
+        }
+        if (_tieneRec && ev.incertidumbreGlobal === 'alta') {
+            _capAdd(cap.capacidadOperativa.riesgosSobrecarga, 'Recomendaciones amplias con incertidumbre alta.');
+            _capRiesgo('recomendaciones_soporte_limitado', 'medio', 'La viabilidad de implementacion requiere contraste con actores locales.', ['recomendaciones']);
+        }
+        if (aud.equilibrioFuentes === 'predominio_inferencial') {
+            _capAdd(cap.capacidadOperativa.riesgosSobrecarga, 'Dependencia tecnica de lectura inferencial.');
+        }
+
+        if (nFuentes >= 3) _capAdd(cap.sostenibilidadPotencial.factoresFavorables, 'Diversidad de fuentes.');
+        if (ev.distribucion.triangulado > 0) _capAdd(cap.sostenibilidadPotencial.factoresFavorables, 'Hay elementos triangulados.');
+        if (_actCom > 0) _capAdd(cap.sostenibilidadPotencial.factoresFavorables, 'Activos comunitarios potenciales.');
+        if (_tieneDPC) _capAdd(cap.sostenibilidadPotencial.factoresFavorables, 'Participacion disponible.');
+        if (opp.some(function(o){ return o.categoria === 'seguimiento_anual'; })) _capAdd(cap.sostenibilidadPotencial.factoresFavorables, 'Continuidad anual planteada como orientacion.');
+        if (ev.incertidumbreGlobal === 'alta') _capAdd(cap.sostenibilidadPotencial.factoresLimitantes, 'Incertidumbre alta.');
+        _capAdd(cap.sostenibilidadPotencial.factoresLimitantes, 'Evaluacion longitudinal no integrada en LT1.');
+        _capAdd(cap.sostenibilidadPotencial.factoresLimitantes, 'Gobernanza local no documentada.');
+        if (ev.dependenciasCriticas.length > 0) _capAdd(cap.sostenibilidadPotencial.factoresLimitantes, 'Dependencias criticas de fuente.');
+
+        ev.dependenciasCriticas.forEach(function(dep) {
+            _capDependencia(dep.tipo, dep.fuentePrincipal, dep.impacto, dep.texto);
+            cap.continuidadProbable.dependenciasCriticas.push(dep);
+        });
+        if (!_tieneDPC) cap.continuidadProbable.advertencias.push('La continuidad de la respuesta podria depender de actores tecnicos si no se contrasta con comunidad.');
+        if (_actCom === 0) cap.continuidadProbable.advertencias.push('La continuidad comunitaria requiere mapeo de activos.');
+        cap.continuidadProbable.advertencias.push('La continuidad anual necesita verificacion posterior con ejecucion real.');
+
+        cap.capacidadInstitucional.nivel = _capNivel(cap.capacidadInstitucional.señales.length, cap.capacidadInstitucional.fragilidades.length);
+        cap.capacidadComunitaria.nivel = _capNivel(cap.capacidadComunitaria.señales.length, cap.fragilidadesEstructurales.length);
+        cap.capacidadOperativa.nivel = _capNivel(cap.capacidadOperativa.señales.length, cap.capacidadOperativa.riesgosSobrecarga.length);
+        cap.sostenibilidadPotencial.nivel = _capNivel(cap.sostenibilidadPotencial.factoresFavorables.length, cap.sostenibilidadPotencial.factoresLimitantes.length);
+        cap.continuidadProbable.nivel = _capNivel(
+            cap.sostenibilidadPotencial.factoresFavorables.length,
+            cap.continuidadProbable.dependenciasCriticas.length + cap.continuidadProbable.advertencias.length
+        );
+
+        cap.fragilidadesEstructurales = cap.fragilidadesEstructurales.concat(cap.capacidadInstitucional.fragilidades).filter(function(x, i, arr){ return arr.indexOf(x) === i; });
+        cap.alertasCapacidad = cap.alertasCapacidad.concat(
+            cap.capacidadOperativa.riesgosSobrecarga,
+            cap.continuidadProbable.advertencias
+        ).filter(function(x, i, arr){ return arr.indexOf(x) === i; });
+
     } catch(err) {
         meta.advertencias.push('Error interno en COMPAS_construirLecturaTerritorialV1: ' + (err && err.message ? err.message : String(err)));
         console.error('[COMPAS] COMPAS_construirLecturaTerritorialV1:', err);
@@ -78524,6 +78664,39 @@ window.COMPAS_construirLecturaTerritorialV1 = COMPAS_construirLecturaTerritorial
             + '<div class="lt1-row"><span class="lt1-key">matriz soporte</span><span class="lt1-val">' + _esc(_renderMatrizSoporte(ev.matrizSoporte)) + '</span></div>'
             + ((ev.advertenciasEpistemicas || []).slice(0, 3).map(function(a){ return '<div class="lt1-warn" style="color:#8a5a00;">&rsaquo; ' + _esc(a) + '</div>'; }).join(''))
             + '</div>';
+
+        // Capacidad territorial (v1.4)
+        var cap = lec.capacidadTerritorial || {};
+        var capInst = cap.capacidadInstitucional || {};
+        var capCom = cap.capacidadComunitaria || {};
+        var capOp = cap.capacidadOperativa || {};
+        var sost = cap.sostenibilidadPotencial || {};
+        var cont = cap.continuidadProbable || {};
+        html += '<div class="lt1-section">'
+            + '<div class="lt1-section-title">Capacidad territorial</div>'
+            + '<div class="lt1-row"><span class="lt1-key">institucional</span><span class="lt1-val">' + _esc(capInst.nivel) + ' · señales: ' + ((capInst.señales || []).length) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">comunitaria</span><span class="lt1-val">' + _esc(capCom.nivel) + ' · señales: ' + ((capCom.señales || []).length) + ' · activos: ' + (capCom.activosDetectados || 0) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">operativa</span><span class="lt1-val">' + _esc(capOp.nivel) + ' · riesgos: ' + ((capOp.riesgosSobrecarga || []).length) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">sostenibilidad</span><span class="lt1-val">' + _esc(sost.nivel) + ' · fav: ' + ((sost.factoresFavorables || []).length) + ' · lim: ' + ((sost.factoresLimitantes || []).length) + '</span></div>'
+            + '<div class="lt1-row"><span class="lt1-key">continuidad</span><span class="lt1-val">' + _esc(cont.nivel) + ' · dependencias: ' + ((cont.dependenciasCriticas || []).length) + '</span></div>'
+            + '</div>';
+
+        if ((cap.fragilidadesEstructurales || []).length) {
+            html += '<div class="lt1-section">'
+                + '<div class="lt1-section-title">Fragilidades estructurales <span style="color:#94a3b8;font-weight:400;">(' + cap.fragilidadesEstructurales.length + ')</span></div>'
+                + cap.fragilidadesEstructurales.slice(0, 4).map(function(f){ return '<div class="lt1-warn" style="color:#8a5a00;">&rsaquo; ' + _esc(f) + '</div>'; }).join('')
+                + '</div>';
+        }
+
+        if ((cap.riesgosImplementacion || []).length || (cap.alertasCapacidad || []).length) {
+            html += '<div class="lt1-section">'
+                + '<div class="lt1-section-title">Riesgos de implementaci&oacute;n</div>'
+                + '<div class="lt1-row"><span class="lt1-key">riesgos</span><span class="lt1-val">' + ((cap.riesgosImplementacion || []).length) + '</span></div>'
+                + '<div class="lt1-row"><span class="lt1-key">dependencias</span><span class="lt1-val">' + ((cap.dependenciasCriticas || []).length) + '</span></div>'
+                + '<div class="lt1-row"><span class="lt1-key">alertas</span><span class="lt1-val">' + ((cap.alertasCapacidad || []).length) + '</span></div>'
+                + (cap.alertasCapacidad || []).slice(0, 3).map(function(a){ return '<div class="lt1-warn" style="color:#8a5a00;">&rsaquo; ' + _esc(a) + '</div>'; }).join('')
+                + '</div>';
+        }
 
         // Contadores
         var ARRAYS = [
