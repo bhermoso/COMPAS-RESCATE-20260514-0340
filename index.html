@@ -79169,6 +79169,357 @@ window.COMPAS_crearSnapshotTerritorialLongitudinalV1 = COMPAS_crearSnapshotTerri
 window.COMPAS_validarSnapshotTerritorialLongitudinalV1 = COMPAS_validarSnapshotTerritorialLongitudinalV1;
 window.COMPAS_obtenerEjemploSnapshotTerritorialLongitudinalV1 = COMPAS_obtenerEjemploSnapshotTerritorialLongitudinalV1;
 
+// ---------------------------------------------------------------------------
+// VALIDACION CRUZADA CADENA LONGITUDINAL DOCUMENTAL COMPAS v1
+// Proposito: diagnosticar pasivamente la cadena longitudinal sin modificar datos.
+// Sin persistencia, IA, render, evaluacion, scoring ni inferencia sanitaria.
+// ---------------------------------------------------------------------------
+
+function COMPAS_vclV1_definicionCapas() {
+    return [
+        {
+            id: 'contratoFuentesTerritorialesV1',
+            funciones: ['COMPAS_crearFuenteTerritorialV1', 'COMPAS_validarFuenteTerritorialV1', 'COMPAS_obtenerEjemplosFuentesTerritorialesV1'],
+            ejecutarEjemplo: function() {
+                if (typeof COMPAS_obtenerEjemplosFuentesTerritorialesV1 !== 'function') return null;
+                var ej = COMPAS_obtenerEjemplosFuentesTerritorialesV1();
+                return Array.isArray(ej) ? ej[0] : ej;
+            },
+            validarEjemplo: function(obj) {
+                return window.COMPAS.contratoFuentesTerritorialesV1.validarFuente(obj);
+            }
+        },
+        {
+            id: 'auditoriaTerritorialV1',
+            funciones: ['COMPAS_crearAuditoriaTerritorialV1', 'COMPAS_validarAuditoriaTerritorialV1', 'COMPAS_obtenerEjemploAuditoriaTerritorialV1'],
+            ejecutarEjemplo: function() {
+                return (typeof COMPAS_obtenerEjemploAuditoriaTerritorialV1 === 'function')
+                    ? COMPAS_obtenerEjemploAuditoriaTerritorialV1()
+                    : null;
+            },
+            validarEjemplo: function(obj) {
+                return window.COMPAS.auditoriaTerritorialV1.validarAuditoria(obj);
+            }
+        },
+        {
+            id: 'catalogoTerritorialV1',
+            funciones: ['COMPAS_crearCatalogoTerritorialV1', 'COMPAS_validarCatalogoTerritorialV1', 'COMPAS_obtenerEjemploCatalogoTerritorialV1'],
+            ejecutarEjemplo: function() {
+                return (typeof COMPAS_obtenerEjemploCatalogoTerritorialV1 === 'function')
+                    ? COMPAS_obtenerEjemploCatalogoTerritorialV1()
+                    : null;
+            },
+            validarEjemplo: function(obj) {
+                return window.COMPAS.catalogoTerritorialV1.validarCatalogo(obj);
+            }
+        },
+        {
+            id: 'longitudinalTemporalV1',
+            funciones: ['COMPAS_crearEstructuraLongitudinalTemporalV1', 'COMPAS_validarEstructuraLongitudinalTemporalV1', 'COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1'],
+            ejecutarEjemplo: function() {
+                return (typeof COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1 === 'function')
+                    ? COMPAS_obtenerEjemploEstructuraLongitudinalTemporalV1()
+                    : null;
+            },
+            validarEjemplo: function(obj) {
+                return window.COMPAS.longitudinalTemporalV1.validarEstructura(obj);
+            }
+        },
+        {
+            id: 'lecturaLongitudinalTerritorialV1',
+            funciones: ['COMPAS_crearLecturaLongitudinalTerritorialV1', 'COMPAS_validarLecturaLongitudinalTerritorialV1', 'COMPAS_obtenerEjemploLecturaLongitudinalTerritorialV1'],
+            ejecutarEjemplo: function() {
+                return (typeof COMPAS_obtenerEjemploLecturaLongitudinalTerritorialV1 === 'function')
+                    ? COMPAS_obtenerEjemploLecturaLongitudinalTerritorialV1()
+                    : null;
+            },
+            validarEjemplo: function(obj) {
+                return window.COMPAS.lecturaLongitudinalTerritorialV1.validarLectura(obj);
+            }
+        },
+        {
+            id: 'consolidacionLongitudinalMunicipalV1',
+            funciones: ['COMPAS_crearConsolidacionLongitudinalMunicipalV1', 'COMPAS_validarConsolidacionLongitudinalMunicipalV1', 'COMPAS_obtenerEjemploConsolidacionLongitudinalMunicipalV1'],
+            ejecutarEjemplo: function() {
+                return (typeof COMPAS_obtenerEjemploConsolidacionLongitudinalMunicipalV1 === 'function')
+                    ? COMPAS_obtenerEjemploConsolidacionLongitudinalMunicipalV1()
+                    : null;
+            },
+            validarEjemplo: function(obj) {
+                return window.COMPAS.consolidacionLongitudinalMunicipalV1.validarConsolidacion(obj);
+            }
+        },
+        {
+            id: 'observatorioTerritorialLongitudinalV1',
+            funciones: ['COMPAS_crearObservatorioTerritorialLongitudinalV1', 'COMPAS_validarObservatorioTerritorialLongitudinalV1', 'COMPAS_obtenerEjemploObservatorioTerritorialLongitudinalV1'],
+            ejecutarEjemplo: function() {
+                return (typeof COMPAS_obtenerEjemploObservatorioTerritorialLongitudinalV1 === 'function')
+                    ? COMPAS_obtenerEjemploObservatorioTerritorialLongitudinalV1()
+                    : null;
+            },
+            validarEjemplo: function(obj) {
+                return window.COMPAS.observatorioTerritorialLongitudinalV1.validarObservatorio(obj);
+            }
+        },
+        {
+            id: 'snapshotTerritorialLongitudinalV1',
+            funciones: ['COMPAS_crearSnapshotTerritorialLongitudinalV1', 'COMPAS_validarSnapshotTerritorialLongitudinalV1', 'COMPAS_obtenerEjemploSnapshotTerritorialLongitudinalV1'],
+            ejecutarEjemplo: function() {
+                return (typeof COMPAS_obtenerEjemploSnapshotTerritorialLongitudinalV1 === 'function')
+                    ? COMPAS_obtenerEjemploSnapshotTerritorialLongitudinalV1()
+                    : null;
+            },
+            validarEjemplo: function(obj) {
+                return window.COMPAS.snapshotTerritorialLongitudinalV1.validarSnapshot(obj);
+            }
+        }
+    ];
+}
+
+function COMPAS_vclV1_pushUnico(arr, valor) {
+    if (!valor || arr.indexOf(valor) !== -1) return;
+    arr.push(valor);
+}
+
+function COMPAS_obtenerDiagnosticoCadenaLongitudinalV1() {
+    var capasAuditadas = [];
+    var capasValidas = [];
+    var capasConRiesgo = [];
+    var capasInvalidas = [];
+    var funcionesDetectadas = [];
+    var namespacesDetectados = [];
+    var validacionesEjecutadas = [];
+    var compatibilidadesVerificadas = [];
+    var incompatibilidadesDetectadas = [];
+    var riesgosDocumentales = [];
+    var limites = [
+        'Diagnostico pasivo; no modifica datos ni persiste en Firebase',
+        'No sustituye evaluacion sanitaria, LT1 interpretativo ni render institucional',
+        'Cobertura limitada a ejemplos de referencia cuando existen'
+    ];
+    var ejemplosPorCapa = {};
+    var definiciones = COMPAS_vclV1_definicionCapas();
+
+    definiciones.forEach(function(def) {
+        capasAuditadas.push(def.id);
+        var capaOk = true;
+        var capaRiesgo = false;
+        var ns = window.COMPAS && window.COMPAS[def.id];
+
+        if (ns && typeof ns === 'object') {
+            COMPAS_vclV1_pushUnico(namespacesDetectados, def.id);
+        } else {
+            capaOk = false;
+            COMPAS_vclV1_pushUnico(capasInvalidas, def.id);
+            incompatibilidadesDetectadas.push({ capa: def.id, tipo: 'namespace_ausente' });
+        }
+
+        def.funciones.forEach(function(fn) {
+            if (typeof window[fn] === 'function') {
+                COMPAS_vclV1_pushUnico(funcionesDetectadas, fn);
+            } else {
+                capaOk = false;
+                capaRiesgo = true;
+                COMPAS_vclV1_pushUnico(capasInvalidas, def.id);
+                incompatibilidadesDetectadas.push({ capa: def.id, tipo: 'funcion_ausente', funcion: fn });
+            }
+        });
+
+        if (ns && typeof def.validarEjemplo === 'function' && typeof def.ejecutarEjemplo === 'function') {
+            try {
+                var ejemplo = def.ejecutarEjemplo();
+                ejemplosPorCapa[def.id] = ejemplo;
+                if (ejemplo === null || ejemplo === undefined) {
+                    capaRiesgo = true;
+                    validacionesEjecutadas.push({ capa: def.id, prueba: 'ejemplo', resultado: 'sin_ejemplo' });
+                    COMPAS_vclV1_pushUnico(riesgosDocumentales, def.id + ': ejemplo no disponible');
+                } else {
+                    var serializable = true;
+                    try {
+                        JSON.stringify(ejemplo);
+                    } catch (serErr) {
+                        serializable = false;
+                        capaOk = false;
+                        incompatibilidadesDetectadas.push({ capa: def.id, tipo: 'serializacion_fallida' });
+                    }
+                    if (serializable && typeof def.validarEjemplo === 'function') {
+                        var val = def.validarEjemplo(ejemplo);
+                        validacionesEjecutadas.push({
+                            capa: def.id,
+                            prueba: 'validar_ejemplo',
+                            valido: !!(val && val.valido),
+                            errores: val ? (val.errores || []) : ['validador_no_ejecutable'],
+                            advertencias: val ? (val.advertencias || []) : []
+                        });
+                        if (!val || !val.valido) {
+                            capaOk = false;
+                            incompatibilidadesDetectadas.push({ capa: def.id, tipo: 'ejemplo_invalido' });
+                        } else if (val.advertencias && val.advertencias.length > 0) {
+                            capaRiesgo = true;
+                        }
+                    }
+                }
+            } catch (e) {
+                capaOk = false;
+                validacionesEjecutadas.push({ capa: def.id, prueba: 'ejemplo', resultado: 'error', detalle: String(e.message || e) });
+                incompatibilidadesDetectadas.push({ capa: def.id, tipo: 'validador_no_ejecutable', detalle: String(e.message || e) });
+            }
+        } else if (ns) {
+            capaRiesgo = true;
+            validacionesEjecutadas.push({ capa: def.id, prueba: 'ejemplo', resultado: 'validador_no_configurado' });
+        }
+
+        if (capaOk && !capasInvalidas.some(function(c) { return c === def.id; })) {
+            COMPAS_vclV1_pushUnico(capasValidas, def.id);
+        }
+        if (capaRiesgo && capaOk) {
+            COMPAS_vclV1_pushUnico(capasConRiesgo, def.id);
+        }
+    });
+
+    var estructura = ejemplosPorCapa.longitudinalTemporalV1;
+    var lectura = ejemplosPorCapa.lecturaLongitudinalTerritorialV1;
+    var consolidacion = ejemplosPorCapa.consolidacionLongitudinalMunicipalV1;
+    var observatorio = ejemplosPorCapa.observatorioTerritorialLongitudinalV1;
+    var snapshot = ejemplosPorCapa.snapshotTerritorialLongitudinalV1;
+
+    if (estructura && lectura) {
+        if (lectura.cicloAnalizado && estructura.cicloActual && lectura.cicloAnalizado === estructura.cicloActual) {
+            compatibilidadesVerificadas.push({
+                tipo: 'lectura_estructura_mismo_ciclo',
+                ciclo: lectura.cicloAnalizado
+            });
+        } else {
+            incompatibilidadesDetectadas.push({
+                tipo: 'lectura_estructura_ciclo_distinto',
+                cicloLectura: lectura.cicloAnalizado,
+                cicloEstructura: estructura.cicloActual
+            });
+        }
+        if (lectura.municipio && estructura.municipio && lectura.municipio === estructura.municipio) {
+            compatibilidadesVerificadas.push({ tipo: 'lectura_estructura_mismo_municipio', municipio: lectura.municipio });
+        }
+    }
+
+    if (consolidacion && estructura) {
+        if (consolidacion.municipio && estructura.municipio && consolidacion.municipio === estructura.municipio) {
+            compatibilidadesVerificadas.push({ tipo: 'consolidacion_estructura_mismo_municipio', municipio: consolidacion.municipio });
+        }
+        if (Array.isArray(consolidacion.ciclosIntegrados) && consolidacion.ciclosIntegrados.indexOf(estructura.cicloActual) !== -1) {
+            compatibilidadesVerificadas.push({ tipo: 'consolidacion_incluye_ciclo_estructura', ciclo: estructura.cicloActual });
+        }
+    }
+
+    if (observatorio && consolidacion) {
+        if (Array.isArray(observatorio.municipiosIntegrados) && observatorio.municipiosIntegrados.indexOf(consolidacion.municipio) !== -1) {
+            compatibilidadesVerificadas.push({ tipo: 'observatorio_integra_municipio_consolidacion', municipio: consolidacion.municipio });
+        }
+    }
+
+    if (snapshot && observatorio) {
+        if (snapshot.municipio && Array.isArray(observatorio.municipiosIntegrados) &&
+            observatorio.municipiosIntegrados.indexOf(snapshot.municipio) !== -1) {
+            compatibilidadesVerificadas.push({ tipo: 'snapshot_municipio_en_observatorio', municipio: snapshot.municipio });
+        }
+        if (snapshot.ciclo && snapshot.fechaCorteISO) {
+            compatibilidadesVerificadas.push({ tipo: 'snapshot_con_corte_declarado', ciclo: snapshot.ciclo, fechaCorteISO: snapshot.fechaCorteISO });
+        }
+    }
+
+    if (capasConRiesgo.length > 0) {
+        COMPAS_vclV1_pushUnico(riesgosDocumentales, 'capas_con_advertencias_o_ejemplos_parciales: ' + capasConRiesgo.join(', '));
+    }
+    if (incompatibilidadesDetectadas.length > 0) {
+        COMPAS_vclV1_pushUnico(riesgosDocumentales, 'incompatibilidades_estructurales_detectadas: ' + incompatibilidadesDetectadas.length);
+    }
+
+    var validoGlobal = capasInvalidas.length === 0 && incompatibilidadesDetectadas.length === 0;
+
+    return {
+        contrato: 'validacion_cadena_longitudinal_v1',
+        version: 'validacion_cadena_longitudinal_v1',
+        generadoISO: new Date().toISOString(),
+        capasAuditadas: capasAuditadas,
+        capasValidas: capasValidas,
+        capasConRiesgo: capasConRiesgo,
+        capasInvalidas: capasInvalidas.filter(function(c, i, a) { return a.indexOf(c) === i; }),
+        funcionesDetectadas: funcionesDetectadas,
+        namespacesDetectados: namespacesDetectados,
+        validacionesEjecutadas: validacionesEjecutadas,
+        compatibilidadesVerificadas: compatibilidadesVerificadas,
+        incompatibilidadesDetectadas: incompatibilidadesDetectadas,
+        riesgosDocumentales: riesgosDocumentales,
+        limites: limites,
+        trazabilidad: {
+            capa: 'validacion_cadena_longitudinal_v1',
+            generadoPor: 'COMPAS_obtenerDiagnosticoCadenaLongitudinalV1',
+            capasDefinidas: capasAuditadas.length,
+            sinModificacionDatos: true,
+            sinPersistenciaFirebase: true
+        },
+        validoGlobal: validoGlobal
+    };
+}
+
+function COMPAS_validarCadenaLongitudinalV1(diagnostico) {
+    var errores = [];
+    var advertencias = [];
+    var arraysCriticos = [
+        'capasAuditadas',
+        'capasValidas',
+        'capasConRiesgo',
+        'capasInvalidas',
+        'funcionesDetectadas',
+        'namespacesDetectados',
+        'validacionesEjecutadas',
+        'compatibilidadesVerificadas',
+        'incompatibilidadesDetectadas',
+        'riesgosDocumentales',
+        'limites'
+    ];
+
+    if (!diagnostico || typeof diagnostico !== 'object') errores.push('diagnostico_no_objeto');
+    if (diagnostico && diagnostico.contrato !== 'validacion_cadena_longitudinal_v1') advertencias.push('contrato_no_declarado');
+    if (diagnostico && !diagnostico.version) advertencias.push('version_no_declarada');
+    if (diagnostico && !diagnostico.generadoISO) advertencias.push('generadoISO_no_declarado');
+    if (diagnostico && typeof diagnostico.validoGlobal !== 'boolean') advertencias.push('validoGlobal_no_booleano');
+    if (diagnostico && (!diagnostico.trazabilidad || typeof diagnostico.trazabilidad !== 'object')) {
+        advertencias.push('trazabilidad_no_objeto');
+    }
+
+    arraysCriticos.forEach(function(campo) {
+        if (diagnostico && !Array.isArray(diagnostico[campo])) errores.push(campo + '_no_array');
+    });
+
+    if (diagnostico && Array.isArray(diagnostico.capasAuditadas) && diagnostico.capasAuditadas.length === 0) {
+        advertencias.push('sin_capas_auditadas');
+    }
+
+    if (diagnostico) {
+        try {
+            JSON.stringify(diagnostico);
+        } catch (e) {
+            errores.push('no_serializable_json');
+        }
+    }
+
+    return {
+        version: 'validacion_diagnostico_cadena_longitudinal_v1',
+        valido: errores.length === 0,
+        errores: errores,
+        advertencias: advertencias
+    };
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.validacionCadenaLongitudinalV1 = {
+    version: 'validacion_cadena_longitudinal_v1',
+    obtenerDiagnostico: COMPAS_obtenerDiagnosticoCadenaLongitudinalV1,
+    validarCadena: COMPAS_validarCadenaLongitudinalV1
+};
+window.COMPAS_validarCadenaLongitudinalV1 = COMPAS_validarCadenaLongitudinalV1;
+window.COMPAS_obtenerDiagnosticoCadenaLongitudinalV1 = COMPAS_obtenerDiagnosticoCadenaLongitudinalV1;
+
 function _lt1_tieneArray(v) {
     return Array.isArray(v) && v.length > 0;
 }
