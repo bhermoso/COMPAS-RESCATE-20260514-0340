@@ -71750,9 +71750,13 @@ function eval_actualizarProceso() {
     // ── Conteo por estado de actuaciones ────────────────────────────
     // Guardia de municipio (mismo patrón que P5 en generarDocumentoPlan).
 
-    var agenda = (typeof COMPAS_obtenerAgendaEvaluacion === 'function' && Array.isArray(COMPAS_obtenerAgendaEvaluacion().actuaciones))
-    ? COMPAS_obtenerAgendaEvaluacion().actuaciones
-    : [];
+    var _agendaEvalProceso = (typeof COMPAS_obtenerAgendaEvaluacion === 'function')
+        ? COMPAS_obtenerAgendaEvaluacion()
+        : { actuaciones: [] };
+
+    var agenda = Array.isArray(_agendaEvalProceso.actuaciones)
+        ? _agendaEvalProceso.actuaciones
+        : [];
 
     var _metricasProceso = (window.COMPAS && typeof window.COMPAS.calcularMetricasActuacionesEvaluacion === 'function')
         ? window.COMPAS.calcularMetricasActuacionesEvaluacion(agenda)
