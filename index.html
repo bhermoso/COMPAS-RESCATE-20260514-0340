@@ -71243,24 +71243,27 @@ function COMPAS_crearSnapshotEvaluacion() {
     if (contratoSnapshotEvaluacion !== 'snapshot_evaluacion_v1') {
         _errorSnapshot('contrato_snapshot_evaluacion_invalido');
     }
-    _validarLecturaContratoSnapshot();
-    var _contratoAgendaEval = agendaEvaluacion && agendaEvaluacion.contratoAgendaEvaluacion;
-    var _validacionAgendaEval = agendaEvaluacion && agendaEvaluacion.validacionAgendaEvaluacion;
-    if (_contratoAgendaEval !== 'agenda_evaluacion_v1') {
-        _advertenciaSnapshot('agenda_evaluacion_contrato_no_declarado');
-    }
-    if (_validacionAgendaEval) {
-        if (_validacionAgendaEval.valido === false) {
-            (_validacionAgendaEval.errores || []).forEach(function(error) {
-                _errorSnapshot('agenda_evaluacion_' + error);
-            });
-            (_validacionAgendaEval.advertencias || []).forEach(function(advertencia) {
-                _advertenciaSnapshot('agenda_evaluacion_' + advertencia);
-            });
+    function _validarAgendaEvaluacionSnapshot() {
+        var _contratoAgendaEval = agendaEvaluacion && agendaEvaluacion.contratoAgendaEvaluacion;
+        var _validacionAgendaEval = agendaEvaluacion && agendaEvaluacion.validacionAgendaEvaluacion;
+        if (_contratoAgendaEval !== 'agenda_evaluacion_v1') {
+            _advertenciaSnapshot('agenda_evaluacion_contrato_no_declarado');
         }
-    } else {
-        _advertenciaSnapshot('agenda_evaluacion_sin_validacion');
+        if (_validacionAgendaEval) {
+            if (_validacionAgendaEval.valido === false) {
+                (_validacionAgendaEval.errores || []).forEach(function(error) {
+                    _errorSnapshot('agenda_evaluacion_' + error);
+                });
+                (_validacionAgendaEval.advertencias || []).forEach(function(advertencia) {
+                    _advertenciaSnapshot('agenda_evaluacion_' + advertencia);
+                });
+            }
+        } else {
+            _advertenciaSnapshot('agenda_evaluacion_sin_validacion');
+        }
     }
+    _validarLecturaContratoSnapshot();
+    _validarAgendaEvaluacionSnapshot();
     function _validarTasaSnapshot(nombre, valor) {
         if (!isFinite(valor)) _errorSnapshot(nombre + '_no_finita');
         else if (valor < 0) _errorSnapshot(nombre + '_negativa');
