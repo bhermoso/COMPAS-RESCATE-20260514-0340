@@ -77613,6 +77613,162 @@ window.COMPAS_crearAuditoriaTerritorialV1 = COMPAS_crearAuditoriaTerritorialV1;
 window.COMPAS_validarAuditoriaTerritorialV1 = COMPAS_validarAuditoriaTerritorialV1;
 window.COMPAS_obtenerEjemploAuditoriaTerritorialV1 = COMPAS_obtenerEjemploAuditoriaTerritorialV1;
 
+// ---------------------------------------------------------------------------
+// CATALOGO MUNICIPAL LONGITUDINAL DE FUENTES TERRITORIALES COMPAS v1
+// Proposito: inventariar fuentes documentales/estadisticas por municipio para
+// observatorio longitudinal, LT1, auditoria y mejoramiento. Pasivo y auditable.
+// ---------------------------------------------------------------------------
+
+function COMPAS_crearCatalogoTerritorialV1(datos) {
+    datos = datos || {};
+    var fuentes = Array.isArray(datos.fuentes) ? datos.fuentes.slice() : [];
+    return {
+        contrato: 'catalogo_territorial_v1',
+        municipio: datos.municipio || '',
+        fechaActualizacion: datos.fechaActualizacion || new Date().toISOString(),
+        fuentes: fuentes,
+        categorias: Array.isArray(datos.categorias) ? datos.categorias.slice() : [],
+        coberturaTemporal: datos.coberturaTemporal || '',
+        coberturaTerritorial: datos.coberturaTerritorial || '',
+        lagunasDocumentales: Array.isArray(datos.lagunasDocumentales) ? datos.lagunasDocumentales.slice() : [],
+        lagunasTematicas: Array.isArray(datos.lagunasTematicas) ? datos.lagunasTematicas.slice() : [],
+        fortalezasDocumentales: Array.isArray(datos.fortalezasDocumentales) ? datos.fortalezasDocumentales.slice() : [],
+        riesgosInterpretacion: Array.isArray(datos.riesgosInterpretacion) ? datos.riesgosInterpretacion.slice() : [],
+        observacionesMetodologicas: datos.observacionesMetodologicas || '',
+        calidadEstructural: datos.calidadEstructural || 'no_valorada',
+        utilidadLongitudinal: datos.utilidadLongitudinal || 'no_valorada',
+        utilidadLT1: datos.utilidadLT1 || 'no_valorada',
+        utilidadObservatorio: datos.utilidadObservatorio || 'no_valorada',
+        utilidadEvaluacion: datos.utilidadEvaluacion || 'no_valorada',
+        utilidadMejoramiento: datos.utilidadMejoramiento || 'no_valorada'
+    };
+}
+
+function COMPAS_validarCatalogoTerritorialV1(catalogo) {
+    var errores = [];
+    var advertencias = [];
+    var validarFuente = (window.COMPAS && window.COMPAS.contratoFuentesTerritorialesV1)
+        ? window.COMPAS.contratoFuentesTerritorialesV1.validarFuente
+        : null;
+
+    if (!catalogo || typeof catalogo !== 'object') errores.push('catalogo_no_objeto');
+    if (catalogo && catalogo.contrato !== 'catalogo_territorial_v1') advertencias.push('contrato_no_declarado');
+    if (catalogo && !catalogo.municipio) errores.push('municipio_obligatorio');
+    if (catalogo && !catalogo.fechaActualizacion) advertencias.push('fechaActualizacion_no_declarada');
+    if (catalogo && !Array.isArray(catalogo.fuentes)) errores.push('fuentes_no_array');
+    if (catalogo && Array.isArray(catalogo.fuentes) && catalogo.fuentes.length === 0) advertencias.push('sin_fuentes');
+    if (catalogo && !Array.isArray(catalogo.categorias)) advertencias.push('categorias_no_array');
+    if (catalogo && !Array.isArray(catalogo.lagunasDocumentales)) advertencias.push('lagunasDocumentales_no_array');
+    if (catalogo && !Array.isArray(catalogo.lagunasTematicas)) advertencias.push('lagunasTematicas_no_array');
+    if (catalogo && !Array.isArray(catalogo.fortalezasDocumentales)) advertencias.push('fortalezasDocumentales_no_array');
+    if (catalogo && !Array.isArray(catalogo.riesgosInterpretacion)) advertencias.push('riesgosInterpretacion_no_array');
+    if (catalogo && !catalogo.coberturaTemporal) advertencias.push('coberturaTemporal_no_declarada');
+    if (catalogo && !catalogo.coberturaTerritorial) advertencias.push('coberturaTerritorial_no_declarada');
+
+    if (catalogo && Array.isArray(catalogo.fuentes) && typeof validarFuente === 'function') {
+        catalogo.fuentes.forEach(function(fuente, idx) {
+            var val = validarFuente(fuente);
+            if (!val.valido) errores.push('fuente_' + idx + '_invalida');
+            (val.errores || []).forEach(function(err) {
+                errores.push('fuente_' + idx + '_' + err);
+            });
+            (val.advertencias || []).forEach(function(adv) {
+                advertencias.push('fuente_' + idx + '_' + adv);
+            });
+        });
+    } else if (catalogo && Array.isArray(catalogo.fuentes) && catalogo.fuentes.length > 0) {
+        advertencias.push('contrato_fuentes_no_disponible');
+    }
+
+    return {
+        version: 'validacion_catalogo_territorial_v1',
+        valido: errores.length === 0,
+        errores: errores,
+        advertencias: advertencias
+    };
+}
+
+function COMPAS_obtenerEjemploCatalogoTerritorialV1() {
+    var fuentesBase = (typeof COMPAS_obtenerEjemplosFuentesTerritorialesV1 === 'function')
+        ? COMPAS_obtenerEjemplosFuentesTerritorialesV1()
+        : [];
+    var fuentes = fuentesBase.filter(function(fuente) {
+        return ['informe_epidemiologico_municipal', 'eracis_plizd', 'sima_ieca', 'argos'].indexOf(fuente.id) !== -1;
+    });
+
+    fuentes.push(COMPAS_crearFuenteTerritorialV1({
+        id: 'agenda_urbana_municipal',
+        nombre: 'Agenda Urbana municipal',
+        tipoFuente: 'estrategica',
+        nivelEvidencia: 2,
+        organismo: 'Administracion local',
+        territorialidad: 'municipal',
+        periodicidad: 'plurianual',
+        areasTematicas: ['urbanismo', 'movilidad', 'vivienda', 'sostenibilidad', 'cohesion social'],
+        desigualdades: true,
+        participacion: true,
+        intersectorialidad: true,
+        multiculturalidad: false,
+        vulnerabilidadTerritorial: true,
+        accionComunitaria: false,
+        longitudinal: true,
+        calidadMetodologica: 'media',
+        utilidadLT1: 'alta',
+        utilidadObservatorio: 'alta',
+        utilidadEvaluacion: 'baja',
+        utilidadMejoramiento: 'alta',
+        reutilizableAutomaticamente: false,
+        observacionesMetodologicas: 'Fuente estrategica territorial; requiere contraste con ejecucion real y datos de salud.'
+    }));
+
+    return COMPAS_crearCatalogoTerritorialV1({
+        municipio: 'Municipio piloto',
+        fechaActualizacion: new Date().toISOString(),
+        fuentes: fuentes,
+        categorias: ['salud', 'vulnerabilidad', 'empleo', 'demografia', 'urbanismo', 'gobernanza'],
+        coberturaTemporal: 'mixta: anual, plurianual y segun disponibilidad documental',
+        coberturaTerritorial: 'municipal con posibles desagregaciones por barrio/zona desfavorecida',
+        lagunasDocumentales: [
+            'sin repositorio municipal unificado de documentos',
+            'sin trazabilidad completa de actualizaciones',
+            'sin inventario homologado de activos comunitarios'
+        ],
+        lagunasTematicas: [
+            'salud mental comunitaria',
+            'soledad no deseada',
+            'seguimiento anual de actuaciones locales'
+        ],
+        fortalezasDocumentales: [
+            'fuentes estadisticas longitudinales disponibles',
+            'documentacion estrategica intersectorial',
+            'base para lectura territorial estructurada'
+        ],
+        riesgosInterpretacion: [
+            'mezclar diagnostico documental con ejecucion real',
+            'inferir causalidad desde fuentes contextuales',
+            'sobrerrepresentar fuentes tecnicas frente a participacion'
+        ],
+        observacionesMetodologicas: 'Ejemplo simplificado; no constituye evaluacion municipal ni ranking de calidad documental.',
+        calidadEstructural: 'media_alta',
+        utilidadLongitudinal: 'alta',
+        utilidadLT1: 'alta',
+        utilidadObservatorio: 'alta',
+        utilidadEvaluacion: 'media',
+        utilidadMejoramiento: 'alta'
+    });
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.catalogoTerritorialV1 = {
+    version: 'catalogo_territorial_v1',
+    crearCatalogo: COMPAS_crearCatalogoTerritorialV1,
+    validarCatalogo: COMPAS_validarCatalogoTerritorialV1,
+    ejemplo: COMPAS_obtenerEjemploCatalogoTerritorialV1
+};
+window.COMPAS_crearCatalogoTerritorialV1 = COMPAS_crearCatalogoTerritorialV1;
+window.COMPAS_validarCatalogoTerritorialV1 = COMPAS_validarCatalogoTerritorialV1;
+window.COMPAS_obtenerEjemploCatalogoTerritorialV1 = COMPAS_obtenerEjemploCatalogoTerritorialV1;
+
 function _lt1_tieneArray(v) {
     return Array.isArray(v) && v.length > 0;
 }
