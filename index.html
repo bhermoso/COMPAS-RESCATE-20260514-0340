@@ -80137,6 +80137,342 @@ window.COMPAS_crearMatrizLongitudinalComparabilidadV1 = COMPAS_crearMatrizLongit
 window.COMPAS_validarMatrizLongitudinalComparabilidadV1 = COMPAS_validarMatrizLongitudinalComparabilidadV1;
 window.COMPAS_obtenerEjemploMatrizLongitudinalComparabilidadV1 = COMPAS_obtenerEjemploMatrizLongitudinalComparabilidadV1;
 
+// ---------------------------------------------------------------------------
+// CONTEXTO METODOLOGICO EVALUACION LONGITUDINAL COMPAS v1
+// Proposito: contextualizar condiciones de evaluacion prudente futura sin ejecutarla.
+// Sin IA, scoring, inferencia causal, indicadores sanitarios ni evaluacion automatica.
+// ---------------------------------------------------------------------------
+
+var COMPAS_CELV1_CONTEXTOS_DISPONIBLES = ['contexto_completo', 'contexto_parcial', 'contexto_insuficiente'];
+var COMPAS_CELV1_NIVELES_PRUDENCIA = ['alta', 'moderada', 'restrictiva'];
+
+function COMPAS_celV1_copiarArray(val) {
+    return Array.isArray(val) ? val.slice() : [];
+}
+
+function COMPAS_celV1_pushUnico(arr, valor) {
+    if (!valor || arr.indexOf(valor) !== -1) return;
+    arr.push(valor);
+}
+
+function COMPAS_celV1_referenciaLigera(obj, capa) {
+    if (!obj || typeof obj !== 'object') return null;
+    return {
+        capa: capa,
+        contrato: obj.contrato || null,
+        version: obj.version || null,
+        generadoISO: obj.generadoISO || null
+    };
+}
+
+function COMPAS_celV1_intentarValidar(validarFn, obj) {
+    if (!obj || typeof validarFn !== 'function') return { presente: false, valido: false, resultado: null };
+    try {
+        var r = validarFn(obj);
+        return { presente: true, valido: !!(r && r.valido), resultado: r };
+    } catch (e) {
+        return { presente: true, valido: false, resultado: { error: String(e.message || e) } };
+    }
+}
+
+function COMPAS_celV1_clasificarComparabilidadDesdeMatriz(matriz) {
+    var disponible = [];
+    var limitada = [];
+    var noDisponible = [];
+    if (!matriz || !matriz.dimensionesComparabilidad) return { disponible: disponible, limitada: limitada, noDisponible: noDisponible };
+    Object.keys(matriz.dimensionesComparabilidad).forEach(function(dim) {
+        var d = matriz.dimensionesComparabilidad[dim];
+        if (!d) return;
+        var item = { dimension: dim, estado: d.estado, fragilidad: d.fragilidad || 'no_declarada' };
+        if (d.estado === 'comparable') disponible.push(item);
+        else if (d.estado === 'comparable_con_cautela') limitada.push(item);
+        else noDisponible.push(item);
+    });
+    return { disponible: disponible, limitada: limitada, noDisponible: noDisponible };
+}
+
+function COMPAS_celV1_resolverNivelPrudencia(contextoDisponible, fragilidadAlta) {
+    if (contextoDisponible === 'contexto_insuficiente' || fragilidadAlta) return 'restrictiva';
+    if (contextoDisponible === 'contexto_parcial') return 'moderada';
+    return 'alta';
+}
+
+function COMPAS_crearContextoEvaluacionLongitudinalV1(datos) {
+    datos = datos || {};
+    var contratoPrudente = datos.contratoPrudente || datos.contratoEvaluacionPrudente || null;
+    var matriz = datos.matrizComparabilidad || datos.matriz || null;
+    var snapshot = datos.snapshotTerritorial || datos.snapshot || null;
+    var observatorio = datos.observatorioTerritorial || datos.observatorio || null;
+
+    var validarContrato = (window.COMPAS && window.COMPAS.contratoEvaluacionLongitudinalPrudenteV1)
+        ? window.COMPAS.contratoEvaluacionLongitudinalPrudenteV1.validarContrato : null;
+    var validarMatriz = (window.COMPAS && window.COMPAS.matrizLongitudinalComparabilidadV1)
+        ? window.COMPAS.matrizLongitudinalComparabilidadV1.validarMatriz : null;
+    var validarSnapshot = (window.COMPAS && window.COMPAS.snapshotTerritorialLongitudinalV1)
+        ? window.COMPAS.snapshotTerritorialLongitudinalV1.validarSnapshot : null;
+    var validarObservatorio = (window.COMPAS && window.COMPAS.observatorioTerritorialLongitudinalV1)
+        ? window.COMPAS.observatorioTerritorialLongitudinalV1.validarObservatorio : null;
+
+    var vContrato = COMPAS_celV1_intentarValidar(validarContrato, contratoPrudente);
+    var vMatriz = COMPAS_celV1_intentarValidar(validarMatriz, matriz);
+    var vSnapshot = COMPAS_celV1_intentarValidar(validarSnapshot, snapshot);
+    var vObservatorio = COMPAS_celV1_intentarValidar(validarObservatorio, observatorio);
+
+    var fuentesValidas = 0;
+    if (vContrato.presente && vContrato.valido) fuentesValidas++;
+    if (vMatriz.presente && vMatriz.valido) fuentesValidas++;
+    if (vSnapshot.presente && vSnapshot.valido) fuentesValidas++;
+    if (vObservatorio.presente && vObservatorio.valido) fuentesValidas++;
+
+    var contextoDisponible = 'contexto_insuficiente';
+    if (fuentesValidas >= 3) contextoDisponible = 'contexto_completo';
+    else if (fuentesValidas >= 1) contextoDisponible = 'contexto_parcial';
+
+    var municipio = datos.municipio || '';
+    var ambito = datos.ambito || '';
+    var ciclo = datos.ciclo || '';
+    if (!municipio && snapshot && snapshot.municipio) municipio = snapshot.municipio;
+    if (!municipio && observatorio && Array.isArray(observatorio.municipiosIntegrados) && observatorio.municipiosIntegrados[0]) {
+        municipio = observatorio.municipiosIntegrados[0];
+    }
+    if (!ambito && observatorio && observatorio.ambito) ambito = observatorio.ambito;
+    if (!ambito && matriz && matriz.ambito) ambito = matriz.ambito;
+    if (!ciclo && snapshot && snapshot.ciclo) ciclo = snapshot.ciclo;
+    if (!ciclo && observatorio && Array.isArray(observatorio.continuidadTerritorial) &&
+        observatorio.continuidadTerritorial[0] && Array.isArray(observatorio.continuidadTerritorial[0].ciclosIntegrados) &&
+        observatorio.continuidadTerritorial[0].ciclosIntegrados[0]) {
+        ciclo = observatorio.continuidadTerritorial[0].ciclosIntegrados[0];
+    }
+
+    var clasif = COMPAS_celV1_clasificarComparabilidadDesdeMatriz(matriz);
+    var comparabilidadDisponible = COMPAS_celV1_copiarArray(datos.comparabilidadDisponible);
+    var comparabilidadLimitada = COMPAS_celV1_copiarArray(datos.comparabilidadLimitada);
+    var comparabilidadNoDisponible = COMPAS_celV1_copiarArray(datos.comparabilidadNoDisponible);
+    if (comparabilidadDisponible.length === 0) comparabilidadDisponible = clasif.disponible;
+    if (comparabilidadLimitada.length === 0) comparabilidadLimitada = clasif.limitada;
+    if (comparabilidadNoDisponible.length === 0) comparabilidadNoDisponible = clasif.noDisponible;
+
+    var contratosActivos = COMPAS_celV1_copiarArray(datos.contratosActivos);
+    if (contratosActivos.length === 0) {
+        if (vContrato.valido) COMPAS_celV1_pushUnico(contratosActivos, 'contrato_evaluacion_longitudinal_prudente_v1');
+        if (vMatriz.valido) COMPAS_celV1_pushUnico(contratosActivos, 'matriz_longitudinal_comparabilidad_v1');
+        if (vSnapshot.valido) COMPAS_celV1_pushUnico(contratosActivos, 'snapshot_territorial_longitudinal_v1');
+        if (vObservatorio.valido) COMPAS_celV1_pushUnico(contratosActivos, 'observatorio_territorial_longitudinal_v1');
+    }
+
+    var evaluacionesPermitidas = COMPAS_celV1_copiarArray(datos.evaluacionesPermitidas);
+    var evaluacionesNoPermitidas = COMPAS_celV1_copiarArray(datos.evaluacionesNoPermitidas);
+    if (contratoPrudente && contratoPrudente.tiposEvaluacion) {
+        Object.keys(contratoPrudente.tiposEvaluacion).forEach(function(k) {
+            var t = contratoPrudente.tiposEvaluacion[k];
+            if (t && t.permitido) COMPAS_celV1_pushUnico(evaluacionesPermitidas, k);
+            else COMPAS_celV1_pushUnico(evaluacionesNoPermitidas, k);
+        });
+    }
+    if (evaluacionesPermitidas.length === 0) {
+        evaluacionesPermitidas.push('prudente_permitida', 'descriptiva_permitida');
+    }
+    if (evaluacionesNoPermitidas.length === 0) {
+        evaluacionesNoPermitidas.push('causal_no_permitida', 'predictiva_no_permitida');
+    }
+
+    var riesgosMetodologicos = COMPAS_celV1_copiarArray(datos.riesgosMetodologicos);
+    var fragilidadMetodologica = COMPAS_celV1_copiarArray(datos.fragilidadMetodologica);
+    var cautelasActivas = COMPAS_celV1_copiarArray(datos.cautelasActivas);
+    var restriccionesEvaluacion = COMPAS_celV1_copiarArray(datos.restriccionesEvaluacion);
+    var limites = COMPAS_celV1_copiarArray(datos.limites);
+
+    if (matriz && Array.isArray(matriz.riesgosInvalidacion)) {
+        matriz.riesgosInvalidacion.forEach(function(r) { COMPAS_celV1_pushUnico(riesgosMetodologicos, r); });
+    }
+    if (matriz && Array.isArray(matriz.factoresFragilidad)) {
+        matriz.factoresFragilidad.forEach(function(f) { COMPAS_celV1_pushUnico(fragilidadMetodologica, f); });
+    }
+    if (contratoPrudente && Array.isArray(contratoPrudente.cautelasMetodologicas)) {
+        contratoPrudente.cautelasMetodologicas.forEach(function(c) { COMPAS_celV1_pushUnico(cautelasActivas, c); });
+    }
+    if (contratoPrudente && Array.isArray(contratoPrudente.usosNoPermitidos)) {
+        contratoPrudente.usosNoPermitidos.forEach(function(u) { COMPAS_celV1_pushUnico(restriccionesEvaluacion, u); });
+    }
+
+    if (contextoDisponible === 'contexto_insuficiente') {
+        COMPAS_celV1_pushUnico(cautelasActivas, 'Contexto metodologico insuficiente; no iniciar evaluacion prudente automatica');
+        COMPAS_celV1_pushUnico(restriccionesEvaluacion, 'Solo lectura documental exploratoria hasta completar fuentes');
+    } else if (contextoDisponible === 'contexto_parcial') {
+        COMPAS_celV1_pushUnico(cautelasActivas, 'Contexto parcial; explicitar lagunas antes de evaluar');
+    }
+
+    if (cautelasActivas.length === 0) {
+        cautelasActivas.push('Capa de contexto pasiva; no evalua resultados sanitarios');
+    }
+    if (restriccionesEvaluacion.length === 0) {
+        restriccionesEvaluacion.push('No inferir mejora o deterioro desde este contexto');
+        restriccionesEvaluacion.push('No emitir rankings ni recomendaciones politicas');
+    }
+    if (riesgosMetodologicos.length === 0) {
+        riesgosMetodologicos.push('evaluar sin homologar ciclo y corte temporal');
+    }
+    if (limites.length === 0) {
+        limites.push('No sustituye evaluacion real/exploratoria ni LT1 interpretativo');
+        limites.push('No activa IA ni persistencia Firebase');
+    }
+
+    var fragilidadAlta = comparabilidadNoDisponible.length >= 3 || contextoDisponible === 'contexto_insuficiente';
+    var nivelPrudencia = datos.nivelPrudencia || COMPAS_celV1_resolverNivelPrudencia(contextoDisponible, fragilidadAlta);
+    if (COMPAS_CELV1_NIVELES_PRUDENCIA.indexOf(nivelPrudencia) === -1) nivelPrudencia = 'moderada';
+
+    return {
+        contrato: 'contexto_evaluacion_longitudinal_v1',
+        version: datos.version || 'contexto_evaluacion_longitudinal_v1',
+        generadoISO: datos.generadoISO || new Date().toISOString(),
+        municipio: municipio,
+        ambito: ambito,
+        ciclo: ciclo,
+        contextoDisponible: contextoDisponible,
+        contratosActivos: contratosActivos,
+        comparabilidadDisponible: comparabilidadDisponible,
+        comparabilidadLimitada: comparabilidadLimitada,
+        comparabilidadNoDisponible: comparabilidadNoDisponible,
+        riesgosMetodologicos: riesgosMetodologicos,
+        fragilidadMetodologica: fragilidadMetodologica,
+        cautelasActivas: cautelasActivas,
+        restriccionesEvaluacion: restriccionesEvaluacion,
+        evaluacionesPermitidas: evaluacionesPermitidas,
+        evaluacionesNoPermitidas: evaluacionesNoPermitidas,
+        nivelPrudencia: nivelPrudencia,
+        utilidadObservatorio: datos.utilidadObservatorio || 'no_valorada',
+        utilidadEvaluacion: datos.utilidadEvaluacion || 'no_valorada',
+        utilidadMejoramiento: datos.utilidadMejoramiento || 'no_valorada',
+        limites: limites,
+        trazabilidad: {
+            capa: 'contexto_evaluacion_longitudinal_v1',
+            generadoPor: 'COMPAS_crearContextoEvaluacionLongitudinalV1',
+            fuentes: {
+                contratoPrudente: COMPAS_celV1_referenciaLigera(contratoPrudente, 'contrato_evaluacion_longitudinal_prudente_v1'),
+                matriz: COMPAS_celV1_referenciaLigera(matriz, 'matriz_longitudinal_comparabilidad_v1'),
+                snapshot: COMPAS_celV1_referenciaLigera(snapshot, 'snapshot_territorial_longitudinal_v1'),
+                observatorio: COMPAS_celV1_referenciaLigera(observatorio, 'observatorio_territorial_longitudinal_v1')
+            },
+            validaciones: {
+                contratoPrudente: vContrato,
+                matriz: vMatriz,
+                snapshot: vSnapshot,
+                observatorio: vObservatorio
+            },
+            fuentesValidas: fuentesValidas,
+            sinEvaluacionAutomatica: true
+        }
+    };
+}
+
+function COMPAS_validarContextoEvaluacionLongitudinalV1(contexto) {
+    var errores = [];
+    var advertencias = [];
+    var arraysCriticos = [
+        'contratosActivos',
+        'comparabilidadDisponible',
+        'comparabilidadLimitada',
+        'comparabilidadNoDisponible',
+        'riesgosMetodologicos',
+        'fragilidadMetodologica',
+        'cautelasActivas',
+        'restriccionesEvaluacion',
+        'evaluacionesPermitidas',
+        'evaluacionesNoPermitidas',
+        'limites'
+    ];
+
+    if (!contexto || typeof contexto !== 'object') errores.push('contexto_no_objeto');
+    if (contexto && contexto.contrato !== 'contexto_evaluacion_longitudinal_v1') advertencias.push('contrato_no_declarado');
+    if (contexto && !contexto.version) advertencias.push('version_no_declarada');
+    if (contexto && !contexto.generadoISO) advertencias.push('generadoISO_no_declarado');
+    if (contexto && COMPAS_CELV1_CONTEXTOS_DISPONIBLES.indexOf(contexto.contextoDisponible) === -1) {
+        errores.push('contextoDisponible_no_valido');
+    }
+    if (contexto && COMPAS_CELV1_NIVELES_PRUDENCIA.indexOf(contexto.nivelPrudencia) === -1) {
+        errores.push('nivelPrudencia_no_valido');
+    }
+    if (contexto && (!contexto.trazabilidad || typeof contexto.trazabilidad !== 'object')) {
+        advertencias.push('trazabilidad_no_objeto');
+    }
+
+    arraysCriticos.forEach(function(campo) {
+        if (contexto && !Array.isArray(contexto[campo])) errores.push(campo + '_no_array');
+    });
+
+    if (contexto && Array.isArray(contexto.cautelasActivas) && contexto.cautelasActivas.length === 0) {
+        advertencias.push('sin_cautelas_activas');
+    }
+    if (contexto && Array.isArray(contexto.limites) && contexto.limites.length === 0) advertencias.push('sin_limites');
+    if (contexto && Array.isArray(contexto.restriccionesEvaluacion) && contexto.restriccionesEvaluacion.length === 0) {
+        advertencias.push('sin_restricciones_evaluacion');
+    }
+    if (contexto && contexto.contextoDisponible === 'contexto_insuficiente') {
+        advertencias.push('contexto_metodologico_insuficiente');
+    }
+
+    if (contexto) {
+        try {
+            JSON.stringify(contexto);
+        } catch (e) {
+            errores.push('no_serializable_json');
+        }
+    }
+
+    return {
+        version: 'validacion_contexto_evaluacion_longitudinal_v1',
+        valido: errores.length === 0,
+        errores: errores,
+        advertencias: advertencias
+    };
+}
+
+function COMPAS_obtenerEjemploContextoEvaluacionLongitudinalV1() {
+    var contratoPrudente = (typeof COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1 === 'function')
+        ? COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1()
+        : null;
+    var matriz = (typeof COMPAS_obtenerEjemploMatrizLongitudinalComparabilidadV1 === 'function')
+        ? COMPAS_obtenerEjemploMatrizLongitudinalComparabilidadV1()
+        : null;
+    var snapshot = (typeof COMPAS_obtenerEjemploSnapshotTerritorialLongitudinalV1 === 'function')
+        ? COMPAS_obtenerEjemploSnapshotTerritorialLongitudinalV1()
+        : null;
+    var observatorio = (typeof COMPAS_obtenerEjemploObservatorioTerritorialLongitudinalV1 === 'function')
+        ? COMPAS_obtenerEjemploObservatorioTerritorialLongitudinalV1()
+        : null;
+
+    return COMPAS_crearContextoEvaluacionLongitudinalV1({
+        generadoISO: '2026-01-15T00:00:00.000Z',
+        municipio: 'Atarfe',
+        ambito: observatorio ? observatorio.ambito : 'granada_area_metropolitana_documental',
+        ciclo: '2026',
+        contratoPrudente: contratoPrudente,
+        matrizComparabilidad: matriz,
+        snapshotTerritorial: snapshot,
+        observatorioTerritorial: observatorio,
+        utilidadObservatorio: 'alta',
+        utilidadEvaluacion: 'media',
+        utilidadMejoramiento: 'alta',
+        limites: [
+            'Contexto metodologico para evaluacion prudente futura; no ejecuta evaluacion',
+            'No calcular indicadores sanitarios ni inferir mejora o deterioro'
+        ]
+    });
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.contextoEvaluacionLongitudinalV1 = {
+    version: 'contexto_evaluacion_longitudinal_v1',
+    crearContexto: COMPAS_crearContextoEvaluacionLongitudinalV1,
+    validarContexto: COMPAS_validarContextoEvaluacionLongitudinalV1,
+    ejemplo: COMPAS_obtenerEjemploContextoEvaluacionLongitudinalV1,
+    contextosDisponibles: COMPAS_CELV1_CONTEXTOS_DISPONIBLES.slice(),
+    nivelesPrudencia: COMPAS_CELV1_NIVELES_PRUDENCIA.slice()
+};
+window.COMPAS_crearContextoEvaluacionLongitudinalV1 = COMPAS_crearContextoEvaluacionLongitudinalV1;
+window.COMPAS_validarContextoEvaluacionLongitudinalV1 = COMPAS_validarContextoEvaluacionLongitudinalV1;
+window.COMPAS_obtenerEjemploContextoEvaluacionLongitudinalV1 = COMPAS_obtenerEjemploContextoEvaluacionLongitudinalV1;
+
 function _lt1_tieneArray(v) {
     return Array.isArray(v) && v.length > 0;
 }
