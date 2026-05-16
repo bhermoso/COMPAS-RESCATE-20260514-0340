@@ -78616,6 +78616,317 @@ window.COMPAS_crearConsolidacionLongitudinalMunicipalV1 = COMPAS_crearConsolidac
 window.COMPAS_validarConsolidacionLongitudinalMunicipalV1 = COMPAS_validarConsolidacionLongitudinalMunicipalV1;
 window.COMPAS_obtenerEjemploConsolidacionLongitudinalMunicipalV1 = COMPAS_obtenerEjemploConsolidacionLongitudinalMunicipalV1;
 
+// ---------------------------------------------------------------------------
+// OBSERVATORIO TERRITORIAL LONGITUDINAL COMPAS v1
+// Proposito: contrato documental estable multi-municipio para observatorios futuros.
+// Sin IA, render institucional, scoring, ranking, causalidad ni recomendaciones politicas.
+// ---------------------------------------------------------------------------
+
+function COMPAS_otlV1_pushUnico(arr, valor) {
+    if (!valor || arr.indexOf(valor) !== -1) return;
+    arr.push(valor);
+}
+
+function COMPAS_otlV1_resolverMunicipioEntrada(entrada) {
+    if (!entrada || typeof entrada !== 'object') return '';
+    if (entrada.municipio) return entrada.municipio;
+    if (entrada.consolidacion && entrada.consolidacion.municipio) return entrada.consolidacion.municipio;
+    return '';
+}
+
+function COMPAS_crearObservatorioTerritorialLongitudinalV1(datos) {
+    datos = datos || {};
+    var entradas = Array.isArray(datos.entradas) ? datos.entradas : [];
+    var municipiosIntegrados = [];
+    var municipiosExcluidos = [];
+    var razonesExclusion = [];
+    var compatibilidadesTerritoriales = [];
+    var incompatibilidadesTerritoriales = [];
+    var estabilidadDocumental = [];
+    var estabilidadInstrumental = [];
+    var continuidadTerritorial = [];
+    var riesgosComparabilidad = Array.isArray(datos.riesgosComparabilidad) ? datos.riesgosComparabilidad.slice() : [];
+    var cautelasMetodologicas = Array.isArray(datos.cautelasMetodologicas) ? datos.cautelasMetodologicas.slice() : [];
+    var trazabilidadEntradas = [];
+    var vistos = {};
+    var ciclosPorMunicipio = {};
+
+    var validarConsolidacion = (window.COMPAS && window.COMPAS.consolidacionLongitudinalMunicipalV1)
+        ? window.COMPAS.consolidacionLongitudinalMunicipalV1.validarConsolidacion
+        : null;
+
+    entradas.forEach(function(entrada, idx) {
+        entrada = entrada || {};
+        var municipio = COMPAS_otlV1_resolverMunicipioEntrada(entrada);
+        var consolidacion = entrada.consolidacion || null;
+
+        if (!municipio) {
+            COMPAS_otlV1_pushUnico(municipiosExcluidos, 'entrada_' + idx);
+            razonesExclusion.push({ municipio: null, indice: idx, razon: 'municipio_no_identificado' });
+            return;
+        }
+
+        if (vistos[municipio]) {
+            COMPAS_otlV1_pushUnico(municipiosExcluidos, municipio);
+            razonesExclusion.push({ municipio: municipio, indice: idx, razon: 'municipio_duplicado' });
+            incompatibilidadesTerritoriales.push({ municipio: municipio, tipo: 'municipio_duplicado_en_entradas' });
+            return;
+        }
+
+        if (!consolidacion || typeof consolidacion !== 'object') {
+            COMPAS_otlV1_pushUnico(municipiosExcluidos, municipio);
+            razonesExclusion.push({ municipio: municipio, indice: idx, razon: 'sin_consolidacion_municipal' });
+            trazabilidadEntradas.push({
+                indice: idx,
+                municipio: municipio,
+                tieneConsolidacion: false
+            });
+            return;
+        }
+
+        var entradaTrazable = {
+            indice: idx,
+            municipio: municipio,
+            tieneConsolidacion: true,
+            validacionConsolidacion: null
+        };
+
+        if (typeof validarConsolidacion === 'function') {
+            entradaTrazable.validacionConsolidacion = validarConsolidacion(consolidacion);
+            if (!entradaTrazable.validacionConsolidacion.valido) {
+                COMPAS_otlV1_pushUnico(municipiosExcluidos, municipio);
+                razonesExclusion.push({ municipio: municipio, indice: idx, razon: 'consolidacion_invalida' });
+                trazabilidadEntradas.push(entradaTrazable);
+                return;
+            }
+        } else {
+            entradaTrazable.consolidacionSinValidador = true;
+        }
+
+        if (consolidacion.municipio && consolidacion.municipio !== municipio) {
+            COMPAS_otlV1_pushUnico(municipiosExcluidos, municipio);
+            razonesExclusion.push({ municipio: municipio, indice: idx, razon: 'municipio_no_coincide_con_consolidacion' });
+            incompatibilidadesTerritoriales.push({
+                municipio: municipio,
+                tipo: 'municipio_distinto_en_consolidacion',
+                detalle: consolidacion.municipio
+            });
+            trazabilidadEntradas.push(entradaTrazable);
+            return;
+        }
+
+        vistos[municipio] = true;
+        COMPAS_otlV1_pushUnico(municipiosIntegrados, municipio);
+        trazabilidadEntradas.push(entradaTrazable);
+
+        ciclosPorMunicipio[municipio] = Array.isArray(consolidacion.ciclosIntegrados)
+            ? consolidacion.ciclosIntegrados.slice()
+            : [];
+
+        if (Array.isArray(consolidacion.continuidadDocumental)) {
+            consolidacion.continuidadDocumental.forEach(function(item) {
+                estabilidadDocumental.push({
+                    municipio: municipio,
+                    origen: 'consolidacion_municipal',
+                    registro: item
+                });
+            });
+        }
+
+        if (Array.isArray(consolidacion.estabilidadInstrumental)) {
+            consolidacion.estabilidadInstrumental.forEach(function(item) {
+                estabilidadInstrumental.push({
+                    municipio: municipio,
+                    origen: 'consolidacion_municipal',
+                    registro: item
+                });
+            });
+        }
+
+        if (Array.isArray(consolidacion.compatibilidadesDetectadas) && consolidacion.compatibilidadesDetectadas.length > 0) {
+            compatibilidadesTerritoriales.push({
+                municipio: municipio,
+                tipo: 'consolidacion_con_compatibilidades_internas',
+                cantidad: consolidacion.compatibilidadesDetectadas.length
+            });
+        }
+
+        if (Array.isArray(consolidacion.incompatibilidadesDetectadas) && consolidacion.incompatibilidadesDetectadas.length > 0) {
+            incompatibilidadesTerritoriales.push({
+                municipio: municipio,
+                tipo: 'consolidacion_con_incompatibilidades_internas',
+                cantidad: consolidacion.incompatibilidadesDetectadas.length
+            });
+        }
+
+        if (Array.isArray(consolidacion.riesgosComparabilidad)) {
+            consolidacion.riesgosComparabilidad.forEach(function(r) {
+                COMPAS_otlV1_pushUnico(riesgosComparabilidad, municipio + ': ' + r);
+            });
+        }
+
+        continuidadTerritorial.push({
+            municipio: municipio,
+            ciclosIntegrados: ciclosPorMunicipio[municipio],
+            ciclosExcluidos: Array.isArray(consolidacion.ciclosExcluidos) ? consolidacion.ciclosExcluidos.slice() : [],
+            sinInferenciaEvolucion: true
+        });
+    });
+
+    if (municipiosIntegrados.length > 1) {
+        var cicloReferencia = null;
+        var ciclosHomologos = true;
+        municipiosIntegrados.forEach(function(mun) {
+            var ciclos = ciclosPorMunicipio[mun] || [];
+            if (!cicloReferencia && ciclos.length > 0) cicloReferencia = ciclos[0];
+            if (cicloReferencia && (ciclos.indexOf(cicloReferencia) === -1)) ciclosHomologos = false;
+        });
+        if (cicloReferencia && ciclosHomologos) {
+            compatibilidadesTerritoriales.push({
+                tipo: 'ciclo_documental_compartido',
+                ciclo: cicloReferencia,
+                municipios: municipiosIntegrados.slice()
+            });
+        } else {
+            incompatibilidadesTerritoriales.push({
+                tipo: 'ciclos_integrados_no_homologos',
+                municipios: municipiosIntegrados.slice()
+            });
+            COMPAS_otlV1_pushUnico(riesgosComparabilidad, 'comparar municipios sin homologar ciclos documentales integrados');
+        }
+    }
+
+    if (cautelasMetodologicas.length === 0) {
+        cautelasMetodologicas.push('Capa documental pasiva; no activa observatorio institucional ni interpretacion causal');
+        cautelasMetodologicas.push('No calcular indicadores sanitarios ni inferir mejora o deterioro entre municipios');
+        cautelasMetodologicas.push('No emitir rankings ni recomendaciones politicas desde esta estructura');
+    }
+
+    if (riesgosComparabilidad.length === 0) {
+        riesgosComparabilidad.push('datos_incompletos: revisar homologacion documental antes de comparativa territorial');
+    }
+
+    return {
+        contrato: 'observatorio_territorial_longitudinal_v1',
+        version: 'observatorio_territorial_longitudinal_v1',
+        generadoISO: datos.generadoISO || new Date().toISOString(),
+        ambito: datos.ambito || '',
+        municipiosIntegrados: municipiosIntegrados,
+        municipiosExcluidos: municipiosExcluidos,
+        razonesExclusion: razonesExclusion,
+        compatibilidadesTerritoriales: compatibilidadesTerritoriales,
+        incompatibilidadesTerritoriales: incompatibilidadesTerritoriales,
+        estabilidadDocumental: estabilidadDocumental,
+        estabilidadInstrumental: estabilidadInstrumental,
+        continuidadTerritorial: continuidadTerritorial,
+        riesgosComparabilidad: riesgosComparabilidad,
+        cautelasMetodologicas: cautelasMetodologicas,
+        utilidadObservatorio: datos.utilidadObservatorio || 'no_valorada',
+        utilidadEvaluacion: datos.utilidadEvaluacion || 'no_valorada',
+        utilidadLT1: datos.utilidadLT1 || 'no_valorada',
+        utilidadMejoramiento: datos.utilidadMejoramiento || 'no_valorada',
+        limites: Array.isArray(datos.limites) ? datos.limites.slice() : [
+            'Contrato longitudinal documental para observatorio futuro; sin render ni IA',
+            'Preparado para snapshots territoriales y comparativa prudente posterior',
+            'No sustituye evaluacion longitudinal ni LT1 interpretativo'
+        ],
+        trazabilidad: {
+            capa: 'observatorio_territorial_longitudinal_v1',
+            totalEntradas: entradas.length,
+            entradas: trazabilidadEntradas,
+            validadoresDisponibles: {
+                consolidacionLongitudinalMunicipalV1: typeof validarConsolidacion === 'function'
+            },
+            generadoPor: 'COMPAS_crearObservatorioTerritorialLongitudinalV1'
+        }
+    };
+}
+
+function COMPAS_validarObservatorioTerritorialLongitudinalV1(observatorio) {
+    var errores = [];
+    var advertencias = [];
+    var arraysCriticos = [
+        'municipiosIntegrados',
+        'municipiosExcluidos',
+        'razonesExclusion',
+        'compatibilidadesTerritoriales',
+        'incompatibilidadesTerritoriales',
+        'estabilidadDocumental',
+        'estabilidadInstrumental',
+        'continuidadTerritorial',
+        'riesgosComparabilidad',
+        'cautelasMetodologicas',
+        'limites'
+    ];
+
+    if (!observatorio || typeof observatorio !== 'object') errores.push('observatorio_no_objeto');
+    if (observatorio && observatorio.contrato !== 'observatorio_territorial_longitudinal_v1') {
+        advertencias.push('contrato_no_declarado');
+    }
+    if (observatorio && !observatorio.version) advertencias.push('version_no_declarada');
+    if (observatorio && !observatorio.generadoISO) advertencias.push('generadoISO_no_declarado');
+    if (observatorio && (!observatorio.trazabilidad || typeof observatorio.trazabilidad !== 'object')) {
+        advertencias.push('trazabilidad_no_objeto');
+    }
+
+    arraysCriticos.forEach(function(campo) {
+        if (observatorio && !Array.isArray(observatorio[campo])) errores.push(campo + '_no_array');
+    });
+
+    if (observatorio && Array.isArray(observatorio.municipiosIntegrados) && observatorio.municipiosIntegrados.length === 0) {
+        advertencias.push('sin_municipios_integrados');
+    }
+
+    if (observatorio) {
+        try {
+            JSON.stringify(observatorio);
+        } catch (e) {
+            errores.push('no_serializable_json');
+        }
+    }
+
+    return {
+        version: 'validacion_observatorio_territorial_longitudinal_v1',
+        valido: errores.length === 0,
+        errores: errores,
+        advertencias: advertencias
+    };
+}
+
+function COMPAS_obtenerEjemploObservatorioTerritorialLongitudinalV1() {
+    var consolidacionAtarfe = (typeof COMPAS_obtenerEjemploConsolidacionLongitudinalMunicipalV1 === 'function')
+        ? COMPAS_obtenerEjemploConsolidacionLongitudinalMunicipalV1()
+        : null;
+
+    return COMPAS_crearObservatorioTerritorialLongitudinalV1({
+        ambito: 'granada_area_metropolitana_documental',
+        generadoISO: '2026-01-15T00:00:00.000Z',
+        entradas: [
+            { municipio: 'Atarfe', consolidacion: consolidacionAtarfe },
+            { municipio: 'Municipio piloto sin carga', consolidacion: null }
+        ],
+        utilidadObservatorio: 'alta',
+        utilidadEvaluacion: 'baja',
+        utilidadLT1: 'alta',
+        utilidadMejoramiento: 'media',
+        limites: [
+            'Ejemplo prudente con Atarfe integrado y un municipio excluido por falta de consolidacion',
+            'No usar como ranking supramunicipal ni como evidencia de mejora o deterioro'
+        ]
+    });
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.observatorioTerritorialLongitudinalV1 = {
+    version: 'observatorio_territorial_longitudinal_v1',
+    crearObservatorio: COMPAS_crearObservatorioTerritorialLongitudinalV1,
+    validarObservatorio: COMPAS_validarObservatorioTerritorialLongitudinalV1,
+    ejemplo: COMPAS_obtenerEjemploObservatorioTerritorialLongitudinalV1
+};
+window.COMPAS_crearObservatorioTerritorialLongitudinalV1 = COMPAS_crearObservatorioTerritorialLongitudinalV1;
+window.COMPAS_validarObservatorioTerritorialLongitudinalV1 = COMPAS_validarObservatorioTerritorialLongitudinalV1;
+window.COMPAS_obtenerEjemploObservatorioTerritorialLongitudinalV1 = COMPAS_obtenerEjemploObservatorioTerritorialLongitudinalV1;
+
 function _lt1_tieneArray(v) {
     return Array.isArray(v) && v.length > 0;
 }
