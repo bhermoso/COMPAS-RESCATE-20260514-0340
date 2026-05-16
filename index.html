@@ -79520,6 +79520,302 @@ window.COMPAS.validacionCadenaLongitudinalV1 = {
 window.COMPAS_validarCadenaLongitudinalV1 = COMPAS_validarCadenaLongitudinalV1;
 window.COMPAS_obtenerDiagnosticoCadenaLongitudinalV1 = COMPAS_obtenerDiagnosticoCadenaLongitudinalV1;
 
+// ---------------------------------------------------------------------------
+// CONTRATO METODOLOGICO EVALUACION LONGITUDINAL PRUDENTE COMPAS v1
+// Proposito: fijar limites metodologicos de evaluacion longitudinal sin automatismos.
+// Sin IA, scoring, inferencia causal, rankings ni recomendaciones politicas.
+// ---------------------------------------------------------------------------
+
+function COMPAS_celpV1_copiarArray(val) {
+    return Array.isArray(val) ? val.slice() : [];
+}
+
+function COMPAS_celpV1_copiarTiposSeguimiento(val) {
+    var base = {
+        documental: { definicion: '', permitido: true, limites: [] },
+        operativo: { definicion: '', permitido: false, limites: [] },
+        longitudinal: { definicion: '', permitido: true, limites: [] },
+        territorial: { definicion: '', permitido: true, limites: [] }
+    };
+    if (!val || typeof val !== 'object') return base;
+    ['documental', 'operativo', 'longitudinal', 'territorial'].forEach(function(k) {
+        if (val[k] && typeof val[k] === 'object') {
+            base[k] = {
+                definicion: val[k].definicion || base[k].definicion,
+                permitido: !!val[k].permitido,
+                limites: COMPAS_celpV1_copiarArray(val[k].limites)
+            };
+        }
+    });
+    return base;
+}
+
+function COMPAS_celpV1_copiarTiposEvaluacion(val) {
+    var base = {
+        prudente_permitida: { definicion: '', permitido: true, limites: [] },
+        descriptiva_permitida: { definicion: '', permitido: true, limites: [] },
+        causal_no_permitida: { definicion: '', permitido: false, limites: [] },
+        predictiva_no_permitida: { definicion: '', permitido: false, limites: [] }
+    };
+    if (!val || typeof val !== 'object') return base;
+    ['prudente_permitida', 'descriptiva_permitida', 'causal_no_permitida', 'predictiva_no_permitida'].forEach(function(k) {
+        if (val[k] && typeof val[k] === 'object') {
+            base[k] = {
+                definicion: val[k].definicion || base[k].definicion,
+                permitido: !!val[k].permitido,
+                limites: COMPAS_celpV1_copiarArray(val[k].limites)
+            };
+        }
+    });
+    return base;
+}
+
+function COMPAS_crearContratoEvaluacionLongitudinalPrudenteV1(datos) {
+    datos = datos || {};
+    return {
+        contrato: 'contrato_evaluacion_longitudinal_prudente_v1',
+        version: datos.version || 'contrato_evaluacion_longitudinal_prudente_v1',
+        generadoISO: datos.generadoISO || new Date().toISOString(),
+        principiosMetodologicos: COMPAS_celpV1_copiarArray(datos.principiosMetodologicos),
+        usosPermitidos: COMPAS_celpV1_copiarArray(datos.usosPermitidos),
+        usosNoPermitidos: COMPAS_celpV1_copiarArray(datos.usosNoPermitidos),
+        comparacionesAceptables: COMPAS_celpV1_copiarArray(datos.comparacionesAceptables),
+        comparacionesNoAceptables: COMPAS_celpV1_copiarArray(datos.comparacionesNoAceptables),
+        riesgosInvalidacion: COMPAS_celpV1_copiarArray(datos.riesgosInvalidacion),
+        cautelasMetodologicas: COMPAS_celpV1_copiarArray(datos.cautelasMetodologicas),
+        criteriosComparabilidad: COMPAS_celpV1_copiarArray(datos.criteriosComparabilidad),
+        criteriosContinuidad: COMPAS_celpV1_copiarArray(datos.criteriosContinuidad),
+        criteriosExclusion: COMPAS_celpV1_copiarArray(datos.criteriosExclusion),
+        tiposSeguimiento: COMPAS_celpV1_copiarTiposSeguimiento(datos.tiposSeguimiento),
+        tiposEvaluacion: COMPAS_celpV1_copiarTiposEvaluacion(datos.tiposEvaluacion),
+        limites: COMPAS_celpV1_copiarArray(datos.limites),
+        trazabilidad: (datos.trazabilidad && typeof datos.trazabilidad === 'object') ? datos.trazabilidad : {
+            capa: 'contrato_evaluacion_longitudinal_prudente_v1',
+            generadoPor: 'COMPAS_crearContratoEvaluacionLongitudinalPrudenteV1',
+            sinAutomatismoEvaluativo: true
+        }
+    };
+}
+
+function COMPAS_validarContratoEvaluacionLongitudinalPrudenteV1(contratoEval) {
+    var errores = [];
+    var advertencias = [];
+    var arraysCriticos = [
+        'principiosMetodologicos',
+        'usosPermitidos',
+        'usosNoPermitidos',
+        'comparacionesAceptables',
+        'comparacionesNoAceptables',
+        'riesgosInvalidacion',
+        'cautelasMetodologicas',
+        'criteriosComparabilidad',
+        'criteriosContinuidad',
+        'criteriosExclusion',
+        'limites'
+    ];
+    var clavesSeguimiento = ['documental', 'operativo', 'longitudinal', 'territorial'];
+    var clavesEvaluacion = ['prudente_permitida', 'descriptiva_permitida', 'causal_no_permitida', 'predictiva_no_permitida'];
+
+    if (!contratoEval || typeof contratoEval !== 'object') errores.push('contrato_no_objeto');
+    if (contratoEval && contratoEval.contrato !== 'contrato_evaluacion_longitudinal_prudente_v1') {
+        advertencias.push('contrato_no_declarado');
+    }
+    if (contratoEval && !contratoEval.version) advertencias.push('version_no_declarada');
+    if (contratoEval && !contratoEval.generadoISO) advertencias.push('generadoISO_no_declarado');
+    if (contratoEval && (!contratoEval.trazabilidad || typeof contratoEval.trazabilidad !== 'object')) {
+        advertencias.push('trazabilidad_no_objeto');
+    }
+
+    arraysCriticos.forEach(function(campo) {
+        if (contratoEval && !Array.isArray(contratoEval[campo])) errores.push(campo + '_no_array');
+    });
+
+    if (contratoEval && (!contratoEval.tiposSeguimiento || typeof contratoEval.tiposSeguimiento !== 'object')) {
+        errores.push('tiposSeguimiento_no_objeto');
+    } else if (contratoEval) {
+        clavesSeguimiento.forEach(function(k) {
+            if (!contratoEval.tiposSeguimiento[k]) advertencias.push('tipoSeguimiento_' + k + '_ausente');
+        });
+    }
+
+    if (contratoEval && (!contratoEval.tiposEvaluacion || typeof contratoEval.tiposEvaluacion !== 'object')) {
+        errores.push('tiposEvaluacion_no_objeto');
+    } else if (contratoEval) {
+        clavesEvaluacion.forEach(function(k) {
+            if (!contratoEval.tiposEvaluacion[k]) advertencias.push('tipoEvaluacion_' + k + '_ausente');
+        });
+        if (contratoEval.tiposEvaluacion.causal_no_permitida &&
+            contratoEval.tiposEvaluacion.causal_no_permitida.permitido) {
+            errores.push('inferencia_causal_marcada_como_permitida');
+        }
+        if (contratoEval.tiposEvaluacion.predictiva_no_permitida &&
+            contratoEval.tiposEvaluacion.predictiva_no_permitida.permitido) {
+            errores.push('evaluacion_predictiva_marcada_como_permitida');
+        }
+    }
+
+    if (contratoEval && Array.isArray(contratoEval.principiosMetodologicos) && contratoEval.principiosMetodologicos.length === 0) {
+        advertencias.push('sin_principios_metodologicos');
+    }
+    if (contratoEval && Array.isArray(contratoEval.limites) && contratoEval.limites.length === 0) {
+        advertencias.push('sin_limites');
+    }
+    if (contratoEval && Array.isArray(contratoEval.cautelasMetodologicas) && contratoEval.cautelasMetodologicas.length === 0) {
+        advertencias.push('sin_cautelas_metodologicas');
+    }
+
+    if (contratoEval) {
+        try {
+            JSON.stringify(contratoEval);
+        } catch (e) {
+            errores.push('no_serializable_json');
+        }
+    }
+
+    return {
+        version: 'validacion_contrato_evaluacion_longitudinal_prudente_v1',
+        valido: errores.length === 0,
+        errores: errores,
+        advertencias: advertencias
+    };
+}
+
+function COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1() {
+    return COMPAS_crearContratoEvaluacionLongitudinalPrudenteV1({
+        generadoISO: '2026-01-15T00:00:00.000Z',
+        principiosMetodologicos: [
+            'La evaluacion longitudinal prudente se apoya en evidencia documental trazable',
+            'La incompletitud documental no autoriza inferencias de mejora o deterioro',
+            'Toda comparacion exige homologacion de ciclo, corte temporal y fuente',
+            'El contrato no activa automatismos evaluativos ni sustituye LT1 interpretativo'
+        ],
+        usosPermitidos: [
+            'Describir continuidad y cambios documentales entre ciclos',
+            'Verificar compatibilidad metodologica entre capas longitudinales',
+            'Preparar lecturas prudentes para observatorio y mejoramiento municipal',
+            'Contrastar snapshots territoriales con cautelas explicitas'
+        ],
+        usosNoPermitidos: [
+            'Calcular indicadores sanitarios sinteticos',
+            'Inferir causalidad entre politicas y resultados poblacionales',
+            'Emitir rankings o puntuaciones municipales',
+            'Activar recomendaciones politicas automaticas',
+            'Usar IA para completar lagunas documentales'
+        ],
+        comparacionesAceptables: [
+            'Mismo municipio, mismos cortes temporales homologados',
+            'Municipios distintos solo con criterios de comparabilidad explicitos y limites',
+            'Seguimiento documental entre ciclos con trazabilidad de fuentes'
+        ],
+        comparacionesNoAceptables: [
+            'Comparar ciclos sin homologar periodicidad de fuentes',
+            'Comparar municipios con cargas documentales incomparables sin exclusion declarada',
+            'Atribuir cambios documentales a resultados de salud sin triangulacion'
+        ],
+        riesgosInvalidacion: [
+            'Lagunas persistentes no declaradas en consolidacion u observatorio',
+            'Mezclar seguimiento operativo con seguimiento documental sin distincion',
+            'Usar ausencia de datos como evidencia de ausencia de problema',
+            'Comparar snapshots con fechas de corte no homologadas'
+        ],
+        cautelasMetodologicas: [
+            'Distinguir siempre seguimiento documental de seguimiento operativo',
+            'No interpretar exclusiones de ciclo como fallo municipal',
+            'Explicitar limites antes de cualquier lectura evaluativa posterior'
+        ],
+        criteriosComparabilidad: [
+            'Contrato de fuente territorial v1 valido',
+            'Ciclo y corte temporal declarados',
+            'Riesgos de comparabilidad registrados en capa longitudinal'
+        ],
+        criteriosContinuidad: [
+            'Continuidad documental verificable entre inventarios y cortes',
+            'Coherencia entre estructura temporal, lectura y consolidacion municipal'
+        ],
+        criteriosExclusion: [
+            'Consolidacion municipal invalida o ausente',
+            'Ciclo no identificado o duplicado',
+            'Municipio incompatible entre entradas de observatorio'
+        ],
+        tiposSeguimiento: {
+            documental: {
+                definicion: 'Seguimiento de disponibilidad, calidad y trazabilidad de fuentes y repositorios',
+                permitido: true,
+                limites: ['No equivale a seguimiento de resultados en salud']
+            },
+            operativo: {
+                definicion: 'Seguimiento de ejecucion de actuaciones, recursos y procesos en territorio',
+                permitido: false,
+                limites: ['Requiere evidencia operativa independiente; no inferible solo desde documentos']
+            },
+            longitudinal: {
+                definicion: 'Organizacion prudente de ciclos, cortes y ventanas sin inferir evolucion sanitaria',
+                permitido: true,
+                limites: ['No calcular tendencias epidemiologicas desde esta capa']
+            },
+            territorial: {
+                definicion: 'Lectura estructurada de desigualdades, participacion y vulnerabilidad a nivel municipal',
+                permitido: true,
+                limites: ['No convertir lecturas tematicas en indicadores sinteticos']
+            }
+        },
+        tiposEvaluacion: {
+            prudente_permitida: {
+                definicion: 'Evaluacion contextualizada con cautelas, limites y triangulacion declarada',
+                permitido: true,
+                limites: ['Debe citar fuentes y riesgos de invalidacion']
+            },
+            descriptiva_permitida: {
+                definicion: 'Descripcion estructurada de hallazgos documentales sin atribucion causal',
+                permitido: true,
+                limites: ['Sin juicios de eficacia ni eficiencia automaticos']
+            },
+            causal_no_permitida: {
+                definicion: 'Atribucion de cambios a intervenciones, politicas o determinantes sin diseno causal',
+                permitido: false,
+                limites: ['Invalida inferencias desde esta capa contractual']
+            },
+            predictiva_no_permitida: {
+                definicion: 'Proyeccion de resultados futuros o escenarios probabilisticos automatizados',
+                permitido: false,
+                limites: ['No autorizada en evaluacion longitudinal prudente v1']
+            }
+        },
+        limites: [
+            'Contrato metodologico pasivo; no ejecuta evaluacion ni persiste en Firebase',
+            'Compatible con cadena longitudinal documental v1 y diagnostico de cadena',
+            'No sustituye evaluacion real/exploratoria ni motores IA de COMPAS'
+        ],
+        trazabilidad: {
+            capa: 'contrato_evaluacion_longitudinal_prudente_v1',
+            alineacion: 'RELAS y EPVSA 2024-2030 — lectura prudente sin automatismo',
+            capasLongitudinalesCompatibles: [
+                'contratoFuentesTerritorialesV1',
+                'auditoriaTerritorialV1',
+                'catalogoTerritorialV1',
+                'longitudinalTemporalV1',
+                'lecturaLongitudinalTerritorialV1',
+                'consolidacionLongitudinalMunicipalV1',
+                'observatorioTerritorialLongitudinalV1',
+                'snapshotTerritorialLongitudinalV1',
+                'validacionCadenaLongitudinalV1'
+            ],
+            generadoPor: 'COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1'
+        }
+    });
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.contratoEvaluacionLongitudinalPrudenteV1 = {
+    version: 'contrato_evaluacion_longitudinal_prudente_v1',
+    crearContrato: COMPAS_crearContratoEvaluacionLongitudinalPrudenteV1,
+    validarContrato: COMPAS_validarContratoEvaluacionLongitudinalPrudenteV1,
+    ejemplo: COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1
+};
+window.COMPAS_crearContratoEvaluacionLongitudinalPrudenteV1 = COMPAS_crearContratoEvaluacionLongitudinalPrudenteV1;
+window.COMPAS_validarContratoEvaluacionLongitudinalPrudenteV1 = COMPAS_validarContratoEvaluacionLongitudinalPrudenteV1;
+window.COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1 = COMPAS_obtenerEjemploContratoEvaluacionLongitudinalPrudenteV1;
+
 function _lt1_tieneArray(v) {
     return Array.isArray(v) && v.length > 0;
 }
