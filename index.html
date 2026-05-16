@@ -71198,6 +71198,8 @@ function COMPAS_crearSnapshotEvaluacion() {
     if (_baseLong.totalCiclo === 0) lecturaEvaluativaLongitudinal.limitaciones.push('sin_actuaciones_del_ciclo');
     if (_comunidadLong.alcance === 'agenda_completa_cargada') lecturaEvaluativaLongitudinal.limitaciones.push('lectura_comunitaria_no_filtrada_por_ciclo');
 
+    var contratoSnapshotEvaluacion = 'snapshot_evaluacion_v1';
+
     var validacionSnapshotEvaluacion = {
         version: 'validacion_snapshot_evaluacion_v1',
         valido: true,
@@ -71210,6 +71212,9 @@ function COMPAS_crearSnapshotEvaluacion() {
     }
     function _advertenciaSnapshot(mensaje) {
         validacionSnapshotEvaluacion.advertencias.push(mensaje);
+    }
+    if (contratoSnapshotEvaluacion !== 'snapshot_evaluacion_v1') {
+        _errorSnapshot('contrato_snapshot_evaluacion_invalido');
     }
     var _contratoAgendaEval = agendaEvaluacion && agendaEvaluacion.contratoAgendaEvaluacion;
     var _validacionAgendaEval = agendaEvaluacion && agendaEvaluacion.validacionAgendaEvaluacion;
@@ -71308,6 +71313,7 @@ function COMPAS_crearSnapshotEvaluacion() {
 
     return {
         version: 'snapshot_evaluacion_v0',
+        contratoSnapshotEvaluacion: contratoSnapshotEvaluacion,
         fechaISO: generadoISO,
         contratoLongitudinal: 'evaluacion_longitudinal_v1',
         generadoISO: generadoISO,
