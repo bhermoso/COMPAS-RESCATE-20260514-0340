@@ -71575,6 +71575,34 @@ function eval_actualizarDashboard() {
     }
 
 
+    var longitudinalHtml = '';
+    var _snapshotEvalDashboard = window.COMPAS && typeof window.COMPAS.obtenerSnapshotEvaluacionActual === 'function'
+        ? window.COMPAS.obtenerSnapshotEvaluacionActual()
+        : null;
+    if (_snapshotEvalDashboard &&
+        _snapshotEvalDashboard.resumenCicloEvaluacion &&
+        _snapshotEvalDashboard.lecturaEvaluativaLongitudinal) {
+        var _resDash = _snapshotEvalDashboard.resumenCicloEvaluacion;
+        var _lecDash = _snapshotEvalDashboard.lecturaEvaluativaLongitudinal;
+        var _valDash = _snapshotEvalDashboard.validacionSnapshotEvaluacion || { valido: true, errores: [], advertencias: [] };
+        var _clasDash = _lecDash.clasificaciones || {};
+
+        longitudinalHtml += '<div style="margin-top:0.55rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0.55rem 0.75rem;font-size:0.72rem;color:#475569;">';
+        longitudinalHtml += '<div style="font-weight:700;color:#334155;margin-bottom:0.3rem;">Lectura longitudinal del ciclo</div>';
+        longitudinalHtml += '<div style="display:flex;flex-wrap:wrap;gap:0.35rem 0.7rem;">';
+        longitudinalHtml += '<span>Ciclo: <strong>' + (_snapshotEvalDashboard.cicloEvaluado || _resDash.ciclo || '-') + '</strong></span>';
+        longitudinalHtml += '<span>Actuaciones del ciclo: <strong>' + (_resDash.totalCiclo || 0) + '</strong></span>';
+        if ((_resDash.totalFueraCiclo || 0) > 0) {
+            longitudinalHtml += '<span>Fuera de ciclo: <strong>' + _resDash.totalFueraCiclo + '</strong></span>';
+        }
+        if (_clasDash.temporalidad) longitudinalHtml += '<span>Temporalidad: <strong>' + _clasDash.temporalidad.estado + '</strong></span>';
+        if (_clasDash.trazabilidad) longitudinalHtml += '<span>Trazabilidad: <strong>' + _clasDash.trazabilidad.estado + '</strong></span>';
+        longitudinalHtml += '</div>';
+        if (_valDash.valido === false) {
+            longitudinalHtml += '<div style="margin-top:0.3rem;color:#92400e;">Aviso t&#233;cnico: validaci&#243;n interna del snapshot con incidencias.</div>';
+        }
+        longitudinalHtml += '</div>';
+    }
 
     // ── Aviso de modo de evaluación ────────────────────────────────────
     var _modoEval = (window.COMPAS && window.COMPAS.state && window.COMPAS.state._evaluacionModo)
@@ -71585,7 +71613,7 @@ function eval_actualizarDashboard() {
 
         '<div style="padding:1rem 1.5rem;">' +
 
-        kpiHtml + barHtml + issDetalleHtml + fuentesHtml +
+        kpiHtml + barHtml + issDetalleHtml + fuentesHtml + longitudinalHtml +
 
         '</div>';
 
