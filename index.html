@@ -25507,6 +25507,44 @@ function actuacion_proyectarEvaluacion(actuaciones) {
 
 }
 
+function COMPAS_calcularMetricasActuacionesEvaluacion(actuaciones) {
+    var total = Array.isArray(actuaciones) ? actuaciones.length : 0;
+    var proy = { porEstado: {} };
+
+    try {
+        if (typeof actuacion_proyectarEvaluacion === 'function' && total > 0) {
+            proy = actuacion_proyectarEvaluacion(actuaciones);
+        }
+    } catch(e) {
+        console.warn('[COMPÁS EVALUACIÓN] calcular métricas actuaciones falló:', e);
+    }
+
+    var porEstado = proy.porEstado || {};
+    var finalizadas = porEstado.finalizada || 0;
+    var enEjecucion = porEstado['en ejecucion'] || 0;
+    var suspendidas = porEstado.suspendida || 0;
+    var planificadas = Math.max(0, total - finalizadas - enEjecucion - suspendidas);
+
+    function _pct(n) {
+        return total > 0 ? Math.round((n / total) * 100) : 0;
+    }
+
+    return {
+        total: total,
+        finalizadas: finalizadas,
+        enEjecucion: enEjecucion,
+        suspendidas: suspendidas,
+        planificadas: planificadas,
+        pctFinalizadas: _pct(finalizadas),
+        pctEnEjecucion: _pct(enEjecucion),
+        pctSuspendidas: _pct(suspendidas),
+        pctPlanificadas: _pct(planificadas)
+    };
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.calcularMetricasActuacionesEvaluacion = COMPAS_calcularMetricasActuacionesEvaluacion;
+
 function actuacion_clasificarCicloEvaluacion(act, ciclo) {
     var cicloStr = (ciclo !== undefined && ciclo !== null && String(ciclo).trim())
         ? String(ciclo).trim()
