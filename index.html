@@ -71223,24 +71223,27 @@ function COMPAS_crearSnapshotEvaluacion() {
     function _advertenciaSnapshot(mensaje) {
         validacionSnapshotEvaluacion.advertencias.push(mensaje);
     }
+    function _validarLecturaContratoSnapshot() {
+        if (!lecturaContratoSnapshot || typeof lecturaContratoSnapshot !== 'object') {
+            _errorSnapshot('lectura_contrato_snapshot_ausente');
+        } else {
+            if (lecturaContratoSnapshot.contrato !== 'lectura_snapshot_evaluacion_v1') {
+                _errorSnapshot('lectura_contrato_snapshot_invalida');
+            }
+            if (typeof lecturaContratoSnapshot.totalActuacionesCiclo !== 'number') {
+                _advertenciaSnapshot('lectura_contrato_snapshot_total_ciclo_no_numerico');
+            }
+            var _camposMinimosLectura = ['cicloEvaluado', 'totalActuacionesCiclo', 'estadoTemporalidad', 'estadoTrazabilidad'];
+            var _camposFaltantes = _camposMinimosLectura.filter(function(c) { return !(c in lecturaContratoSnapshot); });
+            if (_camposFaltantes.length > 0) {
+                _advertenciaSnapshot('lectura_contrato_snapshot_campos_incompletos');
+            }
+        }
+    }
     if (contratoSnapshotEvaluacion !== 'snapshot_evaluacion_v1') {
         _errorSnapshot('contrato_snapshot_evaluacion_invalido');
     }
-    if (!lecturaContratoSnapshot || typeof lecturaContratoSnapshot !== 'object') {
-        _errorSnapshot('lectura_contrato_snapshot_ausente');
-    } else {
-        if (lecturaContratoSnapshot.contrato !== 'lectura_snapshot_evaluacion_v1') {
-            _errorSnapshot('lectura_contrato_snapshot_invalida');
-        }
-        if (typeof lecturaContratoSnapshot.totalActuacionesCiclo !== 'number') {
-            _advertenciaSnapshot('lectura_contrato_snapshot_total_ciclo_no_numerico');
-        }
-        var _camposMinimosLectura = ['cicloEvaluado', 'totalActuacionesCiclo', 'estadoTemporalidad', 'estadoTrazabilidad'];
-        var _camposFaltantes = _camposMinimosLectura.filter(function(c) { return !(c in lecturaContratoSnapshot); });
-        if (_camposFaltantes.length > 0) {
-            _advertenciaSnapshot('lectura_contrato_snapshot_campos_incompletos');
-        }
-    }
+    _validarLecturaContratoSnapshot();
     var _contratoAgendaEval = agendaEvaluacion && agendaEvaluacion.contratoAgendaEvaluacion;
     var _validacionAgendaEval = agendaEvaluacion && agendaEvaluacion.validacionAgendaEvaluacion;
     if (_contratoAgendaEval !== 'agenda_evaluacion_v1') {
