@@ -72321,13 +72321,16 @@ function eval_actualizarJornada() {
 
     var agenda = Array.isArray(_agendaEval.actuaciones) ? _agendaEval.actuaciones : [];
 
-    var nTotal    = agenda.length;
+    var _metricasJornada = (window.COMPAS && typeof window.COMPAS.calcularMetricasActuacionesEvaluacion === 'function')
+        ? window.COMPAS.calcularMetricasActuacionesEvaluacion(agenda)
+        : COMPAS_calcularMetricasActuacionesEvaluacion(agenda);
 
-    var nFin      = agenda.filter(function(a){ return a.estado === 'finalizada'; }).length;
-
-    var nEje      = agenda.filter(function(a){ return a.estado === 'en ejecucion'; }).length;
-
-    var pctFin    = nTotal > 0 ? Math.round(nFin / nTotal * 100) : 0;
+    var nTotal = _metricasJornada.total;
+    var nFin = _metricasJornada.finalizadas;
+    var nEje = _metricasJornada.enEjecucion;
+    var nSus = _metricasJornada.suspendidas;
+    var nPla = _metricasJornada.planificadas;
+    var pctFin = _metricasJornada.pctFinalizadas;
 
     var diagnosticoVivo = window.COMPAS && typeof window.COMPAS.proyectarDiagnostico === 'function'
       ? window.COMPAS.proyectarDiagnostico(agenda)
@@ -72463,10 +72466,6 @@ function eval_actualizarJornada() {
 
         var estadoLabel = pctFin >= 75 ? 'Ejecuci&#243;n avanzada' : (pctFin >= 40 ? 'En curso' : 'Fase inicial');
 
-        var nSus = agenda.filter(function(a){ return a.estado === 'suspendida'; }).length;
-
-        var nPla = nTotal - nFin - nEje - nSus;
-
         html += '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:0.85rem 1rem;">';
 
         html += '<div style="font-weight:700;color:#c2410c;font-size:0.85rem;margin-bottom:0.5rem;">' + estadoIcono + ' Estado del plan &middot; ' + estadoLabel + '</div>';
@@ -72475,9 +72474,9 @@ function eval_actualizarJornada() {
 
         if (nTotal > 0) {
 
-            var _bF = pctFin, _bE = nTotal > 0 ? Math.round(nEje/nTotal*100) : 0;
+            var _bF = pctFin, _bE = _metricasJornada.pctEnEjecucion;
 
-            var _bS = nTotal > 0 ? Math.round(nSus/nTotal*100) : 0;
+            var _bS = _metricasJornada.pctSuspendidas;
 
             html += '<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e2e8f0;margin-bottom:0.55rem;">';
 
