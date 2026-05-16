@@ -25841,12 +25841,35 @@ function COMPAS_obtenerAgendaEvaluacion() {
         console.warn('[COMPÁS AGENDA EVALUACIÓN] actuacion_proyectarEvaluacion falló:', e);
     }
 
+    var validacionAgendaEvaluacion = {
+        valido: true,
+        errores: [],
+        advertencias: []
+    };
+    function _errorAgendaEvaluacion(mensaje) {
+        validacionAgendaEvaluacion.errores.push(mensaje);
+        validacionAgendaEvaluacion.valido = false;
+    }
+    function _esObjetoAgendaEvaluacion(valor) {
+        return !!valor && typeof valor === 'object' && !Array.isArray(valor);
+    }
+    if (total !== actuaciones.length) _errorAgendaEvaluacion('total_no_coincide_con_actuaciones_length');
+    if (proyeccion) {
+        if (proyeccion.total !== total) _errorAgendaEvaluacion('proyeccion_total_no_coincide_con_total');
+        if (!_esObjetoAgendaEvaluacion(proyeccion.porEstado)) _errorAgendaEvaluacion('proyeccion_porEstado_invalida');
+        if (!_esObjetoAgendaEvaluacion(proyeccion.porEntorno)) _errorAgendaEvaluacion('proyeccion_porEntorno_invalida');
+        if (!_esObjetoAgendaEvaluacion(proyeccion.porPrograma)) _errorAgendaEvaluacion('proyeccion_porPrograma_invalida');
+        if (!_esObjetoAgendaEvaluacion(proyeccion.porEstrategia)) _errorAgendaEvaluacion('proyeccion_porEstrategia_invalida');
+    }
+
     return {
+        contratoAgendaEvaluacion: 'agenda_evaluacion_v1',
         fuente: fuente,
         municipio: municipio,
         actuaciones: actuaciones,
         total: total,
-        proyeccion: proyeccion
+        proyeccion: proyeccion,
+        validacionAgendaEvaluacion: validacionAgendaEvaluacion
     };
 }
 
