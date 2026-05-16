@@ -71696,17 +71696,24 @@ function eval_actualizarDashboard() {
         var _lecDash = _snapshotEvalDashboard.lecturaEvaluativaLongitudinal;
         var _valDash = _snapshotEvalDashboard.validacionSnapshotEvaluacion || { valido: true, errores: [], advertencias: [] };
         var _clasDash = _lecDash.clasificaciones || {};
+        var _lcsDash = _snapshotEvalDashboard.lecturaContratoSnapshot || null;
+
+        var _cicloEvaluadoDash   = (_lcsDash && _lcsDash.cicloEvaluado    != null) ? _lcsDash.cicloEvaluado    : (_snapshotEvalDashboard.cicloEvaluado || _resDash.ciclo || '-');
+        var _totalCicloDash      = (_lcsDash && _lcsDash.totalActuacionesCiclo != null) ? _lcsDash.totalActuacionesCiclo : (_resDash.totalCiclo || 0);
+        var _estadoTempDash      = (_lcsDash && _lcsDash.estadoTemporalidad != null) ? _lcsDash.estadoTemporalidad : (_clasDash.temporalidad ? _clasDash.temporalidad.estado : null);
+        var _estadoTrazDash      = (_lcsDash && _lcsDash.estadoTrazabilidad != null) ? _lcsDash.estadoTrazabilidad : (_clasDash.trazabilidad ? _clasDash.trazabilidad.estado : null);
+        var _totalFueraCicloDash = (_lcsDash && _lcsDash.totalActuacionesFueraCiclo != null) ? _lcsDash.totalActuacionesFueraCiclo : (_resDash.totalFueraCiclo || 0);
 
         longitudinalHtml += '<div style="margin-top:0.55rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0.55rem 0.75rem;font-size:0.72rem;color:#475569;">';
         longitudinalHtml += '<div style="font-weight:700;color:#334155;margin-bottom:0.3rem;">Lectura longitudinal del ciclo</div>';
         longitudinalHtml += '<div style="display:flex;flex-wrap:wrap;gap:0.35rem 0.7rem;">';
-        longitudinalHtml += '<span>Ciclo: <strong>' + (_snapshotEvalDashboard.cicloEvaluado || _resDash.ciclo || '-') + '</strong></span>';
-        longitudinalHtml += '<span>Actuaciones del ciclo: <strong>' + (_resDash.totalCiclo || 0) + '</strong></span>';
-        if ((_resDash.totalFueraCiclo || 0) > 0) {
-            longitudinalHtml += '<span>Fuera de ciclo: <strong>' + _resDash.totalFueraCiclo + '</strong></span>';
+        longitudinalHtml += '<span>Ciclo: <strong>' + _cicloEvaluadoDash + '</strong></span>';
+        longitudinalHtml += '<span>Actuaciones del ciclo: <strong>' + _totalCicloDash + '</strong></span>';
+        if (_totalFueraCicloDash > 0) {
+            longitudinalHtml += '<span>Fuera de ciclo: <strong>' + _totalFueraCicloDash + '</strong></span>';
         }
-        if (_clasDash.temporalidad) longitudinalHtml += '<span>Temporalidad: <strong>' + _clasDash.temporalidad.estado + '</strong></span>';
-        if (_clasDash.trazabilidad) longitudinalHtml += '<span>Trazabilidad: <strong>' + _clasDash.trazabilidad.estado + '</strong></span>';
+        if (_estadoTempDash) longitudinalHtml += '<span>Temporalidad: <strong>' + _estadoTempDash + '</strong></span>';
+        if (_estadoTrazDash) longitudinalHtml += '<span>Trazabilidad: <strong>' + _estadoTrazDash + '</strong></span>';
         longitudinalHtml += '</div>';
         if (_valDash.valido === false) {
             longitudinalHtml += '<div style="margin-top:0.3rem;color:#92400e;">Aviso t&#233;cnico: validaci&#243;n interna del snapshot con incidencias.</div>';
