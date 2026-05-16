@@ -71731,23 +71731,31 @@ function eval_actualizarProceso() {
     ? COMPAS_obtenerAgendaEvaluacion().actuaciones
     : [];
 
-    var nAcciones    = agenda.length;
+    var _metricasProceso = (window.COMPAS && typeof window.COMPAS.calcularMetricasActuacionesEvaluacion === 'function')
+        ? window.COMPAS.calcularMetricasActuacionesEvaluacion(agenda)
+        : COMPAS_calcularMetricasActuacionesEvaluacion(agenda);
 
-    var tieneAgenda  = nAcciones > 0;
+    var nAcciones = _metricasProceso.total;
 
-    var nFinalizadas = 0, nEjecucion = 0, nSuspendidas = 0, nPlanificadas = 0;
+    var tieneAgenda = nAcciones > 0;
+
+    var nFinalizadas = _metricasProceso.finalizadas;
+
+    var nEjecucion = _metricasProceso.enEjecucion;
+
+    var nSuspendidas = _metricasProceso.suspendidas;
+
+    var nPlanificadas = _metricasProceso.planificadas;
+
+    var pctFinalizado = _metricasProceso.pctFinalizadas;
+
+    var pctEjecucion = _metricasProceso.pctEnEjecucion;
+
+    var pctPendiente = _metricasProceso.pctPlanificadas;
 
     var entornosSet  = {};
 
     agenda.forEach(function(a) {
-
-        if (a.estado === 'finalizada')    nFinalizadas++;
-
-        else if (a.estado === 'en ejecucion') nEjecucion++;
-
-        else if (a.estado === 'suspendida')   nSuspendidas++;
-
-        else                                  nPlanificadas++;
 
         if (a.entorno) entornosSet[a.entorno] = true;
 
@@ -71756,14 +71764,6 @@ function eval_actualizarProceso() {
     var entornos     = Object.keys(entornosSet);
 
     var multiEntorno = entornos.length >= 2;
-
-    var pctFinalizado = nAcciones > 0 ? Math.round(nFinalizadas / nAcciones * 100) : 0;
-
-    var pctEjecucion  = nAcciones > 0 ? Math.round(nEjecucion  / nAcciones * 100) : 0;
-
-    var pctPendiente  = nAcciones > 0 ? Math.round(nPlanificadas / nAcciones * 100) : 0;
-
-
 
     // ── Semáforo helper ──────────────────────────────────────────────
 
@@ -71899,7 +71899,7 @@ function eval_actualizarProceso() {
 
         var barEje = pctEjecucion;
 
-        var barSus = nAcciones > 0 ? Math.round(nSuspendidas / nAcciones * 100) : 0;
+        var barSus = _metricasProceso.pctSuspendidas;
 
         var barPla = 100 - barFin - barEje - barSus;
 
