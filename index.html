@@ -77398,16 +77398,66 @@ async function at2_generar() {
         _setProgress(85, 'Procesando resultado…');
         await new Promise(function(res){ setTimeout(res, 200); });
 
-        // Seleccionar objeto de render
+        // ── Helpers de detección ──────────────────────────────────────
+        function _tieneTexto(o) {
+            if (!o) return false;
+            if (Array.isArray(o.conclusiones)    && o.conclusiones.length)    return true;
+            if (Array.isArray(o.recomendaciones) && o.recomendaciones.length) return true;
+            var base = o.renderCientifico || o;
+            if (base && base.narrativa && base.narrativa.contexto) return true;
+            return false;
+        }
+        function _tienePrioridades(o) {
+            if (!o) return false;
+            var base = o.renderCientifico || o;
+            return Array.isArray(base.propuestaEPVSA) && base.propuestaEPVSA.length > 0;
+        }
+        function _hayTextoAnaliticoDisponible() {
+            return _tieneTexto(window.analisisActual) || _tieneTexto(window.analisisActualV3);
+        }
+
+        // ── Espera activa: hasta 2500 ms en pasos de 150 ms ──────────
+        if (!_hayTextoAnaliticoDisponible()) {
+            _setProgress(88, 'Consolidando conclusiones y recomendaciones…');
+            var _inicioEspera = Date.now();
+            while (!_hayTextoAnaliticoDisponible() && Date.now() - _inicioEspera < 2500) {
+                await new Promise(function(res){ setTimeout(res, 150); });
+            }
+        }
+
+        // ── Selección segura del objeto de render ─────────────────────
+        var v3     = window.analisisActualV3 || null;
+        var actual = window.analisisActual   || null;
+
+        var v3TieneTexto         = _tieneTexto(v3);
+        var actualTieneTexto     = _tieneTexto(actual);
+        var v3TienePrioridades   = _tienePrioridades(v3);
+
         var obj = null;
-        var v3  = window.analisisActualV3;
-        if (v3 &&
-            ((Array.isArray(v3.conclusiones)    && v3.conclusiones.length)    ||
-             (Array.isArray(v3.recomendaciones) && v3.recomendaciones.length) ||
-             (Array.isArray(v3.propuestaEPVSA)  && v3.propuestaEPVSA.length))) {
+
+        if (v3TieneTexto) {
+            // V3 tiene contenido narrativo completo → usar directo
             obj = v3;
-        } else if (window.analisisActual) {
-            obj = window.analisisActual;
+        } else if (actualTieneTexto && v3TienePrioridades) {
+            // actual tiene texto, v3 tiene propuestaEPVSA → fusionar
+            // Copiar actual superficialmente y sobrescribir propuestaEPVSA
+            obj = Object.assign({}, actual);
+            var v3Base     = v3.renderCientifico || v3;
+            var actualBase = actual.renderCientifico || actual;
+            // Si el contenido narrativo vive en renderCientifico, fusionar ahí
+            if (actual.renderCientifico) {
+                obj.renderCientifico = Object.assign({}, actual.renderCientifico, {
+                    propuestaEPVSA: v3Base.propuestaEPVSA
+                });
+            } else {
+                obj.propuestaEPVSA = v3Base.propuestaEPVSA;
+            }
+        } else if (actualTieneTexto) {
+            // Solo actual tiene texto, sin propuestaEPVSA en v3
+            obj = actual;
+        } else if (v3TienePrioridades || actual) {
+            // Solo prioridades o fallback último recurso
+            obj = v3 || actual;
         }
 
         if (!obj) {
