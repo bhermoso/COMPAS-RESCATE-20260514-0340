@@ -71366,25 +71366,25 @@ function eval_actualizarDashboard() {
         ? _agendaEvalDashboard.actuaciones
         : [];
 
-    var _estadoDashboard = (_agendaEvalDashboard.proyeccion && _agendaEvalDashboard.proyeccion.porEstado)
-        ? _agendaEvalDashboard.proyeccion.porEstado
-        : {};
+    var _metricasDashboard = (window.COMPAS && typeof window.COMPAS.calcularMetricasActuacionesEvaluacion === 'function')
+        ? window.COMPAS.calcularMetricasActuacionesEvaluacion(agenda)
+        : COMPAS_calcularMetricasActuacionesEvaluacion(agenda);
 
-    var nTotal = _agendaEvalDashboard.total || agenda.length;
+    var nTotal = _metricasDashboard.total;
 
-    var nFin = _estadoDashboard.finalizada || 0;
+    var nFin = _metricasDashboard.finalizadas;
 
-    var nEje = _estadoDashboard['en ejecucion'] || 0;
+    var nEje = _metricasDashboard.enEjecucion;
 
-    var nSus = _estadoDashboard.suspendida || 0;
+    var nSus = _metricasDashboard.suspendidas;
 
-    var nPla = nTotal - nFin - nEje - nSus;
+    var nPla = _metricasDashboard.planificadas;
 
-    var pctFin = nTotal > 0 ? Math.round(nFin / nTotal * 100) : 0;
+    var pctFin = _metricasDashboard.pctFinalizadas;
 
-    var pctEje = nTotal > 0 ? Math.round(nEje / nTotal * 100) : 0;
+    var pctEje = _metricasDashboard.pctEnEjecucion;
 
-    var pctPla = nTotal > 0 ? Math.round(nPla / nTotal * 100) : 0;
+    var pctPla = _metricasDashboard.pctPlanificadas;
 
 
 
@@ -71520,7 +71520,7 @@ function eval_actualizarDashboard() {
 
     if (pctEje > 0) barHtml += '<div style="width:' + pctEje + '%;background:#0074c8;transition:width .4s;"></div>';
 
-    if (nSus > 0) { var pctSus = Math.round(nSus/nTotal*100); barHtml += '<div style="width:' + pctSus + '%;background:#fbbf24;"></div>'; }
+    if (nSus > 0) { var pctSus = _metricasDashboard.pctSuspendidas; barHtml += '<div style="width:' + pctSus + '%;background:#fbbf24;"></div>'; }
 
     barHtml += '</div></div>';
 
