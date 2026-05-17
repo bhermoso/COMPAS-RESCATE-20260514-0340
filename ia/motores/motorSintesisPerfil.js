@@ -109,14 +109,8 @@ function _calcularAnalisisModular(contextoIA) {
                 });
             });
     }
-    if (nDet > 0) {
-        fortalezas.push({
-            id:          'determinantes_presentes',
-            texto:       `Se dispone de ${nDet} determinantes de la salud (Encuesta Andaluza de Salud).`,
-            fuente_tipo: 'determinantes',
-            especifica:  false,
-        });
-    }
+    // [auditoría 2026-05-17] 'determinantes_presentes' eliminado: es metadato de fuente,
+    // no fortaleza territorial. "Se dispone de N determinantes" no describe el territorio.
 
     // ── Oportunidades (indicadores CMI a mejorar) ──────────────────────────
     const oportunidades = [];
@@ -441,13 +435,8 @@ function _calcularAnalisisModular(contextoIA) {
         }
     }
 
-    // Determinantes sociales (ID: 'determinantes_sociales')
-    if (nDet > 0) {
-        conclusiones.push({
-            id:    'determinantes_sociales',
-            texto: `Se han considerado ${nDet} determinantes sociales de la salud (Encuesta Andaluza de Salud) en el diagnóstico territorial.`,
-        });
-    }
+    // [auditoría 2026-05-17] 'determinantes_sociales' eliminado: metadato de fuente, no análisis.
+    // "Se han considerado N determinantes" describe el procedimiento, no el territorio.
 
     // Priorización ciudadana (ID: 'priorizacion_ciudadana')
     if (f.tienePopular && f.nParticipantes > 0) {
@@ -457,25 +446,11 @@ function _calcularAnalisisModular(contextoIA) {
         });
     }
 
-    // Estudios complementarios (ID: 'estudios_complementarios')
-    if (f.tieneEstudios && f.nEstudios > 0) {
-        conclusiones.push({
-            id:    'estudios_complementarios',
-            texto: `Se han incorporado ${f.nEstudios} estudio(s) complementario(s) al diagnóstico.`,
-        });
-    }
-
-    // Marco salutogénico (siempre presente — ID: 'marco_salutogenico')
-    conclusiones.push({
-        id:    'marco_salutogenico',
-        texto: `El análisis se enmarca en el enfoque salutogénico, orientado a identificar los recursos y activos para la salud del territorio.`,
-    });
-
-    // Alineamiento EPVSA (siempre presente — ID: 'epvsa_alineamiento')
-    conclusiones.push({
-        id:    'epvsa_alineamiento',
-        texto: `El diagnóstico se encuadra en la Estrategia para la Promoción de la Vida Saludable en Andalucía (EPVSA 2024-2030).`,
-    });
+    // [auditoría 2026-05-17] Tres conclusiones procedimentales eliminadas:
+    // - 'estudios_complementarios': "Se han incorporado N estudios" → metadato de fuente.
+    // - 'marco_salutogenico': "El análisis se enmarca en el enfoque salutogénico" → framing universal.
+    // - 'epvsa_alineamiento': "El diagnóstico se encuadra en EPVSA" → framing institucional universal.
+    // Ninguna describe el territorio; todas son idénticas en cualquier municipio.
 
     // ── Recomendaciones ────────────────────────────────────────────────────
     const recomendaciones = [];
@@ -502,31 +477,12 @@ function _calcularAnalisisModular(contextoIA) {
             });
     }
 
-    // Mapeo de activos (ID: 'mapeo_activos')
-    recomendaciones.push({
-        id:    'mapeo_activos',
-        texto: 'Identificar y movilizar los activos para la salud del territorio como recurso prioritario para las intervenciones.',
-    });
-
-    // RELAS gobernanza (ID: 'relas_gobernanza')
-    recomendaciones.push({
-        id:    'relas_gobernanza',
-        texto: 'Incorporar las RELAS como estructura de gobernanza participativa en el seguimiento del plan.',
-    });
-
-    // Estudios (ID: 'rec_estudios')
-    if (f.tieneEstudios) {
-        recomendaciones.push({
-            id:    'rec_estudios',
-            texto: `Integrar los ${f.nEstudios || '?'} estudios complementarios en el diseño de intervenciones y su seguimiento.`,
-        });
-    }
-
-    // Evaluación participativa (ID: 'evaluacion_participativa')
-    recomendaciones.push({
-        id:    'evaluacion_participativa',
-        texto: 'Establecer un sistema de seguimiento y evaluación participativo que integre los 50 indicadores del Cuadro de Mandos Integral.',
-    });
+    // [auditoría 2026-05-17] Cuatro recomendaciones universales eliminadas:
+    // - 'mapeo_activos': "Identificar y movilizar activos..." → aplicable a cualquier municipio.
+    // - 'relas_gobernanza': "Incorporar RELAS como estructura..." → universal, no territorial.
+    // - 'rec_estudios': "Integrar los N estudios..." → genérico, sin contenido del estudio.
+    // - 'evaluacion_participativa': "Establecer sistema de seguimiento..." → universal.
+    // Las recomendaciones territoriales reales quedan en priorizacion (por área) y participacion.
 
     // ── datosAnalisis (estadísticas CMI) ──────────────────────────────────
     const datosAnalisis = {
@@ -954,6 +910,944 @@ function _calcularConfianza(resultado, contextoIA) {
  * Salida:   SalidaMotor con { perfil, priorizacion, propuestaEPVSA, conclusiones, recomendaciones }
  * Revisión: PENDIENTE — el técnico debe revisar antes de usar el resultado.
  */
+// -----------------------------------------------------------------------------
+// MOTOR SINTESIS PERFIL v4 - CAPA INTERPRETATIVA PARALELA
+// -----------------------------------------------------------------------------
+
+const V4_VERSION = '4.0.0-paralela';
+
+const V4_REGLAS_EPISTEMOLOGICAS = Object.freeze([
+    'Separar observacion, evidencia, inferencia, hipotesis y recomendacion.',
+    'No convertir marcos estrategicos en evidencia territorial directa.',
+    'Las estrategias secundarias solo refuerzan senales territoriales previas.',
+    'El mapeo de activos comunitarios es recomendacion estructural RELAS universal.',
+    'Graduar la incertidumbre y evitar conclusiones causales sin soporte suficiente.',
+    'Preservar propuestaEPVSA v3 sin sustituirla en esta fase.',
+]);
+
+const V4_ESTRATEGIAS_SECUNDARIAS = Object.freeze([
+    {
+        id: 'vida_sin_humo',
+        label: 'Vida Sin Humo / tabaquismo',
+        patron: /vida\s+sin\s+humo|tabac|tabaqu|fumar|humo|cigarr/i,
+        senal: /tabac|tabaqu|fumar|humo|cigarr|consumo\s+responsable|adicc/i,
+    },
+    {
+        id: 'alcohol_y_adicciones',
+        label: 'Alcohol y adicciones',
+        patron: /alcohol|adicc|drog|botell[oó]n|sustancias/i,
+        senal: /alcohol|adicc|drog|botell[oó]n|sustancias|consumo\s+responsable/i,
+    },
+]);
+
+function _v4_array(valor) {
+    return Array.isArray(valor) ? valor : [];
+}
+
+function _v4_texto(valor) {
+    if (!valor) return '';
+    if (typeof valor === 'string') return valor.trim();
+    if (typeof valor.texto === 'string') return valor.texto.trim();
+    if (typeof valor.descripcion === 'string') return valor.descripcion.trim();
+    if (typeof valor.justificacion === 'string') return valor.justificacion.trim();
+    if (typeof valor.nombre === 'string') return valor.nombre.trim();
+    return '';
+}
+
+function _v4_compactarTextos(items, max = 12) {
+    return _v4_array(items).map(_v4_texto).filter(Boolean).slice(0, max);
+}
+
+function _v4_item(parcial) {
+    const texto = _v4_texto(parcial);
+    if (!texto) return null;
+    return {
+        id: parcial.id || `v4_${Math.random().toString(36).slice(2, 10)}`,
+        tipo: parcial.tipo || 'interpretacion',
+        categoria: parcial.categoria || 'general',
+        texto,
+        fuentes: _v4_array(parcial.fuentes),
+        nivelEvidencia: parcial.nivelEvidencia || 4,
+        certeza: parcial.certeza || 'media',
+        justificacion: parcial.justificacion || '',
+        trazabilidad: {
+            motor: 'motor_sintesis_perfil_v4',
+            version: V4_VERSION,
+            regla: parcial.regla || 'lectura_interpretativa',
+        },
+        habilitaEPVSA: !!parcial.habilitaEPVSA,
+        habilitaRecomendacion: !!parcial.habilitaRecomendacion,
+    };
+}
+
+function _v4_push(lista, parcial) {
+    const item = _v4_item(parcial);
+    if (item && !lista.some(x => x.id === item.id || x.texto === item.texto)) lista.push(item);
+    return item;
+}
+
+function _v4_fuentes(contextoIA, analisisBase) {
+    const f = Object.assign({}, (contextoIA && contextoIA.fuentes) || {}, (analisisBase && analisisBase.fuentes) || {});
+    const inventario = [];
+    const add = (id, disponible, nivel, tipo, etiqueta) => {
+        inventario.push({ id, etiqueta, disponible: !!disponible, nivelEvidencia: nivel, tipo });
+    };
+
+    add('indicadores_cmi', !!(contextoIA && contextoIA.cuadroMandos), 1, 'evidencia_territorial_directa', 'Cuadro de Mandos Integral / indicadores');
+    add('determinantes_eas', !!(contextoIA && contextoIA.determinantes && Object.keys(contextoIA.determinantes).length), 1, 'evidencia_territorial_directa', 'Determinantes EAS');
+    add('ibse', !!(f.tieneIBSE || f.tieneIbse || (analisisBase && analisisBase.perfilSOC)), 1, 'evidencia_territorial_directa', 'IBSE / perfil salutogenico');
+    add('informe_salud', !!(contextoIA && contextoIA.informe), 2, 'evidencia_complementaria', 'Informe de situacion de salud');
+    add('estudios_complementarios', !!(contextoIA && contextoIA.estudiosComplementarios && contextoIA.estudiosComplementarios.length), 2, 'evidencia_complementaria', 'Estudios complementarios');
+    add('participacion', !!(contextoIA && contextoIA.participacion), 3, 'fuente_participativa', 'Participacion ciudadana / priorizacion');
+    add('lt1', !!(typeof window !== 'undefined' && typeof window.COMPAS_construirLecturaTerritorialV1 === 'function'), 4, 'inferencia_territorial_prudente', 'Lectura territorial LT1');
+    add('epvsa', true, 5, 'marco_estrategico_principal', 'Marco EPVSA 2024-2030');
+    add('estrategias_secundarias', true, 6, 'marco_estrategico_secundario', 'Estrategias secundarias');
+
+    return {
+        inventario,
+        disponibles: inventario.filter(x => x.disponible).map(x => x.id),
+        jerarquia: {
+            nivel1: 'Evidencia territorial directa',
+            nivel2: 'Evidencia complementaria',
+            nivel3: 'Participacion y priorizacion',
+            nivel4: 'Inferencia territorial prudente',
+            nivel5: 'Marco EPVSA',
+            nivel6: 'Estrategias secundarias',
+        },
+    };
+}
+
+function _v4_extraerLT1(analisisBase) {
+    if (typeof window === 'undefined' || typeof window.COMPAS_construirLecturaTerritorialV1 !== 'function' || !analisisBase) return null;
+    try {
+        return window.COMPAS_construirLecturaTerritorialV1(analisisBase);
+    } catch (err) {
+        return { error: err && err.message ? err.message : String(err) };
+    }
+}
+
+function _v4_textosBase(contextoIA, analisisBase, lt1) {
+    const textos = [];
+    const add = valor => { const t = _v4_texto(valor); if (t) textos.push(t); };
+    _v4_array(analisisBase && analisisBase.conclusiones).forEach(add);
+    _v4_array(analisisBase && analisisBase.fortalezas).forEach(add);
+    _v4_array(analisisBase && analisisBase.oportunidades).forEach(add);
+    _v4_array(analisisBase && analisisBase.alertasInequidad).forEach(add);
+    _v4_array(analisisBase && analisisBase.priorizacion).forEach(add);
+    if (analisisBase && analisisBase.datosAnalisis) {
+        _v4_array(analisisBase.datosAnalisis.indicadoresAMejorar).forEach(add);
+        _v4_array(analisisBase.datosAnalisis.indicadoresFavorables).forEach(add);
+    }
+    if (contextoIA && contextoIA.participacion && contextoIA.participacion.temasFreq) {
+        Object.keys(contextoIA.participacion.temasFreq).forEach(add);
+    }
+    ['observaciones', 'interpretaciones', 'inferencias', 'tensiones', 'activos', 'vulnerabilidades', 'oportunidades', 'orientaciones', 'prioridades'].forEach(k => {
+        _v4_array(lt1 && lt1[k]).forEach(add);
+    });
+    return textos.join(' \n ');
+}
+
+function _v4_haySenalTerritorial(estrategia, textoBase) {
+    return estrategia.senal.test(textoBase || '');
+}
+
+function _v4_construirObservaciones(contextoIA, analisisBase, lt1, salida) {
+    const fuentes = salida.fuentes;
+    const fuente = id => fuentes.disponibles.includes(id) ? [id] : [];
+
+    if (contextoIA && contextoIA.cuadroMandos) {
+        const cmi = contextoIA.cuadroMandos;
+        _v4_push(salida.observaciones, {
+            id: 'obs_cmi_disponible', tipo: 'observacion', categoria: 'indicadores',
+            texto: `El territorio dispone de CMI con ${cmi.conDatos || 0} indicadores con datos.`,
+            fuentes: ['indicadores_cmi'], nivelEvidencia: 1, certeza: 'alta',
+            justificacion: 'Fuente cuantitativa territorial directa.', habilitaRecomendacion: true, habilitaEPVSA: true,
+            regla: 'evidencia_territorial_directa',
+        });
+    }
+
+    const nDet = contextoIA && contextoIA.determinantes ? Object.keys(contextoIA.determinantes).length : 0;
+    if (nDet > 0) {
+        _v4_push(salida.observaciones, {
+            id: 'obs_determinantes_eas', tipo: 'observacion', categoria: 'determinantes',
+            texto: `La lectura incorpora ${nDet} determinantes EAS disponibles.`,
+            fuentes: ['determinantes_eas'], nivelEvidencia: 1, certeza: 'alta',
+            justificacion: 'Los determinantes operan como evidencia territorial directa cuando estan cargados.',
+            habilitaRecomendacion: true, habilitaEPVSA: true,
+            regla: 'evidencia_territorial_directa',
+        });
+    }
+
+    if (contextoIA && contextoIA.participacion) {
+        const n = contextoIA.participacion.nParticipantes || contextoIA.participacion.totalParticipantes || null;
+        _v4_push(salida.observaciones, {
+            id: 'obs_participacion', tipo: 'observacion', categoria: 'participacion',
+            texto: n ? `Existe participacion ciudadana registrada (${n} participantes).` : 'Existe participacion ciudadana registrada.',
+            fuentes: ['participacion'], nivelEvidencia: 3, certeza: 'media',
+            justificacion: 'La participacion orienta prioridades, pero no sustituye a la evidencia territorial directa.',
+            habilitaRecomendacion: true, habilitaEPVSA: false,
+            regla: 'participacion_no_equivale_a_evidencia_directa',
+        });
+    }
+
+    _v4_compactarTextos(analisisBase && analisisBase.conclusiones, 8).forEach((texto, i) => {
+        _v4_push(salida.evidencia.contextual, {
+            id: `ev_conclusion_v3_${i + 1}`, tipo: 'evidencia', categoria: 'conclusion_v3', texto,
+            fuentes: fuente('indicadores_cmi').concat(fuente('determinantes_eas'), fuente('informe_salud')),
+            nivelEvidencia: fuentes.disponibles.includes('indicadores_cmi') || fuentes.disponibles.includes('determinantes_eas') ? 1 : 4,
+            certeza: fuentes.disponibles.includes('indicadores_cmi') || fuentes.disponibles.includes('determinantes_eas') ? 'media-alta' : 'media-baja',
+            justificacion: 'Conclusion del motor vigente reinterpretada como insumo, no como cierre epistemico.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'v3_como_insumo_contextual',
+        });
+    });
+
+    if (lt1 && !lt1.error) {
+        _v4_compactarTextos(lt1.observaciones, 8).forEach((texto, i) => _v4_push(salida.observaciones, {
+            id: `obs_lt1_${i + 1}`, tipo: 'observacion', categoria: 'lt1', texto,
+            fuentes: ['lt1'], nivelEvidencia: 4, certeza: 'media',
+            justificacion: 'Observacion reconstruida desde la lectura territorial LT1 heredada.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'lt1_recuperada',
+        }));
+    }
+}
+
+function _v4_construirLecturas(contextoIA, analisisBase, lt1, salida, evidenciaMeta) {
+    const textoBase = _v4_textosBase(contextoIA, analisisBase, lt1).toLowerCase();
+
+    // Fuentes concretas disponibles: participacion real o LT1 sin error.
+    const hayParticipacion = salida.fuentes.disponibles.includes('participacion');
+    const hayLT1Valido = !!(lt1 && !lt1.error);
+
+    // infer: inferencia territorial directa — solo si hay peso de evidencia suficiente (umbral 2).
+    // Si no, degrada a hipótesis por evidencia insuficiente.
+    const infer = (id, texto, patron, certeza = 'media-baja') => {
+        if (!patron.test(textoBase)) return;
+        if (evidenciaMeta.puedeInferir()) {
+            _v4_push(salida.inferencias, {
+                id, tipo: 'inferencia', categoria: 'dinamica_territorial', texto,
+                fuentes: ['indicadores_cmi', 'determinantes_eas', 'participacion', 'lt1'].filter(f => salida.fuentes.disponibles.includes(f)),
+                nivelEvidencia: 4, certeza,
+                justificacion: 'Dinamica territorial inferida por convergencia de senales con soporte estructural suficiente.',
+                habilitaRecomendacion: false, habilitaEPVSA: false,
+                regla: 'territorialidad_prudente',
+            });
+        } else {
+            _v4_push(salida.hipotesis, {
+                id: `hip_${id}`, tipo: 'hipotesis', categoria: 'hipotesis_sin_evidencia_suficiente',
+                texto: texto + ' (Hipotesis: peso de evidencia estructural insuficiente para inferir.)',
+                fuentes: salida.fuentes.disponibles.filter(f => evidenciaMeta.clasificarFuente(f) <= 3),
+                nivelEvidencia: 5, certeza: 'baja',
+                justificacion: `Patron detectado pero evidenciaMeta.pesoTotal=${evidenciaMeta.pesoTotal} < umbral 2. Requiere al menos una fuente N1 o dos N2.`,
+                habilitaRecomendacion: false, habilitaEPVSA: false,
+                regla: 'hipotesis_por_evidencia_insuficiente',
+            });
+        }
+    };
+
+    // inferOrHipotesis: para señales genéricas — requiere además fuente concreta (participacion o LT1)
+    // Y peso suficiente. Sin ambas condiciones → hipótesis exploratoria.
+    const inferOrHipotesis = (id, texto, patron, certeza = 'media-baja') => {
+        if (!patron.test(textoBase)) return;
+        const tieneFuenteConcreta = hayParticipacion || hayLT1Valido;
+        if (evidenciaMeta.puedeInferir() && tieneFuenteConcreta) {
+            _v4_push(salida.inferencias, {
+                id, tipo: 'inferencia', categoria: 'dinamica_territorial', texto,
+                fuentes: ['participacion', 'lt1'].filter(f => salida.fuentes.disponibles.includes(f)),
+                nivelEvidencia: 4, certeza,
+                justificacion: 'Dinamica territorial inferida con respaldo de fuente participativa o LT1 y evidencia estructural suficiente.',
+                habilitaRecomendacion: false, habilitaEPVSA: false,
+                regla: 'territorialidad_con_fuente_concreta',
+            });
+        } else {
+            const razon = !evidenciaMeta.puedeInferir()
+                ? `evidenciaMeta.pesoTotal=${evidenciaMeta.pesoTotal} < umbral 2`
+                : 'sin fuente participativa ni LT1 concretas';
+            _v4_push(salida.hipotesis, {
+                id: `hip_${id}`, tipo: 'hipotesis', categoria: 'hipotesis_exploratoria',
+                texto: texto + ` (Hipotesis exploratoria: ${razon}.)`,
+                fuentes: [],
+                nivelEvidencia: 5, certeza: 'baja',
+                justificacion: 'Patron detectado pero condiciones epistemologicas insuficientes. No debe leerse como lectura territorial fuerte.',
+                habilitaRecomendacion: false, habilitaEPVSA: false,
+                regla: 'hipotesis_exploratoria_sin_senal_concreta',
+            });
+        }
+    };
+
+    infer('inf_envejecimiento', 'Aparece una posible dinamica de envejecimiento o peso creciente de poblacion mayor que conviene leer junto a apoyos, cuidados y accesibilidad.', /envejec|mayores|personas\s+mayores|poblaci[oó]n\s+mayor/);
+    infer('inf_vulnerabilidad_silenciosa', 'Puede existir vulnerabilidad silenciosa si las senales de desigualdad conviven con baja visibilidad participativa o con fuentes incompletas.', /vulnerab|desigual|inequidad|exclusi[oó]n|fragilidad/);
+    inferOrHipotesis('inf_cohesion_redes', 'Hay senales de cohesion, redes de apoyo o participacion que pueden actuar como activo salutogenico del Plan Local de Salud.', /cohesi[oó]n|redes|apoyo\s+social|participaci[oó]n|asociativ|comunitari/);
+    inferOrHipotesis('inf_potencial_salutogenico', 'El territorio muestra posibles capacidades salutogenicas que deben leerse junto a activos, redes y oportunidades, no solo como deficit.', /salutog|fortaleza|activo|resilien|sentido\s+de\s+coherencia|ibse|soc/);
+    inferOrHipotesis('inf_capacidad_comunitaria', 'La capacidad comunitaria debe interpretarse como condicion de implementacion: puede facilitar o limitar la traduccion del diagnostico en actuaciones.', /participaci[oó]n|activo|gobernanza|asociaci|redes|comunitari/);
+
+    if (lt1 && !lt1.error) {
+        // LT1 solo refuerza inferencias existentes — no las autoriza por sí solo.
+        // Requiere evidencia estructural fuerte (N1 o dos N2) para llegar a inferencias.
+        const destinoLT1 = evidenciaMeta.puedeInferirFuerte() ? salida.inferencias : salida.hipotesis;
+        const tipoLT1 = evidenciaMeta.puedeInferirFuerte() ? 'inferencia' : 'hipotesis';
+        const categoriaLT1 = evidenciaMeta.puedeInferirFuerte() ? 'lt1' : 'hipotesis_exploratoria';
+        const reglaLT1 = evidenciaMeta.puedeInferirFuerte() ? 'lt1_con_respaldo_estructural' : 'lt1_sin_soporte_degradado';
+        const certezaLT1 = evidenciaMeta.puedeInferirFuerte() ? 'media' : 'baja';
+        const justLT1 = evidenciaMeta.puedeInferirFuerte()
+            ? 'Inferencia LT1 con respaldo de evidencia estructural N1/N2.'
+            : 'LT1 sin soporte estructural suficiente: degradado a hipotesis exploratoria. LT1 no autoriza inferencia por si solo.';
+
+        _v4_compactarTextos(lt1.interpretaciones || lt1.inferencias, 8).forEach((texto, i) => _v4_push(destinoLT1, {
+            id: `inf_lt1_${i + 1}`, tipo: tipoLT1, categoria: categoriaLT1,
+            texto: evidenciaMeta.puedeInferirFuerte() ? texto : texto + ' (LT1 sin evidencia estructural de respaldo.)',
+            fuentes: ['lt1'], nivelEvidencia: evidenciaMeta.puedeInferirFuerte() ? 4 : 5, certeza: certezaLT1,
+            justificacion: justLT1,
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: reglaLT1,
+        }));
+        _v4_compactarTextos(lt1.tensiones, 8).forEach((texto, i) => _v4_push(salida.tensiones, {
+            id: `ten_lt1_${i + 1}`, tipo: 'tension', categoria: 'territorial', texto,
+            fuentes: ['lt1'], nivelEvidencia: 4, certeza: 'media-baja',
+            justificacion: 'Tension territorial util para deliberacion tecnica; requiere contraste antes de activar medidas.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'tension_no_es_recomendacion',
+        }));
+    }
+
+    if (/cohesi[oó]n|redes|apoyo\s+social/.test(textoBase) && /envejec|mayores|aislamiento|soledad/.test(textoBase)) {
+        _v4_push(salida.tensiones, {
+            id: 'ten_cohesion_envejecimiento', tipo: 'tension', categoria: 'salutogenica',
+            texto: 'La posible cohesion comunitaria debe contrastarse con el envejecimiento, la soledad o las necesidades de cuidados para no sobredimensionar la capacidad de apoyo informal.',
+            fuentes: ['lt1', 'participacion', 'ibse'].filter(f => salida.fuentes.disponibles.includes(f)),
+            nivelEvidencia: 4, certeza: 'media-baja',
+            justificacion: 'Tension interpretativa entre activo comunitario y demanda de cuidados.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'tension_territorial_prudente',
+        });
+    }
+
+    // Lectura institucional longitudinal — señales de gobernanza basadas en datos reales del ciclo.
+    // No usa regex textual. Lee lecturaEvaluativaLongitudinal ya calculada por el sistema de evaluación.
+    _v4_leerGobernanzaLongitudinal(salida);
+}
+
+// ── Lectura institucional longitudinal ───────────────────────────────────────
+// Obtiene el snapshot evaluativo (preferentemente vía COMPAS_obtenerSnapshotEvaluacionActual;
+// fallback a window.COMPAS.state._ultimoSnapshot) y añade señales de gobernanza a v4.
+// Si no existe lecturaEvaluativaLongitudinal, no hace nada.
+// No inventa longitudinalidad: solo lee clasificaciones ya etiquetadas por el sistema de evaluación.
+function _v4_leerGobernanzaLongitudinal(salida) {
+    if (typeof window === 'undefined') return;
+
+    // Obtener snapshot: primero función pública, fallback a estado cacheado.
+    var _snap = null;
+    try {
+        if (typeof window.COMPAS_obtenerSnapshotEvaluacionActual === 'function') {
+            _snap = window.COMPAS_obtenerSnapshotEvaluacionActual();
+        }
+    } catch (e) {
+        // silencioso — intentaremos fallback
+    }
+    if (!_snap) {
+        _snap = window.COMPAS && window.COMPAS.state && window.COMPAS.state._ultimoSnapshot;
+    }
+
+    var _lel = _snap && _snap.lecturaEvaluativaLongitudinal;
+    if (!_lel || !_lel.clasificaciones) return;  // guard: sin lectura longitudinal, no actúa
+
+    var _clases    = _lel.clasificaciones;
+    var _ejecucion = _clases.ejecucion && _clases.ejecucion.estado;
+    var _arrastre  = (_clases.ejecucion && typeof _clases.ejecucion.tasaArrastre === 'number')
+                     ? _clases.ejecucion.tasaArrastre : null;
+    var _red       = _clases.redComunitaria && _clases.redComunitaria.estado;
+    var _trazab    = _clases.trazabilidad && _clases.trazabilidad.estado;
+
+    // Tensión: ejecución baja → capacidad de implementación insuficiente
+    if (_ejecucion === 'baja') {
+        _v4_push(salida.tensiones, {
+            id: 'ten_capacidad_ejecucion_baja',
+            tipo: 'tension', categoria: 'gobernanza_institucional',
+            texto: 'La tasa de finalización dentro del ciclo registrada es baja. El plan requiere revisión de su capacidad de implementación, simplificación de acciones o acompañamiento externo antes de ampliar compromisos.',
+            fuentes: ['agenda_evaluacion'], nivelEvidencia: 2, certeza: 'media-alta',
+            justificacion: 'Clasificación lecturaEvaluativaLongitudinal.ejecucion = baja. Dato institucional real del ciclo evaluado, no inferencia textual.',
+            habilitaRecomendacion: true, habilitaEPVSA: false,
+            regla: 'gobernanza_ejecucion_insuficiente',
+        });
+    }
+
+    // Fortaleza: ejecución sólida → capacidad institucional documentada
+    if (_ejecucion === 'solida') {
+        _v4_push(salida.fortalezas, {
+            id: 'for_capacidad_ejecucion_solida',
+            tipo: 'fortaleza', categoria: 'gobernanza_institucional',
+            texto: 'La ejecución del ciclo evaluado es sólida: alta tasa de finalización y baja tasa de arrastre. El municipio muestra capacidad de implementación institucional documentada.',
+            fuentes: ['agenda_evaluacion'], nivelEvidencia: 2, certeza: 'media-alta',
+            justificacion: 'Clasificación lecturaEvaluativaLongitudinal.ejecucion = solida. Dato institucional real del ciclo evaluado.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'gobernanza_ejecucion_solida',
+        });
+    }
+
+    // Tensión: arrastre cronificado → barreras estructurales persistentes
+    if (_arrastre !== null && _arrastre >= 50) {
+        _v4_push(salida.tensiones, {
+            id: 'ten_arrastre_cronificado',
+            tipo: 'tension', categoria: 'fragilidad_institucional',
+            texto: 'Más del 50% de las actuaciones del ciclo presenta arrastre. Existe riesgo de cronificación de barreras que impiden cerrar el ciclo planificado. Conviene revisar causas antes de ampliar la agenda.',
+            fuentes: ['agenda_evaluacion'], nivelEvidencia: 2, certeza: 'media',
+            justificacion: 'tasaArrastre = ' + _arrastre + '% (>= 50%) en lecturaEvaluativaLongitudinal. Dato cuantitativo del ciclo evaluado.',
+            habilitaRecomendacion: true, habilitaEPVSA: false,
+            regla: 'fragilidad_arrastre_cronificado',
+        });
+    }
+
+    // Fortaleza: red comunitaria activa → intersectorialidad operativa documentada
+    if (_red === 'activa') {
+        _v4_push(salida.fortalezas, {
+            id: 'for_red_comunitaria_activa',
+            tipo: 'fortaleza', categoria: 'activo_comunitario_institucional',
+            texto: 'La red comunitaria de colaboración documentada está activa. El municipio registra intersectorialidad operativa con entidades colaboradoras y activos en ciclo.',
+            fuentes: ['agenda_evaluacion'], nivelEvidencia: 2, certeza: 'media',
+            justificacion: 'Clasificación lecturaEvaluativaLongitudinal.redComunitaria = activa. Entidades colaboradoras + activos detectados en ciclo.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'red_comunitaria_documentada_activa',
+        });
+    }
+
+    // Hipótesis/limitación: trazabilidad no verificable → cautela metodológica
+    if (_trazab === 'no_verificable') {
+        _v4_push(salida.hipotesis, {
+            id: 'hip_trazabilidad_insuficiente',
+            tipo: 'hipotesis', categoria: 'limitacion_metodologica',
+            texto: 'La trazabilidad de evidencias del ciclo es insuficiente. Las inferencias territoriales deben leerse con mayor cautela: el municipio no puede rendir cuentas verificables sobre los resultados del ciclo evaluado.',
+            fuentes: ['agenda_evaluacion'], nivelEvidencia: 3, certeza: 'media',
+            justificacion: 'Clasificación lecturaEvaluativaLongitudinal.trazabilidad = no_verificable. No es inferencia: es limitación metodológica del propio ciclo.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'limitacion_trazabilidad_ciclo',
+        });
+    }
+}
+
+// Patrón para detectar textos de capacidad analítica/metodológica que NO son fortalezas territoriales.
+// Ej: "Se dispone de 6 determinantes", "la lectura incorpora X fuentes", etc.
+const _V4_PATRON_NO_FORTALEZA_TERRITORIAL = /se\s+dispone\s+de\b|se\s+han\s+considerado\b|la\s+lectura\s+incorpora\b|el\s+an[aá]lisis\s+(se\s+encuadra|incorpora)\b|fuentes?\s+disponibles\b|\b\d+\s+(determinantes|fuentes|indicadores)\s+(eas|disponibles|considerados)/i;
+
+function _v4_construirFortalezasVulnerabilidades(analisisBase, lt1, salida) {
+    _v4_compactarTextos(analisisBase && analisisBase.fortalezas, 8).forEach((texto, i) => {
+        // Textos metodológicos/de capacidad analítica no son fortalezas territoriales
+        if (_V4_PATRON_NO_FORTALEZA_TERRITORIAL.test(texto)) return;
+        _v4_push(salida.fortalezas, {
+            id: `for_v3_${i + 1}`, tipo: 'fortaleza', categoria: 'salutogenica', texto,
+            fuentes: salida.fuentes.disponibles.filter(f => f !== 'epvsa' && f !== 'estrategias_secundarias'),
+            nivelEvidencia: 2, certeza: 'media',
+            justificacion: 'Fortaleza del analisis vigente preservada como activo o capacidad potencial.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'lectura_salutogenica',
+        });
+    });
+    _v4_compactarTextos(lt1 && lt1.activos, 10).forEach((texto, i) => _v4_push(salida.fortalezas, {
+        id: `for_lt1_activo_${i + 1}`, tipo: 'fortaleza', categoria: 'activo_comunitario', texto,
+        fuentes: ['lt1'], nivelEvidencia: 4, certeza: 'media',
+        justificacion: 'Activo recuperado de LT1 como capacidad comunitaria a contrastar y movilizar.',
+        habilitaRecomendacion: false, habilitaEPVSA: false,
+        regla: 'activos_legacy_reintegrados',
+    }));
+    _v4_compactarTextos(analisisBase && analisisBase.oportunidades, 8).forEach((texto, i) => _v4_push(salida.vulnerabilidades, {
+        id: `vul_oportunidad_v3_${i + 1}`, tipo: 'vulnerabilidad', categoria: 'area_mejora', texto,
+        fuentes: salida.fuentes.disponibles.filter(f => f !== 'epvsa' && f !== 'estrategias_secundarias'),
+        nivelEvidencia: 2, certeza: 'media',
+        justificacion: 'Area de mejora reinterpretada como vulnerabilidad o brecha potencial, no como diagnostico cerrado.',
+        habilitaRecomendacion: true, habilitaEPVSA: false,
+        regla: 'deficit_con_cautela',
+    }));
+    _v4_compactarTextos(lt1 && lt1.vulnerabilidades, 8).forEach((texto, i) => _v4_push(salida.vulnerabilidades, {
+        id: `vul_lt1_${i + 1}`, tipo: 'vulnerabilidad', categoria: 'lt1', texto,
+        fuentes: ['lt1'], nivelEvidencia: 4, certeza: 'media-baja',
+        justificacion: 'Vulnerabilidad heredada de LT1; requiere contraste con evidencia directa.',
+        habilitaRecomendacion: false, habilitaEPVSA: false,
+        regla: 'lt1_no_activa_sola',
+    }));
+
+    // Activos desde window.activosComunitarios (Localiza Salud)
+    // REGLA EPISTEMOLÓGICA: activos registrados ≠ cobertura territorial.
+    // Pocos activos ≠ baja capacidad comunitaria. No extrapolable.
+    var _activosLS = (typeof window !== 'undefined' && Array.isArray(window.activosComunitarios))
+        ? window.activosComunitarios : [];
+    if (_activosLS.length > 0) {
+        _v4_push(salida.fortalezas, {
+            id: 'for_activos_ls_base',
+            tipo: 'fortaleza', categoria: 'activo_comunitario_validado',
+            texto: _activosLS.length + ' activo(s) comunitario(s) registrado(s) en Localiza Salud. Base parcial validada institucionalmente mediante participación ciudadana.',
+            fuentes: ['LocalizaSalud'], nivelEvidencia: 3, certeza: 'media',
+            justificacion: 'Los activos registrados representan recursos validados, no el conjunto total del municipio. Pocos activos ≠ baja capacidad comunitaria.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'activos_ls_base_parcial_no_extrapolable',
+        });
+        _activosLS.slice(0, 5).forEach(function(activo, i) {
+            if (!activo.nombre) return;
+            _v4_push(salida.fortalezas, {
+                id: 'for_activo_ls_' + (i + 1),
+                tipo: 'fortaleza', categoria: 'activo_comunitario_validado',
+                texto: activo.nombre + (activo.descripcion ? ' \u2014 ' + String(activo.descripcion).slice(0, 80) : ''),
+                fuentes: ['LocalizaSalud'], nivelEvidencia: 3, certeza: 'media',
+                justificacion: 'Activo validado (Localiza Salud). Tipo: ' + (activo.tipo || 'puntual') + '. Sin inferencia de estructura comunitaria consolidada.',
+                habilitaRecomendacion: false, habilitaEPVSA: false,
+                regla: 'activo_ls_infraestructura_salutogenica_parcial',
+            });
+        });
+    }
+}
+
+// Detecta recomendaciones generadas sobre áreas sin ningún indicador desfavorable.
+// Ej: "Desarrollar acciones específicas en Consumo responsable (0 indicadores con tendencia desfavorable...)"
+const _V4_PATRON_SIN_DESFAVORABLES = /\b0\s+indicadores?\s+(con\s+tendencia\s+)?desfavorabl/i;
+
+function _v4_clasificarRecomendacion(rec, idx, textoBase, salida) {
+    const texto = _v4_texto(rec);
+    if (!texto) return;
+
+    // Regla epistemológica: sin indicadores desfavorables → solo vigilancia, nunca acción específica.
+    if (_V4_PATRON_SIN_DESFAVORABLES.test(texto)) {
+        _v4_push(salida.recomendaciones.exploratorias, {
+            id: `rec_vigilancia_${idx + 1}`,
+            tipo: 'recomendacion',
+            categoria: 'vigilancia_sin_senal',
+            texto: texto.replace(/desarrollar\s+acciones\s+espec[ií]ficas\s+en\s+/i, 'Mantener vigilancia pasiva en '),
+            fuentes: [],
+            nivelEvidencia: 6,
+            certeza: 'baja',
+            justificacion: 'Sin indicadores desfavorables: no procede priorizar actuacion especifica. Se registra como vigilancia y posible revision futura.',
+            habilitaRecomendacion: false,
+            habilitaEPVSA: false,
+            regla: 'sin_senal_no_hay_recomendacion',
+        });
+        return;
+    }
+
+    const estrategia = V4_ESTRATEGIAS_SECUNDARIAS.find(e => e.patron.test(texto));
+    const tieneSoporteTerritorial = estrategia ? _v4_haySenalTerritorial(estrategia, textoBase) : true;
+    const fuentesFuertes = salida.fuentes.disponibles.filter(f => ['indicadores_cmi', 'determinantes_eas', 'ibse', 'informe_salud', 'estudios_complementarios', 'participacion'].includes(f));
+    const base = {
+        id: `rec_v4_${idx + 1}`,
+        tipo: 'recomendacion',
+        categoria: 'territorial',
+        texto,
+        fuentes: fuentesFuertes,
+        nivelEvidencia: fuentesFuertes.some(f => ['indicadores_cmi', 'determinantes_eas', 'ibse'].includes(f)) ? 1 : 4,
+        certeza: fuentesFuertes.length >= 2 ? 'media' : 'media-baja',
+        justificacion: 'Recomendacion del motor vigente reclasificada segun jerarquia de evidencia v4.',
+        habilitaRecomendacion: true,
+        habilitaEPVSA: false,
+        regla: 'recomendacion_reclasificada',
+    };
+
+    if (estrategia && !tieneSoporteTerritorial) {
+        _v4_push(salida.recomendaciones.exploratorias, {
+            ...base,
+            categoria: 'estrategia_secundaria_contextual',
+            nivelEvidencia: 6,
+            certeza: 'baja',
+            justificacion: `${estrategia.label} no activa recomendacion por si sola; queda como contexto hasta que exista senal territorial previa.`,
+            habilitaRecomendacion: false,
+            habilitaEPVSA: false,
+            regla: 'estrategia_secundaria_no_activadora',
+        });
+        return;
+    }
+
+    if (base.nivelEvidencia <= 3) _v4_push(salida.recomendaciones.territoriales, base);
+    else _v4_push(salida.recomendaciones.exploratorias, { ...base, categoria: 'prudente_exploratoria', habilitaRecomendacion: false, regla: 'recomendacion_exploratoria' });
+}
+
+function _v4_construirRecomendaciones(contextoIA, analisisBase, lt1, salida) {
+    const textoBase = _v4_textosBase(contextoIA, { ...analisisBase, recomendaciones: [] }, lt1);
+    _v4_array(analisisBase && analisisBase.recomendaciones).forEach((rec, idx) => _v4_clasificarRecomendacion(rec, idx, textoBase, salida));
+
+    _v4_push(salida.recomendaciones.estructuralesRELAS, {
+        id: 'rec_mapeo_activos_relas_universal', tipo: 'recomendacion', categoria: 'estructural_relas',
+        texto: 'Actualizar o iniciar el mapeo de activos comunitarios como infraestructura basica del Plan Local de Salud, adaptando su profundidad a las prioridades y a la capacidad municipal.',
+        fuentes: ['relais', 'activos_comunitarios', 'epvsa'], nivelEvidencia: 5, certeza: 'estructural',
+        justificacion: 'El mapeo de activos es condicion estructural RELAS para orientar, ejecutar y evaluar actuaciones; no depende de una senal tematica concreta.',
+        habilitaRecomendacion: true, habilitaEPVSA: false,
+        regla: 'activos_relas_universal',
+    });
+
+    _v4_compactarTextos(lt1 && lt1.orientaciones, 6).forEach((texto, i) => _v4_push(salida.recomendaciones.exploratorias, {
+        id: `rec_lt1_orientacion_${i + 1}`, tipo: 'recomendacion', categoria: 'orientacion_comunitaria', texto,
+        fuentes: ['lt1'], nivelEvidencia: 4, certeza: 'media-baja',
+        justificacion: 'Orientacion LT1 recuperada como prudente; necesita contraste tecnico antes de planificar actuaciones.',
+        habilitaRecomendacion: false, habilitaEPVSA: false,
+        regla: 'orientacion_legacy_no_automatismo',
+    }));
+}
+
+function _v4_construirPrioridades(analisisBase, salida) {
+    _v4_array(analisisBase && analisisBase.propuestaEPVSA).forEach((p, idx) => {
+        const texto = p && (p.justificacion || p.lineaNombre || p.lineaId || p.area || p.texto) || '';
+        const fuentesSoporte = salida.fuentes.disponibles.filter(f => ['indicadores_cmi', 'determinantes_eas', 'ibse', 'informe_salud', 'estudios_complementarios', 'participacion'].includes(f));
+        _v4_push(salida.prioridades, {
+            id: `prio_epvsa_v3_${idx + 1}`, tipo: 'prioridad', categoria: 'epvsa_vigente', texto,
+            fuentes: fuentesSoporte.concat(['epvsa']),
+            nivelEvidencia: fuentesSoporte.length ? 3 : 5,
+            certeza: fuentesSoporte.length >= 2 ? 'media' : 'baja',
+            justificacion: 'Prioridad EPVSA de v3 preservada para compatibilidad; v4 solo evalua su soporte, no la sustituye.',
+            habilitaRecomendacion: false,
+            habilitaEPVSA: fuentesSoporte.length > 0,
+            regla: fuentesSoporte.length > 0 ? 'epvsa_con_soporte_territorial' : 'epvsa_marco_no_evidencia',
+        });
+    });
+}
+
+function _v4_incertidumbre(salida) {
+    const disponiblesFuertes = salida.fuentes.disponibles.filter(f => ['indicadores_cmi', 'determinantes_eas', 'ibse', 'informe_salud', 'estudios_complementarios', 'participacion'].includes(f));
+    const vacios = salida.fuentes.inventario.filter(f => !f.disponible && f.nivelEvidencia <= 3).map(f => f.id);
+    return {
+        nivelGlobal: disponiblesFuertes.length >= 3 ? 'media' : disponiblesFuertes.length >= 1 ? 'media-alta' : 'alta',
+        factores: [
+            disponiblesFuertes.length < 2 ? 'Base territorial limitada: conviene no convertir inferencias en decisiones automaticas.' : 'Base territorial plural suficiente para lectura prudente.',
+            salida.tensiones.length ? 'Hay tensiones que requieren deliberacion tecnica.' : 'No se han identificado tensiones explicitas con la informacion disponible.',
+        ],
+        vacios,
+    };
+}
+
+// ── evidenciaMeta: jerarquía ponderada de fuentes para decisiones epistemológicas internas ──
+// Pesos: N1 (indicadores/IBSE/determinantes) = 3 | N2 (informe/estudios) = 2
+//        N3 (participacion/LT1) = 1 / 0.5 | N4 (narrativa) = 0
+// API pública interna: puedeInferir(umbral?), puedeInferirFuerte(), clasificarFuente(id)
+function _v4_construirEvidenciaMeta(fuentesObj) {
+    const PESOS = {
+        indicadores_cmi:          3,
+        determinantes_eas:        3,
+        ibse:                     3,
+        informe_salud:            2,
+        estudios_complementarios: 2,
+        participacion:            1,
+        lt1:                      0.5,
+        epvsa:                    0,
+        estrategias_secundarias:  0,
+    };
+    const disponibles = (fuentesObj && fuentesObj.disponibles) || [];
+    const nivel1 = disponibles.filter(f => ['indicadores_cmi', 'determinantes_eas', 'ibse'].includes(f));
+    const nivel2 = disponibles.filter(f => ['informe_salud', 'estudios_complementarios'].includes(f));
+    const nivel3 = disponibles.filter(f => ['participacion', 'lt1'].includes(f));
+    const nivel4 = []; // texto narrativo — no traza como fuente estructural
+    const pesoTotal = disponibles.reduce((acc, f) => acc + (PESOS[f] || 0), 0);
+    return {
+        nivel1, nivel2, nivel3, nivel4, pesoTotal,
+        // umbral por defecto = 2: necesita al menos una fuente N1 (3p) o dos N2 (4p) o N1+participacion (4p).
+        // Un solo LT1 (0.5p) o solo participacion (1p) no alcanza el umbral → hipótesis.
+        puedeInferir: function(umbral) {
+            return pesoTotal >= (umbral !== undefined ? umbral : 2);
+        },
+        // inferencia fuerte: requiere al menos una fuente N1 o dos N2
+        puedeInferirFuerte: function() {
+            return nivel1.length > 0 || nivel2.length >= 2;
+        },
+        clasificarFuente: function(id) {
+            if (['indicadores_cmi', 'determinantes_eas', 'ibse'].includes(id)) return 1;
+            if (['informe_salud', 'estudios_complementarios'].includes(id)) return 2;
+            if (['participacion', 'lt1'].includes(id)) return 3;
+            return 4;
+        },
+    };
+}
+
+// ── FMC: Factor de Modulación Comunitaria ────────────────────────────────────
+// Modulador interpretativo transversal. NO es fuente de evidencia ni altera inferencias.
+// Solo añade etiqueta nivelLectura + advertencia a cada item ya construido.
+// Fuentes: participacion en contexto, activos LT1, percepción ciudadana (IBSE/informe).
+// Escala 0–1 por componente; total = media de tres componentes.
+function _v4_construirFMC(contextoIA, lt1, salida) {
+    // Componente participacion
+    const partic = contextoIA && contextoIA.participacion;
+    const nPartic = partic && (partic.nParticipantes || partic.totalParticipantes || 0);
+    const vPartic = partic ? (nPartic > 0 ? 1 : 0.5) : 0;
+
+    // Componente activos: LT1 o window.activosComunitarios (Localiza Salud) — el mayor
+    // Pocos activos ≠ baja capacidad comunitaria; activos registrados = base parcial validada.
+    var nActivosLT1 = (lt1 && !lt1.error) ? _v4_array(lt1.activos).length : 0;
+    var nActivosLS  = (typeof window !== 'undefined' && Array.isArray(window.activosComunitarios))
+        ? window.activosComunitarios.length : 0;
+    const nActivos  = Math.max(nActivosLT1, nActivosLS);
+    const vActivos  = nActivos >= 3 ? 1 : nActivos >= 1 ? 0.5 : 0;
+
+    // Componente percepción ciudadana (IBSE como proxy, informe como señal parcial)
+    const vPercepcion = salida.fuentes.disponibles.includes('ibse') ? 1
+        : salida.fuentes.disponibles.includes('informe_salud') ? 0.5 : 0;
+
+    const total = (vPartic + vActivos + vPercepcion) / 3;
+
+    const modulaInferencia = function(item) {
+        if (total < 0.3) {
+            item.nivelLectura = 'tecnocratica';
+            item.advertencia = 'baja sensibilidad comunitaria';
+            item.validacionComunitaria = 'tecnocratica';
+        } else if (total < 0.7) {
+            item.nivelLectura = 'mixta';
+            item.validacionComunitaria = 'mixta';
+        } else {
+            item.nivelLectura = 'comunitaria_enriquecida';
+            item.enriquecidaPorFMC = true;
+            item.validacionComunitaria = 'validada_comunitariamente';
+        }
+        return item;
+    };
+
+    return {
+        participacion: vPartic,
+        activos: vActivos,
+        percepcion: vPercepcion,
+        total,
+        calcular: function() { return total; },
+        modulaInferencia,
+    };
+}
+
+// ── Señales estructurales: inequidad, vulnerabilidad y capacidad comunitaria ──
+// Lee señales ya calculadas (alertasInequidad, perfilSFA, activosEnCiclo).
+// No usa regex textual. No inventa causalidad. Solo combina clasificaciones estructuradas.
+// Máximo: 3 tensiones + 2 fortalezas + 1 hipótesis.
+function _v4_leerSeñalesEstructurales(contextoIA, analisisBase, salida, evidenciaMeta) {
+    var _alertas    = (analisisBase && Array.isArray(analisisBase.alertasInequidad))
+                      ? analisisBase.alertasInequidad : [];
+    var _perfilSFA  = analisisBase && analisisBase.perfilSFA;
+    var _d4Obj      = _perfilSFA && _perfilSFA.scorePorDimension && _perfilSFA.scorePorDimension['d4_inequidad'];
+    var _d4Score    = (_d4Obj && typeof _d4Obj.score === 'number') ? _d4Obj.score : null;
+    var _nDimsSFA   = (_perfilSFA && _perfilSFA.trazabilidad && typeof _perfilSFA.trazabilidad.nDimensionesDisponibles === 'number')
+                      ? _perfilSFA.trazabilidad.nDimensionesDisponibles : null;
+
+    // Obtener activosEnCiclo del snapshot (mismo patrón que _v4_leerGobernanzaLongitudinal)
+    var _snap = null;
+    if (typeof window !== 'undefined') {
+        try {
+            if (typeof window.COMPAS_obtenerSnapshotEvaluacionActual === 'function') {
+                _snap = window.COMPAS_obtenerSnapshotEvaluacionActual();
+            }
+        } catch (e) { /* silencioso */ }
+        if (!_snap) {
+            _snap = window.COMPAS && window.COMPAS.state && window.COMPAS.state._ultimoSnapshot;
+        }
+    }
+    // null = desconocido (sin snapshot); 0 = conocido, sin activos; >0 = activos presentes
+    var _activosEnCiclo = (_snap && _snap.activosComunitariosEnCiclo &&
+        typeof _snap.activosComunitariosEnCiclo.total === 'number')
+        ? _snap.activosComunitariosEnCiclo.total : null;
+
+    var _tieneInequidadSFA = _alertas.some(function(a) { return a && a.tipo === 'inequidad_sfa'; });
+    var _tieneDetDesfav    = _alertas.some(function(a) { return a && a.tipo === 'determinantes_desfavorables'; });
+
+    // ── TENSIONES (máx. 3) ────────────────────────────────────────────────────
+
+    // T1: Convergencia de dos señales independientes de inequidad.
+    // Condición doble: las dos alertas estructuradas deben coexistir, Y hay evidencia N1/N2.
+    // No activa con una sola alerta.
+    if (_tieneInequidadSFA && _tieneDetDesfav && evidenciaMeta.puedeInferirFuerte()) {
+        _v4_push(salida.tensiones, {
+            id: 'ten_inequidad_convergente',
+            tipo: 'tension', categoria: 'vulnerabilidad_estructural',
+            texto: 'Dos señales independientes de inequidad convergen en el territorio: score SFA elevado en la dimensión de desigualdad y alta proporción de determinantes sociales desfavorables. El perfil sugiere vulnerabilidad multidimensional que no puede abordarse con intervenciones temáticas únicas.',
+            fuentes: ['indicadores_cmi', 'determinantes_eas'].filter(function(f) {
+                return salida.fuentes.disponibles.includes(f);
+            }),
+            nivelEvidencia: 2, certeza: 'media-alta',
+            justificacion: 'Convergencia de alertasInequidad tipo inequidad_sfa + determinantes_desfavorables. Señales cuantitativas independientes, no texto libre.',
+            habilitaRecomendacion: true, habilitaEPVSA: false,
+            regla: 'inequidad_convergente_multidimensional',
+        });
+    }
+
+    // T2: Desigualdad sin activos comunitarios documentados.
+    // Solo actúa si el snapshot confirma que activosEnCiclo es cero (null = no sabemos, no actúa).
+    if (_alertas.length > 0 && _activosEnCiclo !== null && _activosEnCiclo === 0) {
+        _v4_push(salida.tensiones, {
+            id: 'ten_inequidad_sin_activos',
+            tipo: 'tension', categoria: 'vulnerabilidad_sin_red',
+            texto: 'Las señales de desigualdad territorial coexisten con ausencia de activos comunitarios documentados. La carga de necesidades no tiene aún una base de recursos comunitarios identificados que pueda contribuir a compensarla.',
+            fuentes: ['agenda_evaluacion'].concat(
+                ['indicadores_cmi', 'determinantes_eas'].filter(function(f) {
+                    return salida.fuentes.disponibles.includes(f);
+                })
+            ),
+            nivelEvidencia: 2, certeza: 'media',
+            justificacion: 'alertasInequidad.length > 0 + activosComunitariosEnCiclo.total === 0 (confirmado en snapshot). Combinación estructurada.',
+            habilitaRecomendacion: true, habilitaEPVSA: false,
+            regla: 'inequidad_sin_red_comunitaria_documentada',
+        });
+    }
+
+    // T3: Señal SFA de inequidad intensa (>0.5) — por encima del umbral de alerta estándar (0.4).
+    // No duplica la alerta textual de v3. Añade tensión interpretativa para casos más graves.
+    if (_d4Score !== null && _d4Score > 0.5) {
+        _v4_push(salida.tensiones, {
+            id: 'ten_inequidad_sfa_intensa',
+            tipo: 'tension', categoria: 'desigualdad_persistente',
+            texto: 'La dimensión SFA de inequidad registra un valor elevado (' + Math.round(_d4Score * 100) + '%). Las actuaciones deben contemplar explícitamente el gradiente social de riesgo y evitar intervenciones neutrales al contexto socioeconómico.',
+            fuentes: ['indicadores_cmi', 'determinantes_eas'].filter(function(f) {
+                return salida.fuentes.disponibles.includes(f);
+            }),
+            nivelEvidencia: 2, certeza: 'media',
+            justificacion: 'SFA D4 score = ' + (_d4Score !== null ? _d4Score.toFixed(2) : '?') + ' (> 0.5). Valor cuantitativo estructurado.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'inequidad_sfa_intensa_gradiente_social',
+        });
+    }
+
+    // ── FORTALEZAS (máx. 2) ───────────────────────────────────────────────────
+
+    // F1: Activos documentados sin señales de inequidad.
+    // Solo si el snapshot confirma activos > 0 Y no hay alertas de inequidad.
+    if (_alertas.length === 0 && _activosEnCiclo !== null && _activosEnCiclo > 0) {
+        _v4_push(salida.fortalezas, {
+            id: 'for_capacidad_salutogenica_sin_carga',
+            tipo: 'fortaleza', categoria: 'capacidad_salutogenica_territorial',
+            texto: _activosEnCiclo + ' activo(s) comunitario(s) documentado(s) sin señales activas de inequidad estructural. Contexto propicio para intervenciones salutogénicas de mantenimiento y desarrollo de capacidades.',
+            fuentes: ['agenda_evaluacion'],
+            nivelEvidencia: 2, certeza: 'media',
+            justificacion: 'activosComunitariosEnCiclo.total = ' + _activosEnCiclo + ' + alertasInequidad.length === 0. Combinación estructurada real.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'capacidad_salutogenica_sin_carga_inequidad',
+        });
+    }
+
+    // F2: SFA D4 bajo (<0.25) con evidencia estructural — equidad territorial documentada.
+    // Requiere puedeInferirFuerte: la afirmación de equidad necesita base cuantitativa sólida.
+    if (_d4Score !== null && _d4Score < 0.25 && evidenciaMeta.puedeInferirFuerte()) {
+        _v4_push(salida.fortalezas, {
+            id: 'for_equidad_territorial_sfa',
+            tipo: 'fortaleza', categoria: 'equidad_territorial',
+            texto: 'El perfil SFA de inequidad es bajo (' + Math.round(_d4Score * 100) + '%). Los determinantes socioeconómicos no representan una carga dominante con la evidencia disponible. Contexto favorable para intervenciones universales.',
+            fuentes: ['indicadores_cmi', 'determinantes_eas'].filter(function(f) {
+                return salida.fuentes.disponibles.includes(f);
+            }),
+            nivelEvidencia: 2, certeza: 'media',
+            justificacion: 'SFA D4 score = ' + (_d4Score !== null ? _d4Score.toFixed(2) : '?') + ' (< 0.25) con evidencia estructural N1/N2 confirmada.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'equidad_territorial_sfa_documentada',
+        });
+    }
+
+    // ── HIPÓTESIS (máx. 1) ────────────────────────────────────────────────────
+
+    // H1: Señal de inequidad con perfil SFA parcial — lectura limitada metodológicamente.
+    // Solo si hay alertas de inequidad Y el perfil SFA tiene pocas dimensiones (<3).
+    if (_alertas.length > 0 && _nDimsSFA !== null && _nDimsSFA < 3) {
+        _v4_push(salida.hipotesis, {
+            id: 'hip_inequidad_sfa_parcial',
+            tipo: 'hipotesis', categoria: 'limitacion_metodologica',
+            texto: 'Existen señales de inequidad pero el perfil SFA disponible es parcial (' + _nDimsSFA + '/8 dimensiones). La lectura de desigualdad puede ser incompleta. Conviene ampliar fuentes antes de priorizar intervenciones focalizadas.',
+            fuentes: ['indicadores_cmi', 'determinantes_eas'].filter(function(f) {
+                return salida.fuentes.disponibles.includes(f);
+            }),
+            nivelEvidencia: 3, certeza: 'media',
+            justificacion: 'alertasInequidad presentes + nDimensionesDisponibles SFA = ' + _nDimsSFA + ' (< 3). Limitación metodológica real, no inferencia territorial.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'inequidad_con_sfa_parcial',
+        });
+    }
+}
+
+function _v4_construirSalida(contextoIA, analisisBase) {
+    const lt1 = _v4_extraerLT1(analisisBase);
+    const salida = {
+        contrato: 'motor_sintesis_perfil_v4',
+        version: V4_VERSION,
+        modo: 'paralelo_no_sustitutivo',
+        ambitoId: contextoIA && contextoIA.ambitoId || null,
+        ambitoNombre: contextoIA && contextoIA.ambitoNombre || contextoIA && contextoIA.ambitoId || null,
+        fechaGeneracion: new Date().toISOString(),
+        fuentes: _v4_fuentes(contextoIA || {}, analisisBase || {}),
+        observaciones: [],
+        evidencia: { fuerte: [], secundaria: [], participativa: [], contextual: [], estrategica: [], estrategiasSecundarias: [] },
+        inferencias: [],
+        hipotesis: [],
+        tensiones: [],
+        fortalezas: [],
+        vulnerabilidades: [],
+        recomendaciones: { territoriales: [], exploratorias: [], estructuralesRELAS: [] },
+        prioridades: [],
+        incertidumbre: null,
+        reglasEpistemologicas: V4_REGLAS_EPISTEMOLOGICAS.slice(),
+        compatibilidad: {
+            noSustituyeV3: true,
+            noPersiste: true,
+            propuestaEPVSA: _v4_array(analisisBase && analisisBase.propuestaEPVSA),
+            seleccionEPVSA: typeof window !== 'undefined' ? (window.seleccionEPVSA || window.seleccionEPVSAActual || null) : null,
+        },
+        legacyReintegrado: {
+            lt1: !!lt1 && !lt1.error,
+            narrativaSalutogenica: true,
+            activosComunitarios: true,
+            orientacionComunitaria: !!lt1 && !lt1.error && _v4_array(lt1.orientaciones).length > 0,
+        },
+        auditoria: {
+            lt1Error: lt1 && lt1.error ? lt1.error : null,
+            estrategiasSecundariasNoActivadoras: V4_ESTRATEGIAS_SECUNDARIAS.map(e => e.id),
+        },
+    };
+
+    _v4_construirObservaciones(contextoIA || {}, analisisBase || {}, lt1, salida);
+    salida.evidencia.fuerte = salida.observaciones.filter(x => x.nivelEvidencia === 1);
+    salida.evidencia.participativa = salida.observaciones.filter(x => x.fuentes.includes('participacion'));
+    salida.evidencia.secundaria = salida.fuentes.inventario.filter(x => x.disponible && x.nivelEvidencia === 2);
+    salida.evidencia.estrategica = [{ id: 'epvsa_2024_2030', tipo: 'marco_estrategico_principal', nivelEvidencia: 5, habilitaRecomendacion: false, habilitaEPVSA: false }];
+    salida.evidencia.estrategiasSecundarias = V4_ESTRATEGIAS_SECUNDARIAS.map(e => ({ id: e.id, etiqueta: e.label, nivelEvidencia: 6, habilitaRecomendacion: false, habilitaEPVSA: false }));
+
+    // evidenciaMeta: jerarquía ponderada para decisiones epistemológicas internas
+    const evidenciaMeta = _v4_construirEvidenciaMeta(salida.fuentes);
+    salida.evidenciaMeta = {
+        nivel1: evidenciaMeta.nivel1,
+        nivel2: evidenciaMeta.nivel2,
+        nivel3: evidenciaMeta.nivel3,
+        pesoTotal: evidenciaMeta.pesoTotal,
+        puedeInferir: evidenciaMeta.puedeInferir,
+        puedeInferirFuerte: evidenciaMeta.puedeInferirFuerte,
+        clasificarFuente: evidenciaMeta.clasificarFuente,
+    };
+
+    _v4_construirLecturas(contextoIA || {}, analisisBase || {}, lt1, salida, evidenciaMeta);
+    _v4_construirFortalezasVulnerabilidades(analisisBase || {}, lt1, salida);
+    _v4_construirRecomendaciones(contextoIA || {}, analisisBase || {}, lt1, salida);
+    _v4_construirPrioridades(analisisBase || {}, salida);
+    // Señales estructurales: inequidad/vulnerabilidad/capacidad comunitaria basadas en datos reales.
+    // Se ejecuta después de toda la construcción base para evitar duplicados y leer señales completas.
+    _v4_leerSeñalesEstructurales(contextoIA || {}, analisisBase || {}, salida, evidenciaMeta);
+    salida.incertidumbre = _v4_incertidumbre(salida);
+
+    if (!salida.tensiones.length && salida.inferencias.length) {
+        _v4_push(salida.hipotesis, {
+            id: 'hipotesis_contraste_tecnico', tipo: 'hipotesis', categoria: 'contraste',
+            texto: 'Las inferencias territoriales deben contrastarse en mesa tecnica y participativa antes de convertirse en agenda operativa.',
+            fuentes: salida.fuentes.disponibles, nivelEvidencia: 4, certeza: 'prudente',
+            justificacion: 'v4 evita que la lectura interpretativa actue como automatismo decisor.',
+            habilitaRecomendacion: false, habilitaEPVSA: false,
+            regla: 'hipotesis_no_decision',
+        });
+    }
+
+    // FMC: aplicar modulación comunitaria sobre items ya construidos.
+    // Solo añade nivelLectura / advertencia / enriquecidaPorFMC — no altera estructura ni lógica.
+    const fmc = _v4_construirFMC(contextoIA || {}, lt1, salida);
+    salida.fmc = {
+        participacion: fmc.participacion,
+        activos: fmc.activos,
+        percepcion: fmc.percepcion,
+        total: fmc.total,
+        calcular: fmc.calcular,
+        modulaInferencia: fmc.modulaInferencia,
+    };
+    salida.inferencias.forEach(item => fmc.modulaInferencia(item));
+    salida.tensiones.forEach(item => fmc.modulaInferencia(item));
+    salida.fortalezas.forEach(item => fmc.modulaInferencia(item));
+
+    return salida;
+}
+
+export const motorSintesisPerfilV4 = Object.freeze({
+    id: 'motor_sintesis_perfil_v4',
+    version: V4_VERSION,
+    descripcion: 'Capa interpretativa paralela para lectura territorial, jerarquia de evidencia e incertidumbre. No sustituye v3 ni persiste datos.',
+    ejecutar(contextoIA, analisisBase = null) {
+        return _v4_construirSalida(contextoIA, analisisBase);
+    },
+});
 export const motorSintesisPerfil = crearMotor({
     id:          'motor_sintesis_perfil',
     version:     '3.0',
@@ -1091,3 +1985,314 @@ export async function salidaDesdeAnalisisHeredado(ambitoId) {
         estadoRevisionHumana: ESTADOS_REVISION.REVISADO,
     });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SÍNTESIS TERRITORIAL INTERPRETATIVA (v1) + BRIDGE V4 → UI
+// ─────────────────────────────────────────────────────────────────────────────
+// Dos capas coordinadas activan en el hook COMPAS_postprocesarConclusionesRecomendaciones:
+//
+//   1. _v4_construirSintesisTerritorial: construye 2 párrafos institucionales compactos
+//      a partir de señales clasificadas (sin regex sobre texto libre, sin causalidades
+//      inventadas, sin relleno si los datos son pobres). Alimenta analisis._sintesisTerritorial
+//      que _adaptarAnalisisAFormatoUI (index.html) expone como resultado.narrativa,
+//      activando el modo científico del renderizador (paneles azul + gris).
+//
+//   2. Bridge de señales V4 → conclusiones: fallback cuando la síntesis no activa o
+//      como reserva en _analisisCompleto. Las señales estructurales e institucionales
+//      se inyectan al frente de analisis.conclusiones con deduplicación estricta.
+//
+// Categorías estructurales (tensiones): vulnerabilidad_estructural, vulnerabilidad_sin_red,
+//   desigualdad_persistente, fragilidad_institucional, ejecucion_insuficiente.
+// Categorías institucionales (fortalezas): gobernanza_institucional,
+//   activo_comunitario_institucional, capacidad_salutogenica_territorial, equidad_territorial.
+// Excluidas: salutogenica, area_mejora, lt1, activo_comunitario (texto V3 reempaquetado).
+// ─────────────────────────────────────────────────────────────────────────────
+var _V4_CAT_TENSION_ESTRUCTURAL = {
+    vulnerabilidad_estructural:   true,
+    vulnerabilidad_sin_red:       true,
+    desigualdad_persistente:      true,
+    fragilidad_institucional:     true,
+    ejecucion_insuficiente:       true
+};
+var _V4_CAT_FORTALEZA_INSTITUCIONAL = {
+    gobernanza_institucional:           true,
+    activo_comunitario_institucional:   true,
+    capacidad_salutogenica_territorial: true,
+    equidad_territorial:                true
+};
+
+// Etiquetas legibles por categoría (para texto de síntesis — NO regex sobre texto libre)
+var _V4_DESC_CAT_TENS = {
+    vulnerabilidad_estructural:   'vulnerabilidad estructural multidimensional',
+    vulnerabilidad_sin_red:       'desigualdad sin base comunitaria documentada',
+    desigualdad_persistente:      'gradiente de desigualdad persistente',
+    fragilidad_institucional:     'fragilidad en la ejecución del ciclo',
+    ejecucion_insuficiente:       'capacidad de ejecución institucional limitada'
+};
+var _V4_DESC_CAT_FORT = {
+    gobernanza_institucional:           'capacidad de ejecución institucional documentada',
+    activo_comunitario_institucional:   'red comunitaria con actividad registrada',
+    equidad_territorial:                'perfil de equidad territorial favorable',
+    capacidad_salutogenica_territorial: 'capacidad salutogénica sin carga estructural de inequidad'
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// _v4_construirSintesisTerritorial(v4, analisis)
+// ─────────────────────────────────────────────────────────────────────────────
+// Construye 2 párrafos institucionales compactos desde señales clasificadas.
+// Párrafo 1 (contexto): calidad de evidencia + patrón de señales + nota de gobernanza.
+// Párrafo 2 (sintesis): cualificador prudencial + conclusión interpretativa.
+// Retorna { narrativa: { contexto, sintesis } } | null.
+// ─────────────────────────────────────────────────────────────────────────────
+function _v4_construirSintesisTerritorial(v4, analisis) {
+    if (!v4 || !v4.incertidumbre || !v4.fuentes) return null;
+
+    // ── Lecturas estructuradas de entrada ────────────────────────────────────
+    var _em   = v4.evidenciaMeta || {};
+    var _inc  = v4.incertidumbre;
+    var _disp = (v4.fuentes && Array.isArray(v4.fuentes.disponibles)) ? v4.fuentes.disponibles : [];
+    var _peso = typeof _em.pesoTotal === 'number' ? _em.pesoTotal : 0;
+    var _nN1  = Array.isArray(_em.nivel1) ? _em.nivel1.length : 0;
+    var _nN2  = Array.isArray(_em.nivel2) ? _em.nivel2.length : 0;
+
+    var _tieneCMI = _disp.indexOf('indicadores_cmi')   >= 0;
+    var _tieneDET = _disp.indexOf('determinantes_eas') >= 0;
+    var _tieneISS = _disp.indexOf('informe_salud')     >= 0;
+    var _tienePAR = _disp.indexOf('participacion')     >= 0;
+
+    // Filtrar tensiones estructurales y fortalezas institucionales
+    var _tens = Array.isArray(v4.tensiones) ? v4.tensiones : [];
+    var _tensEstr = [];
+    for (var _i = 0; _i < _tens.length; _i++) {
+        if (_tens[_i] && _V4_CAT_TENSION_ESTRUCTURAL[_tens[_i].categoria]) _tensEstr.push(_tens[_i]);
+    }
+    var _forts = Array.isArray(v4.fortalezas) ? v4.fortalezas : [];
+    var _fortInst = [];
+    for (var _j = 0; _j < _forts.length; _j++) {
+        if (_forts[_j] && _V4_CAT_FORTALEZA_INSTITUCIONAL[_forts[_j].categoria]) _fortInst.push(_forts[_j]);
+    }
+    var _hips       = Array.isArray(v4.hipotesis) ? v4.hipotesis : [];
+    var _nTens      = _tensEstr.length;
+    var _nFort      = _fortInst.length;
+    var _nHips      = _hips.length;
+    var _nInequidad = (analisis && Array.isArray(analisis.alertasInequidad)) ? analisis.alertasInequidad.length : 0;
+
+    // ── Gobernanza longitudinal desde snapshot ────────────────────────────────
+    var _snap = null;
+    if (typeof window !== 'undefined') {
+        try {
+            if (typeof window.COMPAS_obtenerSnapshotEvaluacionActual === 'function') {
+                _snap = window.COMPAS_obtenerSnapshotEvaluacionActual();
+            }
+        } catch (e) { /* silencioso */ }
+        if (!_snap) _snap = window.COMPAS && window.COMPAS.state && window.COMPAS.state._ultimoSnapshot;
+    }
+    var _lel    = _snap && _snap.lecturaEvaluativaLongitudinal;
+    var _clases = _lel && _lel.clasificaciones;
+    var _govEj  = _clases && _clases.ejecucion && _clases.ejecucion.estado;
+    var _govArr = (_clases && _clases.ejecucion && typeof _clases.ejecucion.tasaArrastre === 'number')
+                  ? _clases.ejecucion.tasaArrastre : null;
+    var _govRed    = _clases && _clases.redComunitaria && _clases.redComunitaria.estado;
+    var _govTrazab = _clases && _clases.trazabilidad && _clases.trazabilidad.estado;
+
+    // ── PÁRRAFO 1: apertura de evidencia + patrón de señales + gobernanza ─────
+    var _p1 = [];
+
+    // 1a. Apertura según calidad de evidencia (basada en pesoTotal y niveles)
+    var _menc = [];
+    if (_tieneCMI) _menc.push('indicadores CMI');
+    if (_tieneDET) _menc.push('determinantes estructurales');
+    if (_tieneISS) _menc.push('informe de situación de salud');
+    if (_tienePAR) _menc.push('priorización ciudadana');
+    var _mencStr = _menc.length ? ' (' + _menc.join(', ') + ')' : '';
+
+    var _apert;
+    if (_peso >= 6 && _nN1 >= 2) {
+        _apert = 'El análisis territorial se apoya en base múltiple de fuentes cuantitativas' + _mencStr + '.';
+    } else if (_peso >= 3 && _nN1 >= 1) {
+        _apert = 'El análisis dispone de fuentes cuantitativas directas' + _mencStr + '.';
+    } else if (_peso >= 2 && _nN2 >= 1) {
+        _apert = 'El análisis se construye principalmente sobre evidencia secundaria' + _mencStr + ', sin indicadores municipales directos.';
+    } else if (_peso >= 1) {
+        _apert = 'La base de información disponible es limitada' + (_menc.length ? _mencStr : '') + '; la lectura que sigue tiene carácter provisional.';
+    } else {
+        // Caso extremo: sin información suficiente → síntesis mínima de advertencia
+        return {
+            narrativa: {
+                contexto: 'La información disponible es insuficiente para una lectura territorial consolidada.',
+                sintesis: 'Se recomienda priorizar la obtención de fuentes cuantitativas directas (indicadores CMI, determinantes EAS, informe de situación de salud) antes de comprometer líneas de actuación.'
+            }
+        };
+    }
+    _p1.push(_apert);
+
+    // 1b. Patrón dominante de señales (por prioridad de categoría, no por texto)
+    var _PRIO_TENS = ['vulnerabilidad_estructural', 'vulnerabilidad_sin_red', 'desigualdad_persistente', 'fragilidad_institucional', 'ejecucion_insuficiente'];
+    var _catTensDom = null;
+    var _pi, _ti;
+    for (_pi = 0; _pi < _PRIO_TENS.length && !_catTensDom; _pi++) {
+        for (_ti = 0; _ti < _tensEstr.length; _ti++) {
+            if (_tensEstr[_ti].categoria === _PRIO_TENS[_pi]) { _catTensDom = _PRIO_TENS[_pi]; break; }
+        }
+    }
+    var _PRIO_FORT = ['gobernanza_institucional', 'activo_comunitario_institucional', 'equidad_territorial', 'capacidad_salutogenica_territorial'];
+    var _catFortDom = null;
+    var _pfi, _fi;
+    for (_pfi = 0; _pfi < _PRIO_FORT.length && !_catFortDom; _pfi++) {
+        for (_fi = 0; _fi < _fortInst.length; _fi++) {
+            if (_fortInst[_fi].categoria === _PRIO_FORT[_pfi]) { _catFortDom = _PRIO_FORT[_pfi]; break; }
+        }
+    }
+
+    var _fraSen;
+    if (_nTens > 0 && _nFort === 0) {
+        _fraSen = 'Las señales dominantes son de tensión estructural' +
+                  (_catTensDom ? ' (' + (_V4_DESC_CAT_TENS[_catTensDom] || _catTensDom) + ')' : '') +
+                  (_nTens > 1 ? '; se identifican ' + _nTens + ' tensiones concurrentes' : '') + '.';
+    } else if (_nFort > 0 && _nTens === 0) {
+        _fraSen = 'Las señales dominantes indican capacidad institucional' +
+                  (_catFortDom ? ' (' + (_V4_DESC_CAT_FORT[_catFortDom] || _catFortDom) + ')' : '') + '.';
+    } else if (_nTens > 0 && _nFort > 0) {
+        _fraSen = 'El perfil es mixto: ' +
+                  _nTens + ' tensión' + (_nTens > 1 ? 'es' : '') + ' estructural' + (_nTens > 1 ? 'es' : '') +
+                  ' coexist' + (_nTens > 1 ? 'en' : 'e') + ' con ' +
+                  _nFort + ' fortaleza' + (_nFort > 1 ? 's' : '') + ' institucional' + (_nFort > 1 ? 'es' : '') + '.';
+    } else if (_nInequidad > 0) {
+        _fraSen = 'Se detectan ' + _nInequidad + ' alerta' + (_nInequidad > 1 ? 's' : '') +
+                  ' de inequidad que no alcanzan umbral de tensión estructural confirmada con la evidencia disponible.';
+    } else {
+        _fraSen = 'No emergen señales estructurales dominantes con la información disponible.';
+    }
+    _p1.push(_fraSen);
+
+    // 1c. Nota de gobernanza longitudinal (solo si el snapshot está disponible)
+    if (_govEj) {
+        var _fraGov = '';
+        if (_govEj === 'solida') {
+            _fraGov = 'La ejecución del ciclo evaluado muestra solidez institucional';
+            if (_govRed === 'activa') _fraGov += ' y la red comunitaria está activa';
+            _fraGov += '.';
+        } else if (_govEj === 'baja') {
+            _fraGov = 'El ciclo de actuaciones presenta dificultades relevantes de ejecución' +
+                      (_govArr !== null && _govArr >= 50 ? ' (tasa de arrastre: ' + Math.round(_govArr) + '%)' : '') + '.';
+        } else if (_govEj === 'parcial') {
+            _fraGov = 'La ejecución del ciclo es parcial' +
+                      (_govArr !== null && _govArr > 25 ? ' (' + Math.round(_govArr) + '% de arrastre)' : '') + '.';
+        }
+        if (_govTrazab === 'no_verificable') {
+            _fraGov += (_fraGov ? ' ' : '') + 'La trazabilidad de evidencias del ciclo no es verificable, lo que limita la rendición de cuentas.';
+        }
+        if (_fraGov) _p1.push(_fraGov);
+    }
+
+    var _contexto = _p1.join(' ');
+
+    // ── PÁRRAFO 2: cualificador prudencial + conclusión interpretativa ─────────
+    var _p2 = [];
+    var _nivelInc = _inc.nivelGlobal || 'alta';
+
+    var _cualif;
+    if (_nivelInc === 'alta') {
+        _cualif = 'La densidad de evidencia es insuficiente para conclusiones consolidadas; las inferencias tienen carácter orientativo y requieren contraste técnico y participativo antes de traducirse en agenda operativa.';
+    } else if (_nivelInc === 'media-alta') {
+        _cualif = 'La lectura tiene carácter tentativo; la evidencia disponible permite orientar deliberación, pero no automatizar decisiones sin contraste previo.';
+    } else {
+        _cualif = 'La lectura es prudente e informada por evidencia estructurada; puede orientar deliberación técnica sin constituir por sí misma una decisión operativa.';
+    }
+    _p2.push(_cualif);
+
+    // Conclusión interpretativa — adaptada al patrón de señales y calidad de evidencia
+    var _concl;
+    if (_peso < 2) {
+        _concl = 'Se recomienda completar la base de información antes de comprometer líneas de actuación.';
+    } else if (_nTens >= 2 && _nInequidad > 0) {
+        _concl = 'El perfil apunta a un territorio con necesidades estructurales que requieren abordaje integral, no temático ni puntual.';
+    } else if (_nTens > 0 && _nFort === 0) {
+        _concl = 'El perfil sugiere vulnerabilidades que merecen atención prioritaria en la siguiente planificación del ciclo de salud.';
+    } else if (_nFort > 0 && _nTens === 0 && _peso >= 3) {
+        _concl = 'El territorio muestra condiciones institucionales favorables para sostener un ciclo de salud con continuidad y proyección.';
+    } else if (_nTens > 0 && _nFort > 0) {
+        _concl = 'La planificación debe equilibrar la respuesta a tensiones estructurales con la consolidación de las capacidades institucionales identificadas.';
+    } else if (_nHips > 0) {
+        _concl = 'Las limitaciones metodológicas identificadas condicionan el alcance de la lectura; ampliar la base de información debe ser prioridad antes de planificar actuaciones.';
+    } else {
+        _concl = 'Con la información disponible no emerge un patrón territorial dominante; el análisis puede informar vigilancia y orientación, no priorización específica.';
+    }
+    _p2.push(_concl);
+
+    return {
+        narrativa: {
+            contexto: _contexto,
+            sintesis: _p2.join(' ')
+        }
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOOK: COMPAS_postprocesarConclusionesRecomendaciones
+// ─────────────────────────────────────────────────────────────────────────────
+// Llamado desde index.html línea 55377:
+//   analisis = COMPAS_postprocesarConclusionesRecomendaciones(analisis) || analisis;
+// Ejecuta las dos capas en orden:
+//   1. Síntesis territorial → analisis._sintesisTerritorial (expuesta por _adaptarAnalisisAFormatoUI)
+//   2. Bridge V4 señales → analisis.conclusiones (fallback si síntesis no activa en UI)
+// No toca propuestaEPVSA, recomendaciones, Firebase, snapshots, compilador.
+// ─────────────────────────────────────────────────────────────────────────────
+window.COMPAS_postprocesarConclusionesRecomendaciones = function(analisis) {
+    if (typeof window === 'undefined') return analisis;
+    var _v4 = window.analisisActualV4;
+    if (!_v4) return analisis;
+    if (!analisis || !Array.isArray(analisis.conclusiones)) return analisis;
+
+    // ── Capa 1: síntesis territorial interpretativa ───────────────────────────
+    var _sint = _v4_construirSintesisTerritorial(_v4, analisis);
+    if (_sint) {
+        analisis._sintesisTerritorial = _sint;
+        console.log('[COMPAS síntesis territorial] Generada. Contexto (' +
+            (_sint.narrativa && _sint.narrativa.contexto ? _sint.narrativa.contexto.length : 0) + ' chars), ' +
+            'Síntesis (' + (_sint.narrativa && _sint.narrativa.sintesis ? _sint.narrativa.sintesis.length : 0) + ' chars).');
+    }
+
+    // ── Capa 2: señales V4 estructurales → conclusiones (bridge fallback) ─────
+    var _ids = {};
+    for (var _i = 0; _i < analisis.conclusiones.length; _i++) {
+        var _c = analisis.conclusiones[_i];
+        if (_c && _c.id) _ids[_c.id] = true;
+    }
+    var _nuevas = [];
+
+    var _tensArr = Array.isArray(_v4.tensiones) ? _v4.tensiones : [];
+    for (var _j = 0; _j < _tensArr.length; _j++) {
+        var _t = _tensArr[_j];
+        if (!_t || !_t.id || !_t.texto) continue;
+        if (!_V4_CAT_TENSION_ESTRUCTURAL[_t.categoria]) continue;
+        if (_ids[_t.id]) continue;
+        _nuevas.push({ id: _t.id, texto: _t.texto });
+        _ids[_t.id] = true;
+    }
+    var _hipsArr = Array.isArray(_v4.hipotesis) ? _v4.hipotesis : [];
+    for (var _k = 0; _k < _hipsArr.length; _k++) {
+        var _h = _hipsArr[_k];
+        if (!_h || !_h.id || !_h.texto) continue;
+        if (_ids[_h.id]) continue;
+        _nuevas.push({ id: _h.id, texto: _h.texto });
+        _ids[_h.id] = true;
+    }
+    var _fortsArr = Array.isArray(_v4.fortalezas) ? _v4.fortalezas : [];
+    for (var _l = 0; _l < _fortsArr.length; _l++) {
+        var _f = _fortsArr[_l];
+        if (!_f || !_f.id || !_f.texto) continue;
+        if (!_V4_CAT_FORTALEZA_INSTITUCIONAL[_f.categoria]) continue;
+        if (_ids[_f.id]) continue;
+        _nuevas.push({ id: _f.id, texto: _f.texto });
+        _ids[_f.id] = true;
+    }
+    if (_nuevas.length > 0) {
+        for (var _m = _nuevas.length - 1; _m >= 0; _m--) {
+            analisis.conclusiones.unshift(_nuevas[_m]);
+        }
+        console.log('[COMPAS V4→UI bridge] ' + _nuevas.length + ' señal(es) estructural(es) en conclusiones:', _nuevas.map(function(n) { return n.id; }));
+    }
+
+    return analisis;
+};

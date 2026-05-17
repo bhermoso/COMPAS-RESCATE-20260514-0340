@@ -3270,6 +3270,32 @@
 
 
 
+
+                    <!-- Vista debug: inventario documental (solo lectura) -->
+
+                    <div id="compas-inventario-documental-debug" style="grid-column:1/-1; border:1px solid #cbd5e1; border-radius:8px; overflow:hidden; background:#ffffff;">
+
+                        <div style="background:#f8fafc; color:#334155; padding:0.65rem 0.9rem; display:flex; align-items:center; gap:0.65rem; border-left:3px solid #0074c8; border-bottom:1px solid #e2e8f0;">
+
+                            <div style="flex:1; min-width:0;">
+
+                                <strong style="font-size:0.88rem;">Estado documental del municipio</strong>
+
+                                <div style="font-size:0.72rem; color:#64748b; margin-top:0.15rem;">Vista debug de inventario documental. Solo lectura.</div>
+
+                            </div>
+
+                            <button id="btn-actualizar-inventario-documental" onclick="COMPAS_renderInventarioDocumentalDebug()" style="background:#ffffff; color:#0074c8; border:1px solid #0074c8; border-radius:4px; padding:0.35rem 0.7rem; font-size:0.76rem; font-weight:700; cursor:pointer;">Actualizar inventario</button>
+
+                        </div>
+
+                        <div id="compas-inventario-documental-debug-body" style="padding:0.85rem 0.95rem; font-size:0.78rem; color:#64748b;">
+
+                            Inventario documental pendiente de actualización.
+
+                        </div>
+
+                    </div>
                 </div>
 
             </div>
@@ -8633,6 +8659,351 @@ function COMPAS_construirArbolTrazabilidad() {
 }
 // ── Fin árbol de trazabilidad ────────────────────────────────────────────────
 
+// -----------------------------------------------------------------------------
+// INVENTARIO DOCUMENTAL COMPAS v1 (solo lectura)
+// -----------------------------------------------------------------------------
+// Capa minima de inteligibilidad documental. No persiste, no rehidrata, no
+// recalcula IBSE, no procesa documentos y no modifica motores ni compilador.
+function COMPAS_construirInventarioDocumental(opciones) {
+    opciones = opciones || {};
+
+    var win = window;
+    var compas = win.COMPAS || {};
+    var state = compas.state || {};
+    var dm = win.datosMunicipioActual || (typeof datosMunicipioActual !== 'undefined' ? datosMunicipioActual : null) || {};
+    var plan = (typeof planLocalSalud !== 'undefined' && planLocalSalud) ? planLocalSalud : {};
+    var municipioActual = null;
+
+    try {
+        municipioActual = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
+    } catch (e) {
+        municipioActual = null;
+    }
+
+    municipioActual = municipioActual || dm.id || dm.codigo || dm.nombre || state.municipioActivo || null;
+
+    function _esObjeto(v) {
+        return !!v && typeof v === 'object' && !Array.isArray(v);
+    }
+
+    function _tieneClaves(v) {
+        return _esObjeto(v) && Object.keys(v).length > 0;
+    }
+
+    function _arr(v) {
+        return Array.isArray(v) ? v : [];
+    }
+
+    function _conteo(v) {
+        if (Array.isArray(v)) return v.length;
+        if (_esObjeto(v)) return Object.keys(v).length;
+        return v ? 1 : 0;
+    }
+
+    function _hay(v) {
+        if (Array.isArray(v)) return v.length > 0;
+        if (_esObjeto(v)) return Object.keys(v).length > 0;
+        return !!v;
+    }
+
+    function _rutaMunicipal(segmento) {
+        var mun = municipioActual || '{municipio}';
+        return 'estrategias/{estrategiaActual}/municipios/' + mun + '/' + segmento;
+    }
+
+    function _estado(existeRuntime, existeFirebase, existeLocal, extra) {
+        if (extra && extra.derivadoSinOrigen) return 'derivado_sin_origen_visible';
+        if (extra && extra.placeholder) return 'pendiente_modelo';
+        if (existeRuntime && existeFirebase) return 'sincronizado_o_rehidratado';
+        if (existeRuntime && existeLocal && !existeFirebase) return 'solo_runtime_local';
+        if (existeRuntime && !existeFirebase) return 'solo_runtime';
+        if (!existeRuntime && existeFirebase) return 'persistido_no_rehidratado';
+        if (!existeRuntime && existeLocal) return 'local_no_integrado';
+        return 'no_disponible';
+    }
+
+    function _item(cfg) {
+        cfg = cfg || {};
+        var existeRuntime = !!cfg.existeRuntime;
+        var existeFirebase = !!cfg.existeFirebase;
+        var existeLocal = !!cfg.existeLocal;
+        return {
+            id: cfg.id,
+            tipoDocumental: cfg.tipoDocumental || 'dato_documental',
+            naturaleza: cfg.naturaleza || 'mixto',
+            origen: cfg.origen || null,
+            existeLocal: existeLocal,
+            existeFirebase: existeFirebase,
+            existeRuntime: existeRuntime,
+            rehidratable: !!cfg.rehidratable,
+            alimentaIA: !!cfg.alimentaIA,
+            alimentaCompilador: !!cfg.alimentaCompilador,
+            alimentaEvaluacion: !!cfg.alimentaEvaluacion,
+            alimentaPlan: !!cfg.alimentaPlan,
+            derivadoDe: cfg.derivadoDe || null,
+            fuenteVerdad: cfg.fuenteVerdad || null,
+            persistencia: cfg.persistencia || 'sin_persistencia_nueva',
+            rutaFirebase: cfg.rutaFirebase || null,
+            certezaFirebase: cfg.certezaFirebase || 'no_comprobada_en_runtime',
+            riesgoLegacy: cfg.riesgoLegacy || 'bajo',
+            estado: cfg.estado || _estado(existeRuntime, existeFirebase, existeLocal, cfg),
+            conteo: typeof cfg.conteo === 'number' ? cfg.conteo : null,
+            notas: _arr(cfg.notas)
+        };
+    }
+
+    var estudios = _arr(win.estudiosComplementarios);
+    var estudiosFirebase = _arr(dm.estudiosComplementarios);
+    var escalas = [];
+    try {
+        escalas = (typeof _compasEscalasGet === 'function') ? _arr(_compasEscalasGet()) : [];
+    } catch (e) {
+        escalas = [];
+    }
+    var escalasFirebase = _arr(dm.estudiosComplementariosEscalas || dm.escalasComplementarias);
+    var informeFirebase = !!(dm.informe && (dm.informe.htmlCompleto || dm.informe.texto || dm.informe.html));
+    var informeLocal = !!(win.__compas_informe_pendiente && (win.__compas_informe_pendiente.htmlCompleto || win.__compas_informe_pendiente.texto));
+    var informeRuntime = informeFirebase || informeLocal || !!(plan.perfil && plan.perfil.html);
+    var ibseAgregado = win.datosIBSE || state.datosIBSE || dm.ibseDatos || dm.ibse_monitor || null;
+    var ibseCsv = win._ibse_v2_csvReciente || null;
+    var ibseMicroRuntime = !!(ibseCsv && (!ibseCsv.mun || !municipioActual || ibseCsv.mun === municipioActual) && _hay(ibseCsv.datos));
+    var ibseAgregadoRuntime = _hay(ibseAgregado);
+    var referenciasEAS = win.referenciasEAS || state.referenciasEAS || dm.referenciasEAS || null;
+    var determinantes = dm.determinantes || state.determinantes || win.determinantesActuales || null;
+    var indicadores = dm.indicadores || state.indicadores || win.indicadoresMunicipales || null;
+    var dpc = win.datosParticipacionCiudadana || dm.participacionCiudadana || null;
+    var prioridades = compas.prioridades || {};
+    var decision = win.decisionPriorizacionActual || dm.decisionPriorizacion || state.decisionPriorizacion || null;
+    var fusion = win.datosFusionPriorizacion || dm.datosFusionPriorizacion || null;
+    var seleccion = state.seleccionEPVSA || dm.seleccionEPVSA || null;
+    var propuesta = win.propuestaActual || state.propuestaEPVSA || dm.propuestaEPVSA || null;
+    var analisis = win.analisisActual || state.analisisActual || dm.analisisIA || null;
+    var analisisV3 = win.analisisActualV3 || state.analisisActualV3 || null;
+    var analisisV4 = win.analisisActualV4 || state.analisisActualV4 || null;
+    var analisisPendiente = win.__COMPAS_analisisIA_pendienteGuardar || null;
+    var acciones = (typeof accionesAgenda !== 'undefined' && Array.isArray(accionesAgenda)) ? accionesAgenda : _arr(state.accionesAgenda || dm.accionesAgenda);
+    var agendaFirebase = dm.agendas || dm.agenda || state.agendaFirebase || null;
+    var planAccion = state.planAccion || plan.planAccion || dm.planAccion || null;
+    var snapshotPlan = state.snapshotPlan || state.planAccionFirebase || null;
+    var snapshotEvaluacion = state.snapshotEvaluacion || null;
+    var activos = state.activosComunitarios || win.activosComunitarios || dm.activosComunitarios || null;
+
+    var items = {
+        informe: _item({
+            id: 'informe', tipoDocumental: 'informe_situacion_salud', naturaleza: 'original_y_texto_extraido',
+            origen: informeLocal ? 'carga_local_informe' : (informeFirebase ? 'firebase_informe' : null),
+            existeLocal: informeLocal, existeFirebase: informeFirebase, existeRuntime: informeRuntime,
+            rehidratable: true, alimentaIA: true, alimentaCompilador: true, alimentaPlan: true,
+            derivadoDe: informeLocal ? 'archivo_word_pdf_o_html_cargado' : null,
+            fuenteVerdad: informeFirebase ? 'firebase:/informe' : (informeLocal ? 'runtime:__compas_informe_pendiente' : null),
+            persistencia: 'guardado_explicito_COMPAS_guardarInforme', rutaFirebase: _rutaMunicipal('informe'),
+            certezaFirebase: informeFirebase ? 'inferida_desde_datosMunicipioActual' : 'no_detectada',
+            riesgoLegacy: informeLocal && !informeFirebase ? 'medio' : 'bajo', conteo: informeRuntime ? 1 : 0,
+            notas: informeLocal && !informeFirebase ? ['Informe local pendiente o no persistido explicitamente.'] : []
+        }),
+        estudios_complementarios: _item({
+            id: 'estudios_complementarios', tipoDocumental: 'estudios_complementarios', naturaleza: 'original_y_resumen_manual',
+            origen: estudios.length ? 'runtime:window.estudiosComplementarios' : (estudiosFirebase.length ? 'firebase_estudiosComplementarios' : null),
+            existeLocal: estudios.length > 0, existeFirebase: estudiosFirebase.length > 0, existeRuntime: estudios.length > 0,
+            rehidratable: true, alimentaIA: true, alimentaCompilador: true, alimentaPlan: true,
+            fuenteVerdad: estudiosFirebase.length ? 'firebase:/estudiosComplementarios' : (estudios.length ? 'runtime:window.estudiosComplementarios' : null),
+            persistencia: 'guardado_explicito__guardarEstudiosFirebase', rutaFirebase: _rutaMunicipal('estudiosComplementarios'),
+            certezaFirebase: estudiosFirebase.length ? 'inferida_desde_datosMunicipioActual' : 'no_detectada',
+            riesgoLegacy: (!estudios.length && estudiosFirebase.length) ? 'alto' : 'medio', conteo: estudios.length || estudiosFirebase.length,
+            notas: (!estudios.length && estudiosFirebase.length) ? ['Hay estudios persistidos que no parecen estar rehidratados en window.estudiosComplementarios.'] : []
+        }),
+        ibse_microdatos: _item({
+            id: 'ibse_microdatos', tipoDocumental: 'microdatos_ibse', naturaleza: 'original_tabular', origen: ibseMicroRuntime ? 'runtime:_ibse_v2_csvReciente' : null,
+            existeLocal: ibseMicroRuntime, existeFirebase: ibseMicroRuntime || !!dm.ibse_respuestas, existeRuntime: ibseMicroRuntime,
+            rehidratable: true, alimentaIA: true, alimentaEvaluacion: true, alimentaPlan: true,
+            derivadoDe: 'csv_redcap_o_formulario_ibse', fuenteVerdad: 'firebase:ibse_respuestas/{municipio}',
+            persistencia: 'guardado_explicito_ibse_guardarAgregado_y_respuestas', rutaFirebase: 'ibse_respuestas/' + (municipioActual || '{municipio}'),
+            certezaFirebase: ibseMicroRuntime ? 'inferida_desde_rehidratacion_ibse' : 'no_detectada', riesgoLegacy: 'medio',
+            conteo: ibseMicroRuntime ? _conteo(ibseCsv.datos) : 0,
+            notas: ['No se recalcula IBSE; solo se inspecciona el marcador runtime de ultima carga/rehidratacion.']
+        }),
+        ibse_agregado: _item({
+            id: 'ibse_agregado', tipoDocumental: 'resultado_agregado_ibse', naturaleza: 'derivado', origen: ibseAgregadoRuntime ? 'runtime:window.datosIBSE' : null,
+            existeFirebase: !!(dm.ibseDatos || dm.ibse_monitor || ibseMicroRuntime), existeRuntime: ibseAgregadoRuntime,
+            rehidratable: true, alimentaIA: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true,
+            derivadoDe: ibseMicroRuntime ? 'ibse_microdatos' : null,
+            fuenteVerdad: ibseMicroRuntime ? 'firebase:ibse_respuestas/{municipio}' : 'runtime:window.datosIBSE',
+            persistencia: 'derivado_de_ibse_respuestas_o_ibseDatos', rutaFirebase: _rutaMunicipal('ibseDatos / ibse_monitor'),
+            certezaFirebase: (dm.ibseDatos || dm.ibse_monitor) ? 'inferida_desde_datosMunicipioActual' : (ibseMicroRuntime ? 'inferida_desde_rehidratacion_ibse' : 'no_detectada'),
+            riesgoLegacy: (ibseAgregadoRuntime && !ibseMicroRuntime && !(dm.ibseDatos || dm.ibse_monitor)) ? 'alto' : 'medio',
+            derivadoSinOrigen: ibseAgregadoRuntime && !ibseMicroRuntime && !(dm.ibseDatos || dm.ibse_monitor), conteo: ibseAgregadoRuntime ? 1 : 0,
+            notas: (ibseAgregadoRuntime && !ibseMicroRuntime) ? ['Existe resultado IBSE agregado sin microdatos visibles en runtime.'] : []
+        }),
+        escalas_eas: _item({
+            id: 'escalas_eas', tipoDocumental: 'escalas_y_valores_comparables_eas', naturaleza: 'derivado_y_referencia',
+            origen: escalas.length ? 'runtime:_compasEscalasGet' : (escalasFirebase.length ? 'firebase_estudiosComplementariosEscalas' : null),
+            existeLocal: escalas.length > 0, existeFirebase: escalasFirebase.length > 0, existeRuntime: escalas.length > 0,
+            rehidratable: true, alimentaIA: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true,
+            derivadoDe: 'estudios_complementarios_ibse_y_referencias_eas',
+            fuenteVerdad: escalasFirebase.length ? 'firebase:/estudiosComplementariosEscalas' : (escalas.length ? 'runtime:_compasEscalasGet' : null),
+            persistencia: 'guardado_explicito__guardarEscalasFirebase', rutaFirebase: _rutaMunicipal('estudiosComplementariosEscalas'),
+            certezaFirebase: escalasFirebase.length ? 'inferida_desde_datosMunicipioActual' : 'no_detectada',
+            riesgoLegacy: (!escalas.length && escalasFirebase.length) ? 'alto' : 'medio', conteo: escalas.length || escalasFirebase.length,
+            notas: (!escalas.length && escalasFirebase.length) ? ['Valores EAS/IBSE persistidos sin rehidratacion runtime visible.'] : []
+        }),
+        referencias_eas: _item({ id: 'referencias_eas', tipoDocumental: 'referencias_comparativas_eas', naturaleza: 'referencia_contextual', origen: _hay(referenciasEAS) ? 'runtime:referenciasEAS' : null, existeFirebase: false, existeRuntime: _hay(referenciasEAS), rehidratable: true, alimentaIA: true, alimentaEvaluacion: true, alimentaPlan: true, fuenteVerdad: 'catalogo_referencias_eas_runtime', persistencia: 'referencia_no_municipal', riesgoLegacy: 'bajo', conteo: _conteo(referenciasEAS) }),
+        determinantes: _item({ id: 'determinantes', tipoDocumental: 'datos_determinantes', naturaleza: 'dato_estructural', origen: _hay(determinantes) ? 'datosMunicipioActual.determinantes' : null, existeFirebase: _hay(dm.determinantes), existeRuntime: _hay(determinantes), rehidratable: true, alimentaIA: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true, fuenteVerdad: 'firebase:/determinantes_o_dataset_municipal', persistencia: 'carga_municipal_existente', rutaFirebase: _rutaMunicipal('determinantes'), certezaFirebase: _hay(dm.determinantes) ? 'inferida_desde_datosMunicipioActual' : 'no_detectada', riesgoLegacy: 'bajo', conteo: _conteo(determinantes) }),
+        indicadores: _item({ id: 'indicadores', tipoDocumental: 'indicadores_municipales', naturaleza: 'dato_estructural', origen: _hay(indicadores) ? 'datosMunicipioActual.indicadores' : null, existeFirebase: _hay(dm.indicadores), existeRuntime: _hay(indicadores), rehidratable: true, alimentaIA: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true, fuenteVerdad: 'firebase:/indicadores_o_dataset_municipal', persistencia: 'carga_municipal_existente', rutaFirebase: _rutaMunicipal('indicadores'), certezaFirebase: _hay(dm.indicadores) ? 'inferida_desde_datosMunicipioActual' : 'no_detectada', riesgoLegacy: 'bajo', conteo: _conteo(indicadores) }),
+        priorizacion_participacion: _item({ id: 'priorizacion_participacion', tipoDocumental: 'participacion_y_priorizacion_ciudadana', naturaleza: 'fuente_participativa', origen: _hay(win.datosParticipacionCiudadana) ? 'runtime:datosParticipacionCiudadana' : (_hay(dm.participacionCiudadana) ? 'firebase:participacionCiudadana' : null), existeLocal: _hay(win.datosParticipacionCiudadana), existeFirebase: _hay(dm.participacionCiudadana) || _hay(dm.votacionRelas), existeRuntime: _hay(dpc), rehidratable: true, alimentaIA: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true, fuenteVerdad: (_hay(dm.participacionCiudadana) || _hay(dm.votacionRelas)) ? 'firebase:/participacionCiudadana_o_votacionRelas' : 'runtime:datosParticipacionCiudadana', persistencia: 'guardado_explicito_priorizacion_participacion', rutaFirebase: _rutaMunicipal('participacionCiudadana / votacionRelas'), certezaFirebase: (_hay(dm.participacionCiudadana) || _hay(dm.votacionRelas)) ? 'inferida_desde_datosMunicipioActual' : 'no_detectada', riesgoLegacy: (_hay(dpc) && !_hay(dm.participacionCiudadana) && !_hay(dm.votacionRelas)) ? 'medio' : 'bajo', conteo: _conteo(dpc) }),
+        priorizacion_epvsa: _item({ id: 'priorizacion_epvsa', tipoDocumental: 'priorizacion_estrategica_epvsa', naturaleza: 'marco_estrategico_y_decision', origen: _hay(prioridades.epvsa) ? 'window.COMPAS.prioridades.epvsa' : (_hay(seleccion) ? 'seleccionEPVSA' : null), existeFirebase: _hay(dm.seleccionEPVSA) || _hay(dm.propuestaEPVSA), existeRuntime: _hay(prioridades.epvsa) || _hay(seleccion) || _hay(propuesta), rehidratable: true, alimentaIA: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true, fuenteVerdad: _hay(dm.seleccionEPVSA) ? 'firebase:/seleccionEPVSA' : 'runtime:COMPAS.state.seleccionEPVSA', persistencia: 'guardado_explicito_seleccion_y_plan', rutaFirebase: _rutaMunicipal('seleccionEPVSA / propuestaEPVSA'), certezaFirebase: (_hay(dm.seleccionEPVSA) || _hay(dm.propuestaEPVSA)) ? 'inferida_desde_datosMunicipioActual' : 'no_detectada', riesgoLegacy: 'medio', conteo: _conteo(seleccion || prioridades.epvsa || propuesta) }),
+        decision_priorizacion: _item({ id: 'decision_priorizacion', tipoDocumental: 'decision_y_fusion_priorizacion', naturaleza: 'derivado_metodologico', origen: _hay(decision) ? 'decisionPriorizacionActual' : (_hay(fusion) ? 'datosFusionPriorizacion' : null), existeFirebase: _hay(dm.decisionPriorizacion) || _hay(dm.datosFusionPriorizacion), existeRuntime: _hay(decision) || _hay(fusion), rehidratable: true, alimentaIA: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true, derivadoDe: 'priorizacion_participacion + priorizacion_epvsa + analisis_territorial', fuenteVerdad: _hay(dm.decisionPriorizacion) ? 'firebase:/decisionPriorizacion' : 'runtime:decisionPriorizacionActual', persistencia: 'derivado_guardado_si_usuario_confirma', rutaFirebase: _rutaMunicipal('decisionPriorizacion / datosFusionPriorizacion'), certezaFirebase: (_hay(dm.decisionPriorizacion) || _hay(dm.datosFusionPriorizacion)) ? 'inferida_desde_datosMunicipioActual' : 'no_detectada', riesgoLegacy: 'medio', conteo: _conteo(decision || fusion) }),
+        analisis_ia: _item({ id: 'analisis_ia', tipoDocumental: 'analisis_ia_diagnostico', naturaleza: 'derivado_interpretativo', origen: _hay(analisis) ? 'runtime:analisisActual' : (_hay(analisisPendiente) ? 'runtime:__COMPAS_analisisIA_pendienteGuardar' : null), existeLocal: _hay(analisisPendiente), existeFirebase: _hay(dm.analisisIA), existeRuntime: _hay(analisis), rehidratable: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true, derivadoDe: 'informe + indicadores + determinantes + estudios + priorizaciones', fuenteVerdad: _hay(dm.analisisIA) ? 'firebase:/analisisIA' : 'runtime:analisisActual', persistencia: 'guardado_explicito_analisisIA', rutaFirebase: _rutaMunicipal('analisisIA'), certezaFirebase: _hay(dm.analisisIA) ? 'inferida_desde_datosMunicipioActual' : 'no_detectada', riesgoLegacy: (_hay(analisis) && !_hay(dm.analisisIA)) ? 'medio' : 'bajo', conteo: _conteo(analisis), notas: _hay(analisisPendiente) ? ['Existe analisis pendiente de guardado explicito.'] : [] }),
+        analisis_ia_v3: _item({ id: 'analisis_ia_v3', tipoDocumental: 'analisis_ia_v3_compatibilidad', naturaleza: 'derivado_interpretativo_legacy_compatible', origen: _hay(analisisV3) ? 'runtime:analisisActualV3' : null, existeRuntime: _hay(analisisV3), rehidratable: false, derivadoDe: 'motorSintesisPerfil_v3', fuenteVerdad: 'runtime:analisisActualV3', persistencia: 'runtime_compatibilidad', riesgoLegacy: 'medio', conteo: _conteo(analisisV3) }),
+        analisis_ia_v4: _item({ id: 'analisis_ia_v4', tipoDocumental: 'analisis_ia_v4_auditable', naturaleza: 'derivado_interpretativo_paralelo', origen: _hay(analisisV4) ? 'runtime:analisisActualV4' : null, existeRuntime: _hay(analisisV4), rehidratable: false, derivadoDe: 'motorSintesisPerfil_v4_paralelo', fuenteVerdad: 'runtime:analisisActualV4', persistencia: 'runtime_sin_persistencia_nueva', riesgoLegacy: 'bajo', conteo: _conteo(analisisV4) }),
+        plan_accion: _item({ id: 'plan_accion', tipoDocumental: 'plan_local_salud', naturaleza: 'documento_operativo_derivado', origen: _hay(planAccion) ? 'planLocalSalud/COMPAS.state.planAccion' : null, existeFirebase: _hay(dm.planAccion) || _hay(state.planAccionFirebase), existeRuntime: _hay(planAccion), rehidratable: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true, derivadoDe: 'analisis_ia + seleccionEPVSA + motorPlanAccion', fuenteVerdad: _hay(dm.planAccion) ? 'firebase:/planAccion' : 'runtime:planLocalSalud.planAccion', persistencia: 'guardado_explicito_guardarPlanEnFirebase', rutaFirebase: _rutaMunicipal('planAccion'), certezaFirebase: (_hay(dm.planAccion) || _hay(state.planAccionFirebase)) ? 'inferida_desde_estado_cargado' : 'no_detectada', riesgoLegacy: 'medio', conteo: _conteo(planAccion) }),
+        agenda: _item({ id: 'agenda', tipoDocumental: 'agenda_anual_y_acciones', naturaleza: 'documento_operativo_derivado', origen: acciones.length ? 'runtime:accionesAgenda' : (_hay(agendaFirebase) ? 'firebase:/agendas' : null), existeFirebase: _hay(agendaFirebase), existeRuntime: acciones.length > 0, rehidratable: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true, derivadoDe: 'plan_accion', fuenteVerdad: _hay(agendaFirebase) ? 'firebase:/agendas' : 'runtime:accionesAgenda', persistencia: 'guardado_explicito_agenda', rutaFirebase: _rutaMunicipal('agendas'), certezaFirebase: _hay(agendaFirebase) ? 'inferida_desde_datosMunicipioActual_o_state' : 'no_detectada', riesgoLegacy: (!acciones.length && _hay(agendaFirebase)) ? 'alto' : 'medio', conteo: acciones.length || _conteo(agendaFirebase), notas: (!acciones.length && _hay(agendaFirebase)) ? ['Agenda persistida sin accionesAgenda visibles en runtime.'] : [] }),
+        snapshots: _item({ id: 'snapshots', tipoDocumental: 'snapshot_plan_evaluacion', naturaleza: 'snapshot_defensivo', origen: _hay(snapshotPlan) || _hay(snapshotEvaluacion) ? 'runtime:COMPAS.state.snapshots' : null, existeFirebase: false, existeRuntime: _hay(snapshotPlan) || _hay(snapshotEvaluacion), rehidratable: false, alimentaCompilador: true, alimentaEvaluacion: true, derivadoDe: 'plan_accion + agenda + evaluacion', fuenteVerdad: 'runtime:COMPAS.state.snapshotPlan/snapshotEvaluacion', persistencia: 'snapshot_runtime_o_guardado_por_flujo_existente', riesgoLegacy: 'medio', conteo: _conteo(snapshotPlan) + _conteo(snapshotEvaluacion), notas: ['El inventario no crea ni actualiza snapshots.'] }),
+        activos_comunitarios: _item({ id: 'activos_comunitarios', tipoDocumental: 'activos_comunitarios_relas', naturaleza: 'infraestructura_relas', origen: _hay(activos) ? 'COMPAS.state.activosComunitarios/datosMunicipioActual' : null, existeFirebase: _hay(dm.activosComunitarios), existeRuntime: _hay(activos), rehidratable: true, alimentaIA: true, alimentaCompilador: true, alimentaEvaluacion: true, alimentaPlan: true, fuenteVerdad: _hay(dm.activosComunitarios) ? 'firebase:/activosComunitarios' : 'runtime:COMPAS.state.activosComunitarios', persistencia: 'capa_activos_existente', rutaFirebase: _rutaMunicipal('activosComunitarios'), certezaFirebase: _hay(dm.activosComunitarios) ? 'inferida_desde_datosMunicipioActual' : 'no_detectada', riesgoLegacy: 'medio', conteo: _conteo(activos) }),
+        evidencias_documentos_futuros: _item({ id: 'evidencias_documentos_futuros', tipoDocumental: 'evidencias_adjuntos_biblioteca_futura', naturaleza: 'placeholder_documental', existeFirebase: false, existeRuntime: false, rehidratable: false, alimentaEvaluacion: true, persistencia: 'no_implementada', placeholder: true, conteo: 0, notas: ['Reserva conceptual para evidencias de ejecucion, anexos y biblioteca municipal futura.'] })
+    };
+
+    var alertas = [];
+    var resumen = { total: 0, disponibles: 0, runtime: 0, persistidos: 0, soloRuntime: 0, persistidoNoRuntime: 0, derivadosSinOrigen: 0, riesgoAlto: 0 };
+
+    Object.keys(items).forEach(function (id) {
+        var it = items[id];
+        resumen.total++;
+        if (it.existeRuntime || it.existeFirebase || it.existeLocal) resumen.disponibles++;
+        if (it.existeRuntime) resumen.runtime++;
+        if (it.existeFirebase) resumen.persistidos++;
+        if (it.estado === 'solo_runtime' || it.estado === 'solo_runtime_local') resumen.soloRuntime++;
+        if (it.estado === 'persistido_no_rehidratado') resumen.persistidoNoRuntime++;
+        if (it.estado === 'derivado_sin_origen_visible') resumen.derivadosSinOrigen++;
+        if (it.riesgoLegacy === 'alto') resumen.riesgoAlto++;
+        if (it.estado === 'persistido_no_rehidratado') alertas.push({ id: id, tipo: 'persistido_no_rehidratado', mensaje: 'Existe persistencia aparente sin runtime visible.' });
+        if (it.estado === 'derivado_sin_origen_visible') alertas.push({ id: id, tipo: 'derivado_sin_origen_visible', mensaje: 'Dato derivado sin origen documental visible en runtime.' });
+    });
+
+    var itemsArray = Object.keys(items || {}).map(function (id) {
+        return items[id];
+    }).filter(Boolean);
+
+    return {
+        contrato: 'inventario_documental_compas_v1',
+        version: '1.0.0',
+        modo: 'solo_lectura_sin_persistencia',
+        generadoISO: new Date().toISOString(),
+        municipio: { id: municipioActual, nombre: dm.nombre || dm.municipio || municipioActual || null },
+        resumen: resumen,
+        items: items,
+        itemsArray: itemsArray,
+        alertas: alertas,
+        fuentesInspeccionadas: [
+            'window.COMPAS.state', 'datosMunicipioActual', 'planLocalSalud', 'window.analisisActual', 'window.analisisActualV3',
+            'window.analisisActualV4', 'window.estudiosComplementarios', 'window.datosIBSE', 'window._ibse_v2_csvReciente',
+            'referenciasEAS', 'window.datosParticipacionCiudadana', 'accionesAgenda', 'COMPAS.state.activosComunitarios',
+            'rutas Firebase ya rehidratadas en datosMunicipioActual/estado'
+        ],
+        garantias: {
+            noLeeTextoCompleto: true,
+            noReprocesaPDF: true,
+            noRecalculaIBSE: true,
+            noEscribeFirebase: true,
+            noModificaCompilador: true,
+            noModificaMotores: true,
+            noCreaRehidratacionNueva: true
+        }
+    };
+}
+
+window.COMPAS_construirInventarioDocumental = COMPAS_construirInventarioDocumental;
+window.COMPAS_logInventarioDocumental = function () {
+    var inventario = COMPAS_construirInventarioDocumental();
+    var filas = Object.keys(inventario.items).map(function (id) {
+        var it = inventario.items[id];
+        return { id: id, estado: it.estado, runtime: it.existeRuntime, firebase: it.existeFirebase, local: it.existeLocal, tipo: it.tipoDocumental, fuenteVerdad: it.fuenteVerdad, riesgoLegacy: it.riesgoLegacy };
+    });
+    if (console && console.groupCollapsed) console.groupCollapsed('[COMPAS] Inventario documental');
+    if (console && console.table) console.table(filas);
+    if (console && console.log) console.log(inventario);
+    if (console && console.groupEnd) console.groupEnd();
+    return inventario;
+};
+// -- Fin inventario documental COMPAS v1 --------------------------------------
+
+function COMPAS_renderInventarioDocumentalDebug() {
+    var body = document.getElementById('compas-inventario-documental-debug-body');
+    if (!body) return null;
+
+    function _esc(v) {
+        return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+        });
+    }
+
+    function _si(v) {
+        return v ? '<span style="color:#065f46;font-weight:700;">si</span>' : '<span style="color:#94a3b8;">no</span>';
+    }
+
+    function _badge(txt, color, bg) {
+        return '<span style="display:inline-block;padding:0.08rem 0.38rem;border-radius:3px;font-size:0.68rem;font-weight:700;color:' + color + ';background:' + bg + ';">' + _esc(txt) + '</span>';
+    }
+
+    try {
+        if (typeof COMPAS_construirInventarioDocumental !== 'function') {
+            body.innerHTML = '<div style="color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:0.65rem 0.75rem;">Inventario documental no disponible en runtime.</div>';
+            return null;
+        }
+
+        var inv = COMPAS_construirInventarioDocumental();
+        var items = Array.isArray(inv && inv.itemsArray)
+            ? inv.itemsArray
+            : Object.keys((inv && inv.items) || {}).map(function (id) { return inv.items[id]; }).filter(Boolean);
+        var resumen = (inv && inv.resumen) || {};
+        var alertas = Array.isArray(inv && inv.alertas) ? inv.alertas : [];
+        var municipio = inv && inv.municipio && (inv.municipio.nombre || inv.municipio.id) ? (inv.municipio.nombre || inv.municipio.id) : null;
+
+        var html = '';
+        html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap;">';
+        html += '<div>';
+        html += '<div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:#64748b;font-weight:700;">Inventario documental</div>';
+        html += '<div style="font-size:0.84rem;color:#1e293b;font-weight:700;margin-top:0.12rem;">' + (municipio ? _esc(municipio) : 'Municipio no seleccionado') + '</div>';
+        html += '</div>';
+        html += '<div style="display:flex;gap:0.35rem;flex-wrap:wrap;">';
+        html += _badge((items.length || 0) + ' items', '#075985', '#e0f2fe');
+        html += _badge((alertas.length || 0) + ' alertas', alertas.length ? '#92400e' : '#166534', alertas.length ? '#fef3c7' : '#dcfce7');
+        html += _badge('solo lectura', '#475569', '#f1f5f9');
+        html += '</div></div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.45rem;margin-bottom:0.75rem;">';
+        [['Total', resumen.total], ['Disponibles', resumen.disponibles], ['Runtime', resumen.runtime], ['Persistidos', resumen.persistidos], ['Solo runtime', resumen.soloRuntime], ['No rehidratados', resumen.persistidoNoRuntime], ['Derivados sin origen', resumen.derivadosSinOrigen], ['Riesgo alto', resumen.riesgoAlto]].forEach(function (par) {
+            html += '<div style="border:1px solid #e2e8f0;border-radius:4px;padding:0.45rem 0.55rem;background:#f8fafc;"><div style="font-size:0.66rem;color:#64748b;text-transform:uppercase;font-weight:700;">' + _esc(par[0]) + '</div><div style="font-size:1rem;color:#1e293b;font-weight:800;margin-top:0.1rem;">' + _esc(par[1] == null ? 0 : par[1]) + '</div></div>';
+        });
+        html += '</div>';
+        if (!municipio) html += '<div style="margin-bottom:0.75rem;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:0.55rem 0.7rem;">Selecciona municipio para interpretar el inventario con contexto territorial.</div>';
+        if (alertas.length) {
+            html += '<div style="margin-bottom:0.75rem;border:1px solid #fde68a;background:#fffbeb;border-radius:4px;padding:0.55rem 0.7rem;"><div style="font-size:0.72rem;color:#92400e;font-weight:800;margin-bottom:0.25rem;">Alertas detectadas</div>';
+            alertas.slice(0, 4).forEach(function (a) { html += '<div style="font-size:0.74rem;color:#78350f;margin-top:0.15rem;">' + _esc(a.id) + ': ' + _esc(a.mensaje || a.tipo) + '</div>'; });
+            if (alertas.length > 4) html += '<div style="font-size:0.7rem;color:#92400e;margin-top:0.2rem;">y ' + (alertas.length - 4) + ' mas</div>';
+            html += '</div>';
+        }
+        if (!items.length) {
+            html += '<div style="color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:0.65rem 0.75rem;">No hay elementos inventariados en este momento.</div>';
+            body.innerHTML = html;
+            return inv;
+        }
+        html += '<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:4px;"><table style="width:100%;border-collapse:collapse;font-size:0.72rem;min-width:760px;">';
+        html += '<thead><tr style="background:#f1f5f9;color:#475569;text-align:left;"><th style="padding:0.45rem;border-bottom:1px solid #e2e8f0;">Item</th><th style="padding:0.45rem;border-bottom:1px solid #e2e8f0;">Estado</th><th style="padding:0.45rem;border-bottom:1px solid #e2e8f0;">Fuente verdad</th><th style="padding:0.45rem;border-bottom:1px solid #e2e8f0;">Riesgo</th><th style="padding:0.45rem;border-bottom:1px solid #e2e8f0;text-align:center;">IA</th><th style="padding:0.45rem;border-bottom:1px solid #e2e8f0;text-align:center;">Comp.</th><th style="padding:0.45rem;border-bottom:1px solid #e2e8f0;text-align:center;">Eval.</th></tr></thead><tbody>';
+        items.forEach(function (it) {
+            var riesgoColor = it.riesgoLegacy === 'alto' ? ['#991b1b', '#fee2e2'] : (it.riesgoLegacy === 'medio' ? ['#92400e', '#fef3c7'] : ['#166534', '#dcfce7']);
+            html += '<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:0.42rem 0.45rem;color:#1e293b;font-weight:700;">' + _esc(it.id) + '<div style="font-weight:400;color:#64748b;font-size:0.68rem;">' + _esc(it.tipoDocumental) + '</div></td><td style="padding:0.42rem 0.45rem;color:#475569;">' + _esc(it.estado) + '</td><td style="padding:0.42rem 0.45rem;color:#475569;max-width:260px;white-space:normal;">' + _esc(it.fuenteVerdad || '-') + '</td><td style="padding:0.42rem 0.45rem;">' + _badge(it.riesgoLegacy || 'bajo', riesgoColor[0], riesgoColor[1]) + '</td><td style="padding:0.42rem 0.45rem;text-align:center;">' + _si(it.alimentaIA) + '</td><td style="padding:0.42rem 0.45rem;text-align:center;">' + _si(it.alimentaCompilador) + '</td><td style="padding:0.42rem 0.45rem;text-align:center;">' + _si(it.alimentaEvaluacion) + '</td></tr>';
+        });
+        html += '</tbody></table></div>';
+        body.innerHTML = html;
+        return inv;
+    } catch (err) {
+        body.innerHTML = '<div style="color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:0.65rem 0.75rem;">No se pudo construir el inventario documental: ' + _esc(err && err.message ? err.message : err) + '</div>';
+        console.warn('[COMPAS inventario documental] render debug fallido:', err);
+        return null;
+    }
+}
+
+window.COMPAS_renderInventarioDocumentalDebug = COMPAS_renderInventarioDocumentalDebug;
+
 // OBJETO GLOBAL PARA EL COMPILADOR DE PLAN LOCAL DE SALUD
 
 // ==========================================
@@ -8704,6 +9075,13 @@ if (!window.COMPAS) {
     window.COMPAS = { state: {} };
 
 }
+
+// Almacén de activos comunitarios (Localiza Salud → COMPÁS)
+// Alias global para compatibilidad con código heredado que lee window.activosComunitarios
+if (!Array.isArray(window.COMPAS.state.activosComunitarios)) {
+    window.COMPAS.state.activosComunitarios = [];
+}
+window.activosComunitarios = window.COMPAS.state.activosComunitarios;
 
 // Namespace de prioridades ciudadanas — agrega datos de las tres fuentes
 
@@ -11704,6 +12082,10 @@ function togglePanelCargaDatos() {
     if (panel.style.display === 'block') {
 
         actualizarEstadosCarga();
+
+        if (typeof COMPAS_renderInventarioDocumentalDebug === 'function') {
+            COMPAS_renderInventarioDocumentalDebug();
+        }
 
     }
 
@@ -14943,15 +15325,55 @@ function generarMarcoEstrategico(config = {}) {
 
             <h4 style="margin:1.5rem 0 0.75rem;color:#0074c8;border-bottom:2px solid #94d40b;padding-bottom:0.5rem;">Herramientas complementarias</h4>
 
-            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;margin-bottom:0.75rem;">
 
-                <a href="https://localizasalud.sanidad.gob.es/maparecursos/main/index" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;background:linear-gradient(135deg,#94d40b,#6ea80a);color:white;padding:0.6rem 1.2rem;border-radius:8px;font-weight:600;font-size:0.9rem;text-decoration:none;box-shadow:0 2px 8px rgba(148,212,11,0.3);">
-
-                    🗺️ Localiza Salud — Mapa de activos comunitarios
-
+                <a href="https://localizasalud.sanidad.gob.es/maparecursos/main/index" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:0.5rem;background:#f8fafc;border:1px solid #cbd5e1;
+                          color:#334155;padding:0.45rem 1rem;border-radius:6px;font-weight:600;
+                          font-size:0.85rem;text-decoration:none;">
+                    🗺️ Localiza Salud
                 </a>
 
-                <span style="font-size:0.78rem;color:#64748b;">Accede al mapa de activos comunitarios para la salud de tu territorio</span>
+                <span style="font-size:0.78rem;color:#64748b;">Accede al mapa de activos comunitarios validados para la salud de tu territorio</span>
+
+            </div>
+
+            <!-- Panel de carga de activos desde Localiza Salud -->
+            <div id="panel-activos-localiza"
+                 style="border:1px solid #e2e8f0;border-left:3px solid #0074c8;border-radius:6px;
+                        padding:0.9rem 1.1rem;background:#f8fafc;">
+
+                <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+                    <strong style="font-size:0.85rem;color:#1e293b;">Activos comunitarios cargados en COMPÁS</strong>
+                    <span id="badge-activos-n"
+                          style="background:#e0f2fe;color:#0369a1;padding:0.1rem 0.45rem;
+                                 border-radius:4px;font-size:0.72rem;font-weight:700;">0 activos</span>
+                </div>
+
+                <p style="font-size:0.78rem;color:#64748b;margin:0 0 0.7rem;line-height:1.55;">
+                    Exporta activos desde Localiza Salud en formato <strong>JSON</strong> o <strong>CSV</strong>
+                    y cárgalos aquí para incorporarlos al análisis territorial v4.
+                    <em>Los activos registrados representan recursos validados, no el conjunto total
+                    de activos del municipio.</em>
+                </p>
+
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                    <button onclick="_compas_loaderActivos_abrirSelector()"
+                            style="background:white;border:1px solid #0074c8;color:#0074c8;
+                                   padding:0.38rem 0.85rem;border-radius:4px;font-size:0.8rem;
+                                   font-weight:600;cursor:pointer;">
+                        ↑ Cargar activos (JSON / CSV)
+                    </button>
+                    <button onclick="_compas_loaderActivos_limpiar()"
+                            style="background:white;border:1px solid #e2e8f0;color:#64748b;
+                                   padding:0.38rem 0.85rem;border-radius:4px;font-size:0.8rem;cursor:pointer;">
+                        Limpiar
+                    </button>
+                    <input type="file" id="compas-activos-file-input" accept=".json,.csv"
+                           style="display:none;" onchange="_compas_loaderActivos_onFile(event)">
+                </div>
+
+                <div id="compas-activos-lista" style="margin-top:0.6rem;"></div>
 
             </div>
 
@@ -52667,7 +53089,19 @@ function analizarDatosMunicipio() {
 
     var tieneInforme   = !!(datos.informe && datos.informe.htmlCompleto);
 
-    var tieneEstudios  = !!(window.estudiosComplementarios && window.estudiosComplementarios.length);
+    var tieneEstudiosDocs = !!(window.estudiosComplementarios &&
+                               window.estudiosComplementarios.length);
+
+    var _ibseMotor = window.datosIBSE;
+    var _escMotor = (typeof _compasEscalasGet === 'function') ? _compasEscalasGet() : [];
+
+    var tieneEscalas = (_ibseMotor && (_ibseMotor.n > 0 || _ibseMotor.n_valido > 0))
+                        || _escMotor.length > 0;
+
+    // En COMPÁS, IBSE y escalas forman parte conceptual de
+    // “Estudios complementarios (IBSE y otros)”.
+    // Mantener separación técnica interna, pero unificar lectura semántica visible.
+    var tieneEstudios = tieneEstudiosDocs || tieneEscalas;
 
     // Resolución por carril:
     //   temática  → datosParticipacionCiudadana con temasFreq (VRELAS)
@@ -52697,9 +53131,6 @@ function analizarDatosMunicipio() {
 
 
 
-    var _ibseMotor = window.datosIBSE;
-    var _escMotor = (typeof _compasEscalasGet === 'function') ? _compasEscalasGet() : [];
-    var tieneEscalas = (_ibseMotor && _ibseMotor.n > 0) || _escMotor.length > 0;
 
     analisis.fuentes = {
 
@@ -54486,6 +54917,318 @@ function COMPAS_postprocesarConclusionesRecomendaciones(analisis) {
     analisis.propuestaEPVSA = propuestaOriginal;
     return analisis;
 }
+
+// ── [AUDITORIA PASIVA V4] Calidad interpretativa del analisis IA ─────────────
+// No modifica conclusiones, recomendaciones, propuestaEPVSA, seleccion ni estado global.
+function COMPAS_auditarCalidadInterpretativaV4(analisis) {
+    var auditoria = {
+        version: 'auditoria_interpretativa_v4',
+        fechaISO: new Date().toISOString(),
+        valido: true,
+        resumen: {
+            totalConclusiones: 0,
+            totalRecomendaciones: 0,
+            totalItems: 0,
+            itemsPlantilla: 0,
+            itemsMetodologia: 0,
+            itemsEvidencia: 0,
+            itemsInferencia: 0,
+            itemsHipotesis: 0,
+            itemsRecomendacion: 0,
+            itemsNoClasificados: 0,
+            porcentajePlantilla: 0,
+            nivelCalidadGlobal: 'alto'
+        },
+        conclusionesAuditadas: [],
+        recomendacionesAuditadas: [],
+        advertencias: [],
+        errores: []
+    };
+
+    if (!analisis || typeof analisis !== 'object') {
+        auditoria.valido = false;
+        auditoria.errores.push('analisis_no_disponible');
+        auditoria.resumen.nivelCalidadGlobal = 'critico';
+        return auditoria;
+    }
+
+    function _lista(v) {
+        return Array.isArray(v) ? v : [];
+    }
+
+    function _texto(item) {
+        if (item == null) return '';
+        if (typeof item === 'string') return item;
+        return String(
+            item.texto ||
+            item.descripcion ||
+            item.titulo ||
+            item.orientacion ||
+            item.linea_accion ||
+            item.linea_accion_municipal ||
+            item.interpretacion ||
+            item.base_analitica ||
+            item.oportunidad_accion ||
+            ''
+        );
+    }
+
+    function _norm(txt) {
+        txt = String(txt || '').toLowerCase();
+        try {
+            txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        } catch(e) {}
+        return txt.replace(/\s+/g, ' ').trim();
+    }
+
+    function _contiene(txt, patrones) {
+        return patrones.some(function(p) { return p.test(txt); });
+    }
+
+    var patronesMetodologia = [
+        /se han considerado/,
+        /se dispone de/,
+        /el analisis se encuadra/,
+        /se enmarca/,
+        /la perspectiva ciudadana/,
+        /fuentes disponibles/,
+        /marco salutogenico/,
+        /epvsa/,
+        /estrategia/
+    ];
+
+    var patronesTrazabilidad = [
+        /trazabilidad/,
+        /fuente/,
+        /fuentes/,
+        /informe/,
+        /estudios complementarios/,
+        /datos disponibles/
+    ];
+
+    var patronesRecomendacion = [
+        /recomienda/,
+        /se recomienda/,
+        /desarrollar/,
+        /realizar/,
+        /impulsar/,
+        /fortalecer/,
+        /priorizar/,
+        /promover/,
+        /poner en marcha/,
+        /implementar/,
+        /coordinar/
+    ];
+
+    var patronesEvidencia = [
+        /\b\d+([,.]\d+)?\b/,
+        /aumento/,
+        /descenso/,
+        /superior/,
+        /inferior/,
+        /prevalencia/,
+        /tasa/,
+        /porcentaje/,
+        /indicador/,
+        /ibse/,
+        /cmi/,
+        /sima/,
+        /argos/,
+        /diagnostico/,
+        /encuesta/,
+        /participacion/,
+        /barrio/,
+        /zona/
+    ];
+
+    var patronesInferencia = [
+        /sugiere/,
+        /apunta/,
+        /indica/,
+        /permite orientar/,
+        /compatible con/,
+        /se observa/,
+        /podria estar/,
+        /puede reflejar/,
+        /se interpreta/
+    ];
+
+    var patronesHipotesis = [
+        /hipotesis/,
+        /podria/,
+        /puede requerir/,
+        /requiere triangulacion/,
+        /exploratorio/,
+        /prudente/,
+        /no permite establecer/
+    ];
+
+    var patronesGenericos = [
+        /accion local en salud/,
+        /promocion de la salud/,
+        /mejorar la salud/,
+        /calidad de vida/,
+        /bienestar de la poblacion/,
+        /intersectorial/,
+        /participacion ciudadana/
+    ];
+
+    function _tieneHallazgoTerritorial(txt) {
+        return _contiene(txt, patronesEvidencia) ||
+               /\b(atarfe|municipio|territorio|barrio|zona|poblacion|vulnerabilidad|desigualdad|activos|redes|apoyo social|empleo|vivienda|movilidad|soledad|salud mental)\b/.test(txt);
+    }
+
+    function _auditarItem(item, indice, origen) {
+        var texto = _texto(item);
+        var t = _norm(texto);
+        var problemas = [];
+        var fortalezas = [];
+        var tipo = 'no_clasificada';
+        var certeza = 'baja';
+
+        var esRecomendacion = origen === 'recomendacion' || _contiene(t, patronesRecomendacion);
+        var esMetodologia = _contiene(t, patronesMetodologia);
+        var esTrazabilidad = _contiene(t, patronesTrazabilidad);
+        var esHipotesis = _contiene(t, patronesHipotesis);
+        var esInferencia = _contiene(t, patronesInferencia);
+        var esEvidencia = _contiene(t, patronesEvidencia);
+        var tieneHallazgo = _tieneHallazgoTerritorial(t);
+        var esGenerico = _contiene(t, patronesGenericos) && !tieneHallazgo;
+        var esMetaSinHallazgo = esMetodologia &&
+            _contiene(t, [/se han considerado/, /se dispone de/, /el analisis se encuadra/, /se enmarca/, /fuentes disponibles/, /la perspectiva ciudadana/, /marco salutogenico/, /epvsa/]) &&
+            !/\b(tasa|prevalencia|superior|inferior|aumento|descenso|barrio|zona|municipio|territorio|vulnerabilidad|desigualdad|activos|redes|apoyo social|empleo|vivienda|movilidad|soledad|salud mental)\b/.test(t);
+
+        if (esMetaSinHallazgo) {
+            tieneHallazgo = false;
+            esEvidencia = false;
+        }
+
+        if (!t) {
+            problemas.push('texto_vacio');
+            certeza = 'no_aplica';
+        }
+
+        if (esRecomendacion) {
+            tipo = 'recomendacion';
+            certeza = tieneHallazgo ? 'media' : 'baja';
+        } else if ((esMetodologia || esTrazabilidad) && !tieneHallazgo) {
+            tipo = esTrazabilidad ? 'trazabilidad' : 'metodologia';
+            certeza = 'no_aplica';
+        } else if (esHipotesis) {
+            tipo = 'hipotesis';
+            certeza = tieneHallazgo ? 'media' : 'baja';
+        } else if (esInferencia) {
+            tipo = 'inferencia';
+            certeza = tieneHallazgo ? 'media' : 'baja';
+        } else if (esEvidencia || tieneHallazgo) {
+            tipo = 'evidencia';
+            certeza = esEvidencia ? 'media' : 'baja';
+        }
+
+        if (esGenerico || ((esMetodologia || /epvsa/.test(t)) && !tieneHallazgo)) {
+            tipo = tipo === 'recomendacion' ? 'recomendacion' : 'plantilla';
+            problemas.push('texto_plantilla_o_marco_general');
+        }
+
+        if (origen === 'conclusion' && (tipo === 'metodologia' || tipo === 'trazabilidad' || tipo === 'plantilla')) {
+            problemas.push('metadato_disfrazado_de_conclusion');
+        }
+
+        if (origen === 'conclusion' && /epvsa/.test(t) && !tieneHallazgo) {
+            problemas.push('marco_epvsa_usado_como_conclusion');
+        }
+
+        if (tipo === 'recomendacion' && !tieneHallazgo) {
+            problemas.push('recomendacion_sin_evidencia_explicita');
+        }
+
+        if (!tieneHallazgo && t.length > 0) {
+            problemas.push('baja_territorializacion');
+        }
+
+        if (/\b(causa|provoca|determina|garantiza|asegura)\b/.test(t) && !esEvidencia) {
+            problemas.push('causalidad_fuerte_no_justificada');
+        }
+
+        if (tipo === 'no_clasificada') {
+            problemas.push('afirmacion_no_clasificada');
+            certeza = 'baja';
+        }
+
+        if (tieneHallazgo) fortalezas.push('contiene_referencia_territorial_o_dato');
+        if (esEvidencia) fortalezas.push('contiene_senal_verificable');
+        if (esInferencia || esHipotesis) fortalezas.push('formula_interpretacion_prudente');
+
+        return {
+            indice: indice,
+            texto: texto,
+            origen: origen,
+            tipoAfirmacion: tipo,
+            certeza: certeza,
+            problemas: problemas,
+            fortalezas: fortalezas,
+            habilitaRecomendacion: tipo === 'evidencia' || tipo === 'inferencia' || tipo === 'hipotesis',
+            habilitaEPVSA: (tipo === 'evidencia' || tipo === 'inferencia') && tieneHallazgo
+        };
+    }
+
+    var conclusiones = _lista(analisis.conclusiones || analisis.conclusiones_v3);
+    var recomendaciones = _lista(analisis.recomendaciones || analisis.recomendaciones_v3);
+
+    auditoria.conclusionesAuditadas = conclusiones.map(function(item, idx) {
+        return _auditarItem(item, idx, 'conclusion');
+    });
+
+    auditoria.recomendacionesAuditadas = recomendaciones.map(function(item, idx) {
+        return _auditarItem(item, idx, 'recomendacion');
+    });
+
+    function _sumar(item) {
+        if (item.tipoAfirmacion === 'plantilla') auditoria.resumen.itemsPlantilla++;
+        else if (item.tipoAfirmacion === 'metodologia') auditoria.resumen.itemsMetodologia++;
+        else if (item.tipoAfirmacion === 'trazabilidad') auditoria.resumen.itemsMetodologia++;
+        else if (item.tipoAfirmacion === 'evidencia') auditoria.resumen.itemsEvidencia++;
+        else if (item.tipoAfirmacion === 'inferencia') auditoria.resumen.itemsInferencia++;
+        else if (item.tipoAfirmacion === 'hipotesis') auditoria.resumen.itemsHipotesis++;
+        else if (item.tipoAfirmacion === 'recomendacion') auditoria.resumen.itemsRecomendacion++;
+        else auditoria.resumen.itemsNoClasificados++;
+    }
+
+    auditoria.conclusionesAuditadas.concat(auditoria.recomendacionesAuditadas).forEach(_sumar);
+
+    auditoria.resumen.totalConclusiones = auditoria.conclusionesAuditadas.length;
+    auditoria.resumen.totalRecomendaciones = auditoria.recomendacionesAuditadas.length;
+    auditoria.resumen.totalItems = auditoria.resumen.totalConclusiones + auditoria.resumen.totalRecomendaciones;
+
+    if (auditoria.resumen.totalItems > 0) {
+        auditoria.resumen.porcentajePlantilla = Math.round(
+            (auditoria.resumen.itemsPlantilla / auditoria.resumen.totalItems) * 1000
+        ) / 10;
+    }
+
+    var problemasCriticos = auditoria.conclusionesAuditadas
+        .concat(auditoria.recomendacionesAuditadas)
+        .filter(function(item) { return item.problemas && item.problemas.length; }).length;
+
+    if (auditoria.resumen.totalItems === 0) {
+        auditoria.valido = false;
+        auditoria.resumen.nivelCalidadGlobal = 'critico';
+        auditoria.errores.push('sin_items_auditables');
+    } else if (auditoria.resumen.porcentajePlantilla >= 40 || problemasCriticos >= auditoria.resumen.totalItems * 0.6) {
+        auditoria.resumen.nivelCalidadGlobal = 'critico';
+        auditoria.advertencias.push('alta_presencia_de_plantilla_o_problemas_interpretativos');
+    } else if (auditoria.resumen.porcentajePlantilla >= 25 || problemasCriticos >= auditoria.resumen.totalItems * 0.4) {
+        auditoria.resumen.nivelCalidadGlobal = 'bajo';
+        auditoria.advertencias.push('calidad_interpretativa_baja');
+    } else if (auditoria.resumen.porcentajePlantilla >= 10 || problemasCriticos > 0) {
+        auditoria.resumen.nivelCalidadGlobal = 'medio';
+        auditoria.advertencias.push('requiere_revision_interpretativa');
+    }
+
+    return auditoria;
+}
+
+window.COMPAS_auditarCalidadInterpretativaV4 = COMPAS_auditarCalidadInterpretativaV4;
 // ── [UTILIDAD PURA] _adaptarAnalisisAFormatoUI ──────────────────────────────
 
 // Sin DOM · Sin Firebase · Sin mutación de estado global. Recibe analisis, devuelve objeto UI.
@@ -54599,6 +55342,8 @@ function _adaptarAnalisisAFormatoUI(analisis, fuentesUsadas) {
         conclusiones, recomendaciones, prioridades_epvsa,
 
         propuestaEPVSA: analisis.propuestaEPVSA || [], // [2026-05-07] exponer para _calcularICP
+
+        narrativa: analisis._sintesisTerritorial && analisis._sintesisTerritorial.narrativa || null,
 
         _analisisCompleto: analisis
 
@@ -55739,7 +56484,7 @@ function renderizarResultadoIA(r) {
 
         }
 
-        htmlNar += '<div style="padding:.9rem 1rem;background:#eff6ff;border-left:3px solid #3b82f6;border-radius:0 8px 8px 0;margin-bottom:.5rem"><strong style="font-size:0.82rem;color:#1d4ed8">📖 Contexto del análisis</strong><p style="margin:.3rem 0 0;font-size:0.87rem;color:#1e293b;line-height:1.55">'+n.contexto+'</p></div>';
+        htmlNar += '<div style="margin-bottom:2.5rem;"><div style="font-size:0.64rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.16em;padding-bottom:.65rem;border-bottom:1px solid #e2e8f0;margin-bottom:1.35rem;">Lectura territorial</div><div style="font-size:0.95rem;color:#0f172a;line-height:1.78;font-weight:400;">'+n.contexto+'</div></div>';
 
         if (baseSci.fortalezas && baseSci.fortalezas.length) {
 
@@ -55759,7 +56504,25 @@ function renderizarResultadoIA(r) {
 
         }
 
-        htmlNar += '<div style="padding:.9rem 1rem;background:#f8fafc;border-left:3px solid #0074c8;border-radius:0 8px 8px 0;margin-bottom:.5rem"><strong style="font-size:0.82rem;color:#0074c8">📋 Síntesis salutogénica</strong><p style="margin:.3rem 0 0;font-size:0.87rem;color:#1e293b;line-height:1.55">'+n.sintesis+'</p></div>';
+        var _rawConcl = r._analisisCompleto && Array.isArray(r._analisisCompleto.conclusiones) ? r._analisisCompleto.conclusiones : [];
+        var _señV4 = _rawConcl.filter(function(c) {
+            if (!c || !c.id) return false;
+            return c.id.indexOf('ten_') === 0 || c.id.indexOf('hip_') === 0 ||
+                   (c.id.indexOf('for_') === 0 && c.id.indexOf('for_v3_') < 0 && c.id.indexOf('for_lt1_') < 0 && c.id.indexOf('for_activo') < 0);
+        });
+        if (_señV4.length > 0) {
+            htmlNar += '<div style="margin:0 0 2rem;"><div style="font-size:0.64rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.16em;padding-bottom:.65rem;border-bottom:1px solid #e2e8f0;margin-bottom:1rem;">Señales identificadas</div>' +
+                _señV4.map(function(c) {
+                    var _t  = c.id.indexOf('ten_')===0 ? 'ten' : c.id.indexOf('hip_')===0 ? 'hip' : 'for';
+                    var _bg = _t==='ten' ? '#94a3b8' : _t==='hip' ? '#cbd5e1' : '#a3bfa0';
+                    var _lb = _t==='ten' ? 'Tensión estructural' : _t==='hip' ? 'Limitación metodológica' : 'Capacidad institucional';
+                    return '<div style="display:flex;gap:.85rem;padding:.65rem 0;border-bottom:1px solid #f8fafc;align-items:flex-start;">' +
+                        '<div style="width:2px;min-height:1.1em;background:'+_bg+';border-radius:1px;flex-shrink:0;margin-top:.25em;"></div>' +
+                        '<div><div style="font-size:0.59rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.2rem;">'+_lb+'</div>' +
+                        '<div style="font-size:0.83rem;color:#334155;line-height:1.58;">'+c.texto+'</div></div></div>';
+                }).join('') + '</div>';
+        }
+        htmlNar += '<div style="padding-top:1.25rem;border-top:1px solid #f1f5f9;"><div style="font-size:0.64rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.16em;margin-bottom:.75rem;">Alcance metodológico</div><div style="font-size:0.82rem;color:#64748b;line-height:1.68;font-style:italic;">'+n.sintesis+'</div></div>';
 
         elConc.innerHTML = htmlNar;
 
@@ -55778,7 +56541,7 @@ function renderizarResultadoIA(r) {
             (interp ? '<div class="concl-sal-field"><div class="concl-sal-field-label">📖 Interpretación</div><p class="concl-sal-field-text">'+interp+'</p></div>' : '') +
             (base   ? '<div class="concl-sal-field"><div class="concl-sal-field-label">📐 Base analítica</div><p class="concl-sal-field-text">'+base+'</p></div>' : '') +
             (opor   ? '<div class="concl-sal-field"><div class="concl-sal-field-label">🎯 Oportunidad de acción local</div><p class="concl-sal-field-text">'+opor+'</p></div>' : '') +
-            (textoLegacy && !titulo ? '<p>'+textoLegacy+'</p>' : '') +
+            (textoLegacy ? '<p style="font-size:0.85rem;color:#475569;margin:.3rem 0 0;line-height:1.55;">'+textoLegacy+'</p>' : '') +
             '</div>';
     }).join('') + '</div>';
 
@@ -55794,22 +56557,23 @@ function renderizarResultadoIA(r) {
 
     var REC_C = [{bg:'#eff6ff',bd:'#0074c8',ct:'#1e40af'},{bg:'#f0fdf4',bd:'#22c55e',ct:'#166534'},{bg:'#fff7ed',bd:'#f59e0b',ct:'#92400e'},{bg:'#faf5ff',bd:'#7c3aed',ct:'#6d28d9'},{bg:'#fef9ee',bd:'#ffb61b',ct:'#b45309'},{bg:'#fff1f2',bd:'#f43f5e',ct:'#be123c'}];
 
-        elRec.innerHTML = '<div class="recom-sal-grid">' +
-        (r.recomendaciones||[]).map(function(rec,i){
-            var c=REC_C[i%REC_C.length], ico=REC_ICOS[rec.id]||'💡';
-            var orientacion = rec.orientacion || rec.titulo || '';
-            var activo = rec.activo || rec.activo_capacidad || '';
-            var lineaAccion = rec.linea_accion_municipal || rec.linea_accion || '';
-            var textoLegacy = (!activo && !lineaAccion && rec.texto) ? rec.texto : '';
-            return '<div class="recom-sal-card" style="border-top-color:'+c.bd+'">' +
-                '<div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;">' +
-                  '<span style="font-size:1.1rem;flex-shrink:0;">'+ico+'</span>' +
-                  '<p class="recom-sal-orientacion" style="color:'+c.ct+'">'+orientacion+'</p>' +
-                '</div>' +
-                (activo ? '<div class="recom-sal-field"><div class="recom-sal-field-label">💪 Activo o capacidad relacionada</div><p class="recom-sal-field-text">'+activo+'</p></div>' : '') +
-                (lineaAccion ? '<div class="recom-sal-field"><div class="recom-sal-field-label">🏛️ Posible línea de acción municipal</div><p class="recom-sal-field-text">'+lineaAccion+'</p></div>' : '') +
-                (textoLegacy ? '<p style="margin:.4rem 0 0;font-size:0.78rem;color:#475569;line-height:1.5;">'+textoLegacy+'</p>' : '') +
-                '</div>';
+        elRec.innerHTML = '<div>' +
+        ((r._analisisCompleto && r._analisisCompleto.recomendaciones) || r.recomendaciones || []).map(function(rec, i) {
+            var _id    = rec.id    || '';
+            var _area  = rec.area  || '';
+            var _texto = rec.texto || rec.titulo || '';
+            var _isPop = _id.indexOf('rec_popular_') === 0;
+            var _tag   = _isPop ? 'Prioridad ciudadana' : _area ? 'Intervención territorial' : 'Recomendación';
+            var _title = _area ? 'Área de ' + _area : _texto;
+            var _sub   = _area ? _texto : '';
+            if (!_title && !_sub) return '';
+            return '<div style="display:flex;gap:1rem;padding:.9rem 0;border-bottom:1px solid #f1f5f9;align-items:flex-start;">' +
+                '<div style="width:2px;min-height:1.3em;background:#e2e8f0;border-radius:1px;flex-shrink:0;margin-top:.2em;"></div>' +
+                '<div style="flex:1;">' +
+                '<div style="font-size:0.58rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.13em;margin-bottom:.25rem;">'+_tag+'</div>' +
+                '<div style="font-size:0.88rem;color:#1e293b;font-weight:500;line-height:1.55;">'+_title+'</div>' +
+                (_sub ? '<div style="font-size:0.8rem;color:#64748b;line-height:1.5;margin-top:.25rem;">'+_sub+'</div>' : '') +
+                '</div></div>';
         }).join('') + '</div>';
 
 
@@ -56933,7 +57697,49 @@ function generarPropuestaIA() {
 
     if (datos.informe && datos.informe.htmlCompleto)   fuentesUsadas.push('Informe de Situación');
 
-    if (window.estudiosComplementarios && window.estudiosComplementarios.length) fuentesUsadas.push('Estudios complementarios');
+    var _estudiosDocs = !!(window.estudiosComplementarios &&
+                            window.estudiosComplementarios.length);
+
+    var _ibseFuente = !!(window.datosIBSE &&
+                        (window.datosIBSE.n > 0 || window.datosIBSE.n_valido > 0));
+
+    var _escalasFuente = false;
+
+    try {
+        _escalasFuente = (typeof _compasEscalasGet === 'function') &&
+                         ((_compasEscalasGet() || []).length > 0);
+    } catch(e) {
+        _escalasFuente = false;
+    }
+
+    if (_estudiosDocs || _ibseFuente || _escalasFuente) {
+
+        var _detalleEstudios = [];
+
+        if (_ibseFuente && window.datosIBSE) {
+            _detalleEstudios.push(
+                'IBSE n=' +
+                (window.datosIBSE.n_valido || window.datosIBSE.n || 0)
+            );
+        }
+
+        if (_escalasFuente) {
+            _detalleEstudios.push('escalas diagnósticas');
+        }
+
+        if (_estudiosDocs) {
+            _detalleEstudios.push(
+                window.estudiosComplementarios.length +
+                ' estudio(s) documental(es)'
+            );
+        }
+
+        fuentesUsadas.push(
+            'Estudios complementarios (' +
+            _detalleEstudios.join(', ') +
+            ')'
+        );
+    }
 
     // [FIX 2026-04-12] Fallback a COMPAS.prioridades.epvsa cuando no hay datosParticipacionCiudadana usables.
     // Replica el patrón ya existente en generarAnalisisIA (l.52817–52824).
@@ -57925,6 +58731,37 @@ function renderizarArbolTrazabilidadResumen() {
     el.textContent = txt;
 }
 
+// ── TARJETAS DE DECISIÓN EPVSA — capa de gobernanza visual de priorización ──
+// Solo afecta visualización. NO toca motores, Firebase, plan ni agenda.
+
+window.__compas_tarjetasModo = window.__compas_tarjetasModo || {};
+
+function _compas_calcularScoreFinal(scoreBase, modo, fmcTotal) {
+    var fmc = typeof fmcTotal === 'number' ? Math.min(1, Math.max(0, fmcTotal)) : 0;
+    if (modo === 'comunitario') return Math.round(scoreBase * 0.4 + fmc * 60);
+    if (modo === 'mixto')       return Math.round(scoreBase * 0.7 + fmc * 30);
+    return Math.round(scoreBase); // tecnocratico: score estructural intacto
+}
+
+function _compas_tarjetaModo(tarjetaId, modo) {
+    window.__compas_tarjetasModo[tarjetaId] = modo;
+    var el = document.getElementById('tarjeta-epvsa-' + tarjetaId);
+    if (!el) return;
+    el.querySelectorAll('[data-modo-btn]').forEach(function(btn) {
+        var active = btn.getAttribute('data-modo-btn') === modo;
+        btn.style.background = active ? '#0074c8' : '#f1f5f9';
+        btn.style.color      = active ? 'white'   : '#475569';
+    });
+    var scoreBase  = parseFloat(el.getAttribute('data-score-base'))  || 0;
+    var fmcTotal   = parseFloat(el.getAttribute('data-fmc-total'))   || 0;
+    var scoreFinal = _compas_calcularScoreFinal(scoreBase, modo, fmcTotal);
+    var scoreEl = el.querySelector('[data-score-final]');
+    if (scoreEl) scoreEl.textContent = scoreFinal + '%';
+    var modoLabels = { tecnocratico: 'Tecnocrático', mixto: 'Mixto', comunitario: 'Comunitario' };
+    var modoEl = el.querySelector('[data-modo-label]');
+    if (modoEl) modoEl.textContent = modoLabels[modo] || modo;
+}
+
 function renderizarPropuestaIA(r, municipio, fuentes) {
 
     document.getElementById('auto-ia-progreso').style.display = 'none';
@@ -58200,6 +59037,100 @@ function renderizarPropuestaIA(r, municipio, fuentes) {
         }
 
 
+
+        // ── Tarjeta de decisión EPVSA (capa visual de gobernanza) ─────────────
+        (function() {
+            var v4       = window.__ultimaSalidaMotorSintesisV4 || window.analisisActualV4 || null;
+            var fmcObj   = (v4 && v4.fmc) || null;
+            var fmcTotal = (fmcObj && typeof fmcObj.total === 'number') ? fmcObj.total : 0;
+            var fmcNivel = fmcTotal >= 0.7 ? 'comunitaria_enriquecida' : fmcTotal >= 0.3 ? 'mixta' : 'tecnocratica';
+            var fmcColor = { comunitaria_enriquecida: '#059669', mixta: '#d97706', tecnocratica: '#6b7280' }[fmcNivel];
+            var fmcLabel = { comunitaria_enriquecida: 'Comunitario alto', mixta: 'Mixto', tecnocratica: 'Tecnocrático bajo' }[fmcNivel];
+
+            var scoreBase     = typeof prop.relevancia === 'number' ? prop.relevancia : parseFloat(prop.relevancia) || 50;
+            var tarjetaId     = 'le' + prop.lineaId;
+
+            // Inferencias v4 (primeras 3, globales — no específicas por línea en esta fase)
+            var v4Infs = (v4 && Array.isArray(v4.inferencias)) ? v4.inferencias.slice(0, 3) : [];
+
+            // Evidencia N1 disponible desde evidenciaMeta
+            var n1Fuentes = (v4 && v4.evidenciaMeta && Array.isArray(v4.evidenciaMeta.nivel1)) ? v4.evidenciaMeta.nivel1 : [];
+
+            detalleHTML += '<details id="tarjeta-epvsa-' + tarjetaId + '"'
+                + ' data-score-base="' + scoreBase + '"'
+                + ' data-fmc-total="' + fmcTotal.toFixed(3) + '"'
+                + ' style="border-top:1px solid #e2e8f0;">';
+
+            detalleHTML += '<summary style="cursor:pointer;padding:0.45rem 1rem;font-size:0.77rem;'
+                + 'color:#475569;list-style:none;display:flex;align-items:center;gap:0.5rem;'
+                + 'background:#f8fafc;">'
+                + '<span style="flex:1;">🏛️ Tarjeta de decisión · LE' + prop.lineaId + '</span>'
+                + '<span style="background:' + fmcColor + '20;color:' + fmcColor + ';padding:0.1rem 0.45rem;'
+                + 'border-radius:4px;font-size:0.7rem;font-weight:600;">'
+                + 'FMC ' + Math.round(fmcTotal * 100) + '% · ' + fmcLabel
+                + '</span></summary>';
+
+            detalleHTML += '<div style="padding:0.7rem 1rem;background:#fafafa;font-size:0.8rem;">';
+
+            // — Evidencia disponible
+            detalleHTML += '<div style="margin-bottom:0.55rem;">'
+                + '<strong style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;">Evidencia estructural</strong>'
+                + '<div style="display:flex;flex-wrap:wrap;gap:0.25rem;margin-top:0.3rem;">';
+            if (!n1Fuentes.length) {
+                detalleHTML += '<span style="color:#94a3b8;font-size:0.72rem;font-style:italic;">Sin fuentes N1 confirmadas</span>';
+            } else {
+                n1Fuentes.forEach(function(f) {
+                    var labels = { indicadores_cmi:'CMI', determinantes_eas:'EAS', ibse:'IBSE' };
+                    detalleHTML += '<span style="background:#d1fae5;color:#065f46;padding:0.1rem 0.4rem;border-radius:3px;font-size:0.7rem;font-weight:600;">'
+                        + (labels[f] || f) + ' N1</span>';
+                });
+            }
+            if (fmcObj && fmcObj.participacion > 0)
+                detalleHTML += '<span style="background:#ede9fe;color:#5b21b6;padding:0.1rem 0.4rem;border-radius:3px;font-size:0.7rem;">Participación ' + Math.round(fmcObj.participacion * 100) + '%</span>';
+            if (fmcObj && fmcObj.activos > 0)
+                detalleHTML += '<span style="background:#fef3c7;color:#92400e;padding:0.1rem 0.4rem;border-radius:3px;font-size:0.7rem;">Activos ' + Math.round(fmcObj.activos * 100) + '%</span>';
+            if (fmcObj && fmcObj.percepcion > 0)
+                detalleHTML += '<span style="background:#e0f2fe;color:#0369a1;padding:0.1rem 0.4rem;border-radius:3px;font-size:0.7rem;">Percepción ' + Math.round(fmcObj.percepcion * 100) + '%</span>';
+            detalleHTML += '</div></div>';
+
+            // — Inferencias v4
+            if (v4Infs.length) {
+                detalleHTML += '<details style="margin-bottom:0.55rem;">'
+                    + '<summary style="cursor:pointer;font-size:0.73rem;color:#6d28d9;padding:0.2rem 0;">📐 Inferencias v4 (' + v4Infs.length + ')</summary>'
+                    + '<ul style="margin:0.3rem 0 0;padding-left:1.1rem;">';
+                v4Infs.forEach(function(inf) {
+                    var txt = typeof inf === 'string' ? inf : (inf.texto || '');
+                    var vc  = inf.validacionComunitaria || '';
+                    if (txt) detalleHTML += '<li style="font-size:0.74rem;color:#374151;margin-bottom:0.15rem;">'
+                        + txt.slice(0, 120) + (txt.length > 120 ? '…' : '')
+                        + (vc ? ' <span style="color:#94a3b8;font-size:0.68rem;">(' + vc + ')</span>' : '')
+                        + '</li>';
+                });
+                detalleHTML += '</ul></details>';
+            }
+
+            // — Modo de interpretación + score
+            detalleHTML += '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;border-top:1px solid #e2e8f0;padding-top:0.5rem;">';
+            detalleHTML += '<span style="font-size:0.73rem;color:#374151;font-weight:600;">Modo:</span>';
+            var modoLabels = { tecnocratico: 'Tecnocrático', mixto: 'Mixto', comunitario: 'Comunitario' };
+            Object.keys(modoLabels).forEach(function(modo) {
+                var active = modo === 'tecnocratico';
+                detalleHTML += '<button data-modo-btn="' + modo + '"'
+                    + ' onclick="_compas_tarjetaModo(\'' + tarjetaId + '\',\'' + modo + '\')"'
+                    + ' style="padding:0.18rem 0.45rem;border-radius:4px;border:1px solid #e2e8f0;font-size:0.71rem;cursor:pointer;'
+                    + 'background:' + (active ? '#0074c8' : '#f1f5f9') + ';'
+                    + 'color:' + (active ? 'white' : '#475569') + ';">'
+                    + modoLabels[modo] + '</button>';
+            });
+            detalleHTML += '<span style="margin-left:auto;font-size:0.74rem;color:#374151;">'
+                + 'Score: <strong style="color:#475569;">' + scoreBase + '%</strong>'
+                + ' → <strong data-score-final style="color:#059669;">' + scoreBase + '%</strong>'
+                + ' (<span data-modo-label>Tecnocrático</span>)</span>';
+            detalleHTML += '</div>';
+
+            detalleHTML += '</div></details>';
+        })();
+        // ── fin tarjeta de decisión ────────────────────────────────────────────
 
         detalleHTML += '</div>'; // fin línea
 
@@ -60273,6 +61204,10 @@ function _actualizarBannerPropuestaV3() {
 window._renderizarV3EnUI = function() {
     var av3 = window.analisisActualV3;
     if (!av3) return;
+    // [2026-05-17] Guarda: síntesis territorial activa → ceder render a modo científico.
+    // V3 sigue calculando (window.analisisActualV3 disponible para Firebase/PDF/compilador).
+    // Sin _sintesisTerritorial (V4 no corrió o evidencia insuficiente) → V3 renderiza normalmente.
+    if (window.analisisActual && window.analisisActual._sintesisTerritorial) return;
 
     // ── A. CONCLUSIONES V3 ────────────────────────────────────────────────────
     var elConc = document.getElementById('ia-conclusiones');
@@ -71526,7 +72461,27 @@ function COMPAS_crearSnapshotEvaluacion() {
             persistente: false,
             oficial: false,
             datos: diagnosticoVivo
-        } : null
+        } : null,
+        activosComunitariosEnCiclo: (function() {
+            var _store = window.COMPAS && window.COMPAS.state && Array.isArray(window.COMPAS.state.activosComunitarios)
+                ? window.COMPAS.state.activosComunitarios : [];
+            return {
+                contrato: 'activos_comunitarios_longitudinal_v1',
+                total: _store.length,
+                activos: _store.map(function(a) {
+                    return {
+                        id: a && a.id ? a.id : null,
+                        nombre: a && a.nombre ? a.nombre : null,
+                        tipo: a && a.tipo ? a.tipo : null,
+                        validado: !!(a && a.validado),
+                        visibleDiraya: !!(a && a.visibleDiraya),
+                        fuente: a && a.fuente ? a.fuente : 'LocalizaSalud_carga_manual'
+                    };
+                }),
+                fuente: 'LocalizaSalud_carga_manual',
+                cargadoEnCiclo: _store.length > 0
+            };
+        })()
     };
 }
 
@@ -72015,6 +72970,36 @@ function COMPAS_interpretarLecturaLongitudinal(lectura) {
 
     if (clas.trazabilidad && clas.trazabilidad.estado === 'debil') {
         lectura.push('La trazabilidad metodológica necesita fortalecimiento documental.');
+    }
+
+    if (fortalezas.indexOf('red_comunitaria_activa') !== -1 &&
+        clas.trazabilidad &&
+        clas.trazabilidad.estado === 'verificable') {
+
+        lectura.push('La red comunitaria presenta señales iniciales de consolidación colaborativa.');
+    }
+
+    if (alertas.indexOf('baja_trazabilidad_verificable') !== -1 &&
+        alertas.indexOf('baja_ejecucion') !== -1) {
+
+        lectura.push('La limitada ejecución y la baja trazabilidad dificultan la evaluación robusta del impacto local.');
+    }
+
+    if (clas.temporalidad &&
+        clas.temporalidad.estado === 'alta_carga_fuera_ciclo') {
+
+        lectura.push('La agenda muestra acumulación de actuaciones procedentes de ciclos previos.');
+    }
+
+    if (limitaciones.indexOf('lectura_comunitaria_no_filtrada_por_ciclo') !== -1) {
+
+        lectura.push('La lectura comunitaria disponible todavía requiere mayor precisión longitudinal.');
+    }
+
+    if (clas.ejecucion &&
+        clas.ejecucion.estado === 'sin_base') {
+
+        lectura.push('Aún no existe base suficiente para interpretar longitudinalmente la ejecución del plan.');
     }
 
     return {
@@ -75725,13 +76710,18 @@ function _fallbackMotorHeredado() {
 
 // ── Cargar módulos IA y registrar la función global ──────────────────────────
 
+// Pre-inicialización sidecar v4 — garantiza que las variables window existan antes de la carga del módulo
+window.motorSintesisPerfilV4 = null;
+window.analisisActualV4 = null;
+window.__ultimaSalidaMotorSintesisV4 = null;
+
 (async function() {
 
     try {
 
         const [
 
-            { motorSintesisPerfil, adaptarSalidaMotorAAnalisisActual },
+            { motorSintesisPerfil, motorSintesisPerfilV4, adaptarSalidaMotorAAnalisisActual },
 
             { contextoDesdeGlobalesHeredados }
 
@@ -75743,6 +76733,8 @@ function _fallbackMotorHeredado() {
 
         ]);
 
+        // Exponer sidecar v4 en window para auditoría runtime
+        window.motorSintesisPerfilV4 = motorSintesisPerfilV4;
 
 
         /**
@@ -75828,6 +76820,25 @@ function _fallbackMotorHeredado() {
                 window.analisisActual = analisisAdaptado;
 
                 window.__ultimaSalidaMotorSintesis = salida;
+
+                // v4 se ejecuta como capa interpretativa paralela: auditable, no sustitutiva y sin persistencia.
+                try {
+                    if (motorSintesisPerfilV4 && typeof motorSintesisPerfilV4.ejecutar === 'function') {
+                        const analisisV4 = motorSintesisPerfilV4.ejecutar(ctxFinal, analisisAdaptado);
+                        window.analisisActualV4 = analisisV4;
+                        window.__ultimaSalidaMotorSintesisV4 = analisisV4;
+                        if (window.COMPAS && window.COMPAS.state) {
+                            window.COMPAS.state.analisisActualV4 = analisisV4;
+                        }
+                        console.log('[COMPAS modular] motorSintesisPerfil v4 paralelo:',
+                            'obs:', (analisisV4.observaciones || []).length,
+                            '| inferencias:', (analisisV4.inferencias || []).length,
+                            '| rec territoriales:', ((analisisV4.recomendaciones || {}).territoriales || []).length,
+                            '| rec exploratorias:', ((analisisV4.recomendaciones || {}).exploratorias || []).length);
+                    }
+                } catch (errV4) {
+                    console.warn('[COMPAS modular] motorSintesisPerfil v4 paralelo no disponible:', errV4 && errV4.message ? errV4.message : errV4);
+                }
 
 
 
@@ -82216,10 +83227,40 @@ function at2_actualizarFuentes() {
     }
 
     // Estudios complementarios
-    if (window.estudiosComplementarios && window.estudiosComplementarios.length) {
-        lineas.push('Estudios complementarios: <strong style="color:#1e293b;">' + window.estudiosComplementarios.length + '</strong>');
+    var _estDocsResumen = !!(window.estudiosComplementarios &&
+                              window.estudiosComplementarios.length);
+
+    var _ibseResumen = !!(window.datosIBSE &&
+                         (window.datosIBSE.n > 0 || window.datosIBSE.n_valido > 0));
+
+    var _escalasResumen = false;
+
+    try {
+        _escalasResumen = (typeof _compasEscalasGet === 'function') &&
+                          ((_compasEscalasGet() || []).length > 0);
+    } catch(e) {
+        _escalasResumen = false;
+    }
+
+    if (_estDocsResumen) {
+
+        lineas.push(
+            'Estudios complementarios: <strong style="color:#1e293b;">' +
+            window.estudiosComplementarios.length +
+            '</strong>'
+        );
+
+    } else if (_ibseResumen || _escalasResumen) {
+
+        lineas.push(
+            'Estudios complementarios: <span style="color:#0369a1;">IBSE/escalas disponibles</span>'
+        );
+
     } else {
-        lineas.push('Estudios complementarios: <span style="color:#94a3b8;">ninguno</span>');
+
+        lineas.push(
+            'Estudios complementarios: <span style="color:#94a3b8;">ninguno</span>'
+        );
     }
 
     // IBSE / escalas
@@ -82626,6 +83667,147 @@ function renderizarResultadoTerritorialV2(r) {
         elPri.innerHTML = htmlPri;
     }
 }
+</script>
+
+<script>
+// ── PIPELINE ACTIVOS COMUNITARIOS — Localiza Salud → COMPÁS v4 ───────────────
+// Carga manual segura. Sin API externa. Sin persistencia automática.
+// Sin alteración de motores ni EPVSA.
+(function() {
+
+var _AVISO_COBERTURA = 'Los activos registrados representan recursos validados incorporados al sistema, no el conjunto total de activos existentes en el municipio.';
+
+function _normalizarActivo(raw, idx) {
+    var nombre = String(raw.nombre || raw.Nombre || raw.name || '').trim();
+    if (!nombre) return null;
+    var catRaw  = raw.categoria || raw.Categoria || '';
+    var impRaw  = raw.impactoPotencial || raw.impactos || '';
+    return {
+        id:                   raw.id || ('activo_ls_' + Date.now() + '_' + idx),
+        nombre:               nombre,
+        descripcion:          String(raw.descripcion || raw.Descripcion || raw.description || '').trim(),
+        categoria:            Array.isArray(catRaw) ? catRaw : String(catRaw).split(/[,;]/).map(function(c){return c.trim();}).filter(Boolean),
+        tipo:                 String(raw.tipo || raw.Tipo || 'puntual').toLowerCase().trim(),
+        validadoParticipacion: true,
+        origen:               'LocalizaSalud',
+        municipio:            String(raw.municipio || raw.Municipio || (window.datosMunicipioActual && window.datosMunicipioActual.nombre) || '').trim(),
+        impactoPotencial:     Array.isArray(impRaw) ? impRaw : String(impRaw).split(/[,;]/).map(function(c){return c.trim();}).filter(Boolean),
+        fechaIncorporacion:   raw.fechaIncorporacion || new Date().toISOString(),
+        observaciones:        String(raw.observaciones || raw.Observaciones || '').trim(),
+        _aviso:               _AVISO_COBERTURA,
+    };
+}
+
+function _parsearCSV(texto) {
+    var lineas = texto.trim().split(/\r?\n/);
+    if (lineas.length < 2) return [];
+    var sep     = lineas[0].includes(';') ? ';' : ',';
+    var headers = lineas[0].split(sep).map(function(h){ return h.trim().replace(/^["']|["']$/g,''); });
+    return lineas.slice(1).map(function(linea) {
+        var vals = linea.split(sep).map(function(v){ return v.trim().replace(/^["']|["']$/g,''); });
+        var obj  = {};
+        headers.forEach(function(h,i){ obj[h] = vals[i] || ''; });
+        return obj;
+    });
+}
+
+function _actualizarUI() {
+    var store = window.COMPAS && window.COMPAS.state && window.COMPAS.state.activosComunitarios || [];
+    var n     = store.length;
+    var badge = document.getElementById('badge-activos-n');
+    if (badge) badge.textContent = n + (n === 1 ? ' activo' : ' activos');
+    var lista = document.getElementById('compas-activos-lista');
+    if (!lista) return;
+    if (n === 0) { lista.innerHTML = ''; return; }
+    var html = '<div style="border-top:1px solid #e2e8f0;padding-top:0.5rem;margin-top:0.4rem;">';
+    html += '<p style="font-size:0.71rem;color:#64748b;margin:0 0 0.4rem;font-style:italic;">' + _AVISO_COBERTURA + '</p>';
+    store.slice(0, 10).forEach(function(a) {
+        var tc  = a.tipo === 'multiefecto' ? '#6d28d9' : '#0369a1';
+        var bg  = a.tipo === 'multiefecto' ? '#ede9fe' : '#e0f2fe';
+        html += '<div style="display:flex;align-items:flex-start;gap:0.4rem;padding:0.22rem 0;border-bottom:1px solid #f1f5f9;">';
+        html += '<span style="background:' + bg + ';color:' + tc + ';padding:0.04rem 0.32rem;border-radius:3px;font-size:0.66rem;font-weight:600;flex-shrink:0;margin-top:0.1rem;">' + (a.tipo || 'puntual') + '</span>';
+        html += '<span style="font-size:0.77rem;color:#1e293b;">' + a.nombre;
+        if (a.descripcion) html += '<span style="color:#64748b;"> — ' + a.descripcion.slice(0, 70) + (a.descripcion.length > 70 ? '…' : '') + '</span>';
+        html += '</span></div>';
+    });
+    if (n > 10) html += '<p style="font-size:0.71rem;color:#64748b;margin:0.3rem 0 0;">… y ' + (n-10) + ' más.</p>';
+    html += '</div>';
+    lista.innerHTML = html;
+}
+
+window._compas_loaderActivos_abrirSelector = function() {
+    var input = document.getElementById('compas-activos-file-input');
+    if (input) input.click();
+};
+
+window._compas_loaderActivos_onFile = function(event) {
+    var file = event.target.files && event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var contenido = e.target.result;
+            var rawItems  = [];
+            if (file.name.toLowerCase().endsWith('.json')) {
+                var parsed = JSON.parse(contenido);
+                rawItems   = Array.isArray(parsed) ? parsed : (parsed.activos || []);
+            } else {
+                rawItems = _parsearCSV(contenido);
+            }
+            var validos = rawItems.map(function(r,i){ return _normalizarActivo(r,i); }).filter(Boolean);
+            if (!validos.length) {
+                console.warn('[COMPAS activos] Fichero sin activos válidos. Verifica que exista campo "nombre" en cada elemento.');
+                return;
+            }
+            var store = window.COMPAS.state.activosComunitarios;
+            validos.forEach(function(a) {
+                var existe = store.some(function(x){ return x.id === a.id || x.nombre === a.nombre; });
+                if (!existe) store.push(a);
+            });
+            window.activosComunitarios = store; // mantener alias sincronizado
+            _actualizarUI();
+            console.log('[COMPAS activos] Cargados:', validos.length, '| Total:', store.length, '|', _AVISO_COBERTURA);
+        } catch(err) {
+            console.warn('[COMPAS activos] Error al parsear fichero:', err && err.message);
+        }
+        event.target.value = ''; // permite recargar el mismo fichero
+    };
+    reader.readAsText(file, 'UTF-8');
+};
+
+window._compas_loaderActivos_limpiar = function() {
+    if (window.COMPAS && window.COMPAS.state) window.COMPAS.state.activosComunitarios.length = 0;
+    window.activosComunitarios = window.COMPAS.state.activosComunitarios;
+    _actualizarUI();
+    console.log('[COMPAS activos] Almacén limpiado.');
+};
+
+// ── Estructura Firebase preparada — NO auto-persiste ────────────────────────
+// Ruta: estrategias/{estrategiaId}/municipios/{municipioId}/activosComunitarios
+// Solo llamar explícitamente, nunca de forma automática.
+window._compas_persistirActivosMunicipio = function(estrategiaId, municipioId, ciclo) {
+    if (!estrategiaId || !municipioId) {
+        console.warn('[COMPAS activos] _compas_persistirActivosMunicipio: faltan estrategiaId o municipioId');
+        return null;
+    }
+    var store   = (window.COMPAS && window.COMPAS.state && window.COMPAS.state.activosComunitarios) || [];
+    var payload = {
+        ciclo:       ciclo || new Date().getFullYear(),
+        fechaCarga:  new Date().toISOString(),
+        nActivos:    store.length,
+        activos:     store.slice(),
+        advertencia: _AVISO_COBERTURA,
+        fuente:      'LocalizaSalud_carga_manual',
+    };
+    console.log('[COMPAS activos] Payload preparado (NO persistido):',
+        'estrategias/' + estrategiaId + '/municipios/' + municipioId + '/activosComunitarios',
+        '| n:', payload.nActivos);
+    // Para persistir en Firebase descomente:
+    // if (typeof db !== 'undefined') db.ref('estrategias/'+estrategiaId+'/municipios/'+municipioId+'/activosComunitarios').set(payload).catch(function(e){ console.warn('[COMPAS activos] Firebase error:', e); });
+    return payload;
+};
+
+})();
 </script>
 
 </body>
