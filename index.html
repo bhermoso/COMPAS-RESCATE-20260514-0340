@@ -71271,6 +71271,8 @@ function COMPAS_crearSnapshotEvaluacion() {
         clasificaciones: {
             ejecucion: {
                 estado: _estadoEjecucion,
+                etiqueta: _estadoEjecucion,
+                porcentaje: _ejecLong.tasaFinalizacionDentroCiclo,
                 tasaFinalizacionDentroCiclo: _ejecLong.tasaFinalizacionDentroCiclo,
                 tasaArrastre: _ejecLong.tasaArrastre,
                 tasaNoEjecucion: _ejecLong.tasaNoEjecucion,
@@ -71278,6 +71280,8 @@ function COMPAS_crearSnapshotEvaluacion() {
             },
             temporalidad: {
                 estado: _estadoTemporalidad,
+                etiqueta: _estadoTemporalidad,
+                porcentaje: 100 - _ejecLong.pesoFueraCicloEnAgenda,
                 pesoFueraCicloEnAgenda: _ejecLong.pesoFueraCicloEnAgenda,
                 totalAgenda: _baseLong.totalAgenda,
                 totalCiclo: _baseLong.totalCiclo,
@@ -71285,12 +71289,16 @@ function COMPAS_crearSnapshotEvaluacion() {
             },
             calidadDatos: {
                 estado: _estadoCalidadDatos,
+                etiqueta: _estadoCalidadDatos,
+                porcentaje: 100 - Math.max(_calidadLong.tasaAnioActuacionVacio, _calidadLong.tasaFechaRealVacia, _calidadLong.tasaFechaRealInvalida),
                 tasaAnioActuacionVacio: _calidadLong.tasaAnioActuacionVacio,
                 tasaFechaRealVacia: _calidadLong.tasaFechaRealVacia,
                 tasaFechaRealInvalida: _calidadLong.tasaFechaRealInvalida
             },
             redComunitaria: {
                 estado: _estadoRedComunitaria,
+                etiqueta: _estadoRedComunitaria,
+                porcentaje: _baseLong.totalCiclo > 0 ? Math.min(100, Math.round(((_comunidadLong.entidadesColaboradoras + _comunidadLong.activosDetectados) / _baseLong.totalCiclo) * 1000) / 10) : 0,
                 activosDetectados: _comunidadLong.activosDetectados,
                 entidadesColaboradoras: _comunidadLong.entidadesColaboradoras,
                 aprendizajesGenerados: _comunidadLong.aprendizajesGenerados,
@@ -71298,6 +71306,8 @@ function COMPAS_crearSnapshotEvaluacion() {
             },
             trazabilidad: {
                 estado: _estadoTrazabilidad,
+                etiqueta: _estadoTrazabilidad,
+                porcentaje: _baseLong.totalCiclo > 0 ? Math.round((_comunidadLong.evidenciasVerificables / _baseLong.totalCiclo) * 1000) / 10 : 0,
                 evidenciasVerificables: _comunidadLong.evidenciasVerificables,
                 totalCiclo: _baseLong.totalCiclo
             }
@@ -71325,14 +71335,18 @@ function COMPAS_crearSnapshotEvaluacion() {
     if (_baseLong.totalCiclo === 0) lecturaEvaluativaLongitudinal.limitaciones.push('sin_actuaciones_del_ciclo');
     if (_comunidadLong.alcance === 'agenda_completa_cargada') lecturaEvaluativaLongitudinal.limitaciones.push('lectura_comunitaria_no_filtrada_por_ciclo');
 
+    var _clasLong = (lecturaEvaluativaLongitudinal && lecturaEvaluativaLongitudinal.clasificaciones)
+        ? lecturaEvaluativaLongitudinal.clasificaciones
+        : {};
+
     var lecturaContratoSnapshot = {
         contrato: 'lectura_snapshot_evaluacion_v1',
         cicloEvaluado: cicloEvaluado,
         totalActuacionesCiclo: _baseLong.totalCiclo,
         totalActuacionesFueraCiclo: _baseLong.totalFueraCiclo,
-        estadoTemporalidad: _baseLong.clasificaciones && _baseLong.clasificaciones.temporalidad ? _baseLong.clasificaciones.temporalidad.estado : null,
-        estadoTrazabilidad: _baseLong.clasificaciones && _baseLong.clasificaciones.trazabilidad ? _baseLong.clasificaciones.trazabilidad.estado : null,
-        nivelEjecucion: _baseLong.clasificaciones && _baseLong.clasificaciones.ejecucion ? _baseLong.clasificaciones.ejecucion.estado : null
+        estadoTemporalidad: _clasLong.temporalidad ? _clasLong.temporalidad.estado : null,
+        estadoTrazabilidad: _clasLong.trazabilidad ? _clasLong.trazabilidad.estado : null,
+        nivelEjecucion: _clasLong.ejecucion ? _clasLong.ejecucion.estado : null
     };
 
     var contratoSnapshotEvaluacion = 'snapshot_evaluacion_v1';
@@ -73248,6 +73262,8 @@ function sincronizarPlanConAgenda(silencioso) {
             orden:                 Date.now() + añadidas
 
         });
+
+        yaEnAgenda.add(act.codigo);
 
         añadidas++;
 
