@@ -72817,6 +72817,22 @@ function eval_actualizarJornada() {
         }
 
         html += '<div style="margin-top:0.3rem;color:#94a3b8;">Lectura derivada del snapshot evaluativo; no sustituye los conteos operativos del plan.</div>';
+
+        var _interpJornada = COMPAS_interpretarLecturaLongitudinal(_lecLongJornada);
+
+        if (_interpJornada && _interpJornada.lecturaEjecutiva) {
+
+            html += '<div style="margin-top:0.75rem;background:#ffffff;border:1px solid #dbeafe;border-left:4px solid #0284c7;border-radius:10px;padding:0.75rem 0.9rem;">';
+
+            html += '<div style="font-size:0.69rem;font-weight:700;letter-spacing:0.45px;text-transform:uppercase;color:#075985;margin-bottom:0.35rem;">Interpretación longitudinal del ciclo</div>';
+
+            html += '<div style="font-size:0.79rem;line-height:1.6;color:#334155;">' +
+                _interpJornada.lecturaEjecutiva +
+            '</div>';
+
+            html += '</div>';
+        }
+
         html += '</div>';
     }
 
