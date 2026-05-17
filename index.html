@@ -71866,6 +71866,22 @@ function eval_actualizarDashboard() {
         if (_valDash.valido === false) {
             longitudinalHtml += '<div style="margin-top:0.3rem;color:#92400e;">Aviso t&#233;cnico: validaci&#243;n interna del snapshot con incidencias.</div>';
         }
+
+        var _interpDash = COMPAS_interpretarLecturaLongitudinal(_lecDash);
+
+        if (_interpDash && _interpDash.lecturaEjecutiva) {
+
+            longitudinalHtml += '<div style="margin-top:0.55rem;padding:0.6rem 0.75rem;background:#ffffff;border:1px solid #dbeafe;border-left:4px solid #0ea5e9;border-radius:8px;">';
+
+            longitudinalHtml += '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;color:#0369a1;margin-bottom:0.3rem;">Lectura ejecutiva del ciclo</div>';
+
+            longitudinalHtml += '<div style="font-size:0.76rem;line-height:1.55;color:#334155;">' +
+                _interpDash.lecturaEjecutiva +
+            '</div>';
+
+            longitudinalHtml += '</div>';
+        }
+
         longitudinalHtml += '</div>';
     }
 
@@ -71925,6 +71941,91 @@ function _badgeLongitudinal(label, estado, porcentaje) {
 
         return '<span style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.2rem 0.55rem;border-radius:999px;font-size:0.68rem;font-weight:700;background:' + fondo + ';color:' + color + ';">' + label + ': ' + estado + ' · ' + porcentaje + '%' + '</span>';
     }
+
+
+function COMPAS_interpretarLecturaLongitudinal(lectura) {
+
+    if (!lectura) {
+        return {
+            resumen: 'Sin lectura longitudinal disponible.',
+            fortalezasInterpretadas: [],
+            alertasInterpretadas: [],
+            lecturaEjecutiva: 'No existe información suficiente para interpretar longitudinalmente el ciclo evaluativo.'
+        };
+    }
+
+    var fortalezas = lectura.fortalezas || [];
+    var alertas = lectura.alertas || [];
+    var limitaciones = lectura.limitaciones || [];
+    var clas = lectura.clasificaciones || {};
+
+    var fortalezasInterpretadas = [];
+    var alertasInterpretadas = [];
+    var lectura = [];
+
+    if (fortalezas.indexOf('ejecucion_solida') !== -1) {
+        fortalezasInterpretadas.push('El ciclo presenta una capacidad operativa estable y una ejecución sostenida de actuaciones.');
+    }
+
+    if (fortalezas.indexOf('ciclo_limpio') !== -1) {
+        fortalezasInterpretadas.push('La planificación mantiene una buena coherencia temporal respecto al ciclo evaluado.');
+    }
+
+    if (fortalezas.indexOf('red_comunitaria_activa') !== -1) {
+        fortalezasInterpretadas.push('Se observa participación de activos y entidades colaboradoras en la red local.');
+    }
+
+    if (fortalezas.indexOf('trazabilidad_verificable') !== -1) {
+        fortalezasInterpretadas.push('La documentación disponible permite verificar parte relevante de la ejecución.');
+    }
+
+    if (alertas.indexOf('baja_ejecucion') !== -1) {
+        alertasInterpretadas.push('La ejecución registrada del plan es limitada o insuficiente para consolidar el ciclo.');
+    }
+
+    if (alertas.indexOf('alta_carga_fuera_ciclo') !== -1) {
+        alertasInterpretadas.push('Existe una proporción elevada de actuaciones fuera del ciclo temporal evaluado.');
+    }
+
+    if (alertas.indexOf('baja_trazabilidad_verificable') !== -1) {
+        alertasInterpretadas.push('La trazabilidad documental y verificable de las actuaciones sigue siendo débil.');
+    }
+
+    if (alertas.indexOf('alto_arrastre') !== -1) {
+        alertasInterpretadas.push('Se detecta arrastre significativo de actuaciones entre ciclos.');
+    }
+
+    if (limitaciones.indexOf('sin_actuaciones_del_ciclo') !== -1) {
+        alertasInterpretadas.push('No existen actuaciones suficientes asociadas al ciclo evaluado.');
+    }
+
+    if (limitaciones.indexOf('lectura_comunitaria_no_filtrada_por_ciclo') !== -1) {
+        alertasInterpretadas.push('La lectura comunitaria disponible todavía no está completamente filtrada por ciclo anual.');
+    }
+
+    if (clas.ejecucion && clas.ejecucion.estado === 'solida') {
+        lectura.push('La ejecución longitudinal muestra signos de consolidación.');
+    } else if (clas.ejecucion && clas.ejecucion.estado === 'baja') {
+        lectura.push('La capacidad de ejecución longitudinal continúa siendo limitada.');
+    }
+
+    if (clas.temporalidad && clas.temporalidad.estado === 'ciclo_limpio') {
+        lectura.push('La coherencia temporal del plan es adecuada.');
+    }
+
+    if (clas.trazabilidad && clas.trazabilidad.estado === 'debil') {
+        lectura.push('La trazabilidad metodológica necesita fortalecimiento documental.');
+    }
+
+    return {
+        resumen: lectura.join(' '),
+        fortalezasInterpretadas: fortalezasInterpretadas,
+        alertasInterpretadas: alertasInterpretadas,
+        lecturaEjecutiva: lectura.join(' ')
+    };
+}
+
+
 
 // ── Bloque 1: Evaluación del proceso ─────────────────────────────────
 
