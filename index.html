@@ -61620,6 +61620,155 @@ window.COMPAS_inspeccionarCicloAnaliticoV3 = function() {
     return window.__COMPAS_CICLO_ANALITICO_V3;
 };
 
+// ── Inspector runtime de estado analítico actual ─────────────────────────────
+// Solo lectura: no muta, no renderiza y no persiste. Complementa el contrato V3.
+window.COMPAS_inspeccionarEstadoAnaliticoActual = function() {
+    var w = window;
+    var compas = w.COMPAS || {};
+    var state = compas.state || {};
+    var analisis = w.analisisActual || null;
+    var v3 = w.analisisActualV3 || null;
+    var sintesis = analisis && analisis._sintesisTerritorial || null;
+    var propuesta = analisis && Array.isArray(analisis.propuestaEPVSA) ? analisis.propuestaEPVSA : [];
+    var propuestaV3 = analisis && Array.isArray(analisis._v3_propuestaEPVSA) ? analisis._v3_propuestaEPVSA : [];
+    var seleccion = state.seleccionEPVSA || w.seleccionAceptada || null;
+    var pendiente = w.__COMPAS_analisisIA_pendienteGuardar || null;
+    var trazabilidad = analisis && analisis.trazabilidad || null;
+
+    function _arr(v) { return Array.isArray(v) ? v : []; }
+    function _obj(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+    function _keys(v) { return _obj(v) ? Object.keys(v) : []; }
+    function _count(v) { return Array.isArray(v) ? v.length : (_obj(v) ? Object.keys(v).length : (v ? 1 : 0)); }
+    function _has(v) { return _count(v) > 0; }
+
+    function _origenPropuesta() {
+        if (!analisis) return 'sin_analisisActual';
+        if (propuesta.length && propuestaV3.length) {
+            var idsP = propuesta.map(function(p){ return p && p.lineaId; }).join('|');
+            var idsV3 = propuestaV3.map(function(p){ return p && p.lineaId; }).join('|');
+            if (idsP === idsV3) return 'analisisActual_propuestaEPVSA_posible_v3';
+            return 'analisisActual_propuestaEPVSA_base_con_v3_disponible';
+        }
+        if (propuesta.length) return 'analisisActual.propuestaEPVSA';
+        if (propuestaV3.length) return 'analisisActual._v3_propuestaEPVSA_sin_bridge_principal';
+        return 'no_disponible';
+    }
+
+    function _renderDominante() {
+        if (sintesis) return 'render_moderno_sintesisTerritorial';
+        if (v3) return 'render_v3_posible';
+        if (analisis) return 'render_base_analisisActual';
+        return 'sin_render_analitico';
+    }
+
+    var v3Campos = {
+        _v3_prioridades: !!(analisis && analisis._v3_prioridades),
+        _v3_conclusiones: !!(analisis && analisis._v3_conclusiones),
+        _v3_recomendaciones: !!(analisis && analisis._v3_recomendaciones),
+        _v3_propuestaEPVSA: !!(analisis && analisis._v3_propuestaEPVSA),
+        _v3_divergencias: !!(analisis && analisis._v3_divergencias),
+        _v3_estudiosAn: !!(analisis && analisis._v3_estudiosAn)
+    };
+
+    var riesgos = [];
+    if (analisis && v3) riesgos.push('mezcla_base_v3');
+    if (pendiente && v3) riesgos.push('persistencia_preparada_puede_no_incluir_mutaciones_v3');
+    if (w._COMPAS_v3_hooked) riesgos.push('render_diferido_hook_v3_900ms');
+    if (analisis && Object.keys(v3Campos).some(function(k){ return v3Campos[k]; })) riesgos.push('mutacion_sobre_analisisActual');
+    if (trazabilidad && trazabilidad.origen_propuesta_actual === 'v3') riesgos.push('resincronizacion_trazabilidad_parcial');
+    if (sintesis && v3) riesgos.push('sintesisTerritorial_domina_render_pero_no_evita_mutacion_v3');
+
+    return {
+        contrato: 'estado_analitico_actual_v1',
+        modo: 'solo_lectura_sin_mutacion',
+        timestamp: new Date().toISOString(),
+        existencia: {
+            analisisActual: !!analisis,
+            analisisActualV3: !!v3,
+            _sintesisTerritorial: !!sintesis,
+            propuestaEPVSA: propuesta.length > 0,
+            seleccionEPVSA: _has(seleccion),
+            analisisIAPendienteGuardar: !!pendiente,
+            trazabilidad: !!trazabilidad
+        },
+        v3: {
+            hookActivo: !!w._COMPAS_v3_hooked,
+            campos: v3Campos,
+            nPrioridades: _count(v3 && v3.prioridades),
+            nConclusiones: _count(v3 && (v3.conclusiones_v3 || v3.conclusiones)),
+            nRecomendaciones: _count(v3 && (v3.recomendaciones_v3 || v3.recomendaciones)),
+            nPropuestaEPVSA: _count(v3 && v3.propuestaEPVSA)
+        },
+        origenes: {
+            propuestaEPVSA: _origenPropuesta(),
+            renderDominante: _renderDominante(),
+            sintesisTerritorial: sintesis ? (sintesis.contrato || sintesis.version || 'analisisActual._sintesisTerritorial') : 'no_disponible'
+        },
+        seleccionEPVSA: {
+            presente: _has(seleccion),
+            n: _count(seleccion),
+            fuente: state.seleccionEPVSA ? 'window.COMPAS.state.seleccionEPVSA' : (w.seleccionAceptada ? 'window.seleccionAceptada' : 'no_disponible')
+        },
+        persistencia: {
+            analisisIAPendienteGuardar: !!pendiente,
+            fechaGeneracionPendiente: pendiente && pendiente.fechaGeneracion || null,
+            fechaGuardadoExplicitoPendiente: pendiente && pendiente.fechaGuardadoExplicito || null,
+            regla: 'sin_persistencia_automatica_nueva'
+        },
+        trazabilidad: {
+            disponible: !!trazabilidad,
+            origenPropuestaActual: trazabilidad && trazabilidad.origen_propuesta_actual || null,
+            fechaResincronizacion: trazabilidad && trazabilidad.fecha_resincronizacion || null,
+            nCadenaCompleta: _count(trazabilidad && trazabilidad.cadena_completa),
+            nPropuestaPorLinea: _count(trazabilidad && trazabilidad.propuesta_por_linea)
+        },
+        runtimeFlags: {
+            modular: !!compas.__modular,
+            hookV3: !!w._COMPAS_v3_hooked,
+            renderModerno: !!sintesis,
+            fallbackActivo: !w.__COMPAS_ejecutarMotorSintesis,
+            motorSintesisDisponible: typeof w.__COMPAS_ejecutarMotorSintesis === 'function',
+            motorV3Disponible: typeof w.COMPAS_ejecutarMotorV3 === 'function',
+            renderV3Disponible: typeof w._renderizarV3EnUI === 'function'
+        },
+        consumidoresDetectables: {
+            plan: typeof w.generarDocumentoPlan === 'function' || typeof w.renderPlanAccion === 'function',
+            snapshotPlan: typeof w.COMPAS_crearSnapshotPlan === 'function',
+            snapshotEvaluacion: typeof w.COMPAS_crearSnapshotEvaluacion === 'function',
+            evaluacion: typeof w.eval_actualizarFase6 === 'function' || typeof w.eval_actualizarResultados === 'function',
+            compilador: !!(w.planLocalSalud || (typeof planLocalSalud !== 'undefined' && planLocalSalud)),
+            propuestaLocal: typeof w.generarPropuestaLocal === 'function' || typeof w.generarPropuestaIA === 'function'
+        },
+        timestamps: {
+            analisisActual: analisis && (analisis.fecha || analisis.fechaGeneracion || analisis.timestamp) || null,
+            analisisActualV3: v3 && (v3.fecha || v3.fechaGeneracion || v3.timestamp) || null,
+            sintesisTerritorial: sintesis && (sintesis.fecha || sintesis.fechaGeneracion || sintesis.timestamp) || null,
+            pendienteGuardar: pendiente && (pendiente.fechaGeneracion || pendiente.fechaGuardadoExplicito) || null
+        },
+        riesgosObservados: riesgos
+    };
+};
+
+window.COMPAS_imprimirEstadoAnaliticoActual = function() {
+    var estado = window.COMPAS_inspeccionarEstadoAnaliticoActual();
+    var fila = {
+        analisisActual: estado.existencia.analisisActual,
+        analisisActualV3: estado.existencia.analisisActualV3,
+        sintesisTerritorial: estado.existencia._sintesisTerritorial,
+        propuestaEPVSA: estado.existencia.propuestaEPVSA,
+        seleccionEPVSA: estado.existencia.seleccionEPVSA,
+        pendienteGuardar: estado.existencia.analisisIAPendienteGuardar,
+        renderDominante: estado.origenes.renderDominante,
+        origenPropuesta: estado.origenes.propuestaEPVSA,
+        hookV3: estado.runtimeFlags.hookV3,
+        modular: estado.runtimeFlags.modular,
+        riesgos: estado.riesgosObservados.join(', ')
+    };
+    if (console && console.table) console.table([fila]);
+    else if (console && console.log) console.log(fila);
+    return estado;
+};
+
 // Hook: ejecutar v3 después de generarAnalisisIA
 
 window.addEventListener('load',function(){
