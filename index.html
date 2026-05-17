@@ -61509,6 +61509,117 @@ window.COMPAS_ejecutarMotorV3 = function(){
 
 
 
+// ── Contrato documental runtime: ciclo analítico V3 ──────────────────────────
+// No ejecuta lógica, no persiste y no modifica estado. Sirve como mapa técnico
+// provisional del ciclo real antes de una modularización física.
+window.__COMPAS_CICLO_ANALITICO_V3 = {
+    version: 'ciclo_analitico_v3_v1',
+    estado: 'documental_runtime',
+    fechaCreacion: '2026-05-17T00:00:00+02:00',
+    fuenteVerdad: 'index.html',
+    noEjecutaLogica: true,
+    noPersiste: true,
+    noModificaEstado: true,
+    fases: {
+        entradaUsuario: {
+            orden: 1,
+            descripcion: 'Entrada manual desde la interfaz: selección de municipio y generación del análisis IA.',
+            entradas: ['seleccion de municipio', 'boton generarAnalisisIA'],
+            salidas: ['solicitud de diagnostico territorial'],
+            mutaciones: [],
+            riesgos: ['depende del estado global activo del municipio']
+        },
+        motorBase: {
+            orden: 2,
+            descripcion: 'Ruta base de análisis heredada/modular: generarAnalisisIA() y llamada original mediante _orig.apply(...).',
+            entradas: ['datosMunicipioActual', 'fuentes cargadas', 'contexto IA disponible'],
+            salidas: ['window.analisisActual'],
+            mutaciones: ['creacion o actualizacion de window.analisisActual'],
+            riesgos: ['mezcla de calculo base, adaptadores y estado global mutable']
+        },
+        hookV3: {
+            orden: 3,
+            descripcion: 'Hook runtime que programa el ciclo V3 tras generarAnalisisIA.',
+            entradas: ['generarAnalisisIA envuelto', '_orig.apply(this, arguments)'],
+            salidas: ['setTimeout(window.COMPAS_ejecutarMotorV3, 900)'],
+            mutaciones: ['window.generarAnalisisIA se envuelve una vez', 'window._COMPAS_v3_hooked = true'],
+            riesgos: ['ejecucion diferida no transaccional', 'dependencia temporal de 900 ms']
+        },
+        motorV3: {
+            orden: 4,
+            descripcion: 'Ejecución del motor analítico V3.',
+            entradas: ['window.COMPAS_analizarV3()', 'window.analisisActual existente cuando procede'],
+            salidas: ['window.analisisActualV3'],
+            mutaciones: ['window.analisisActualV3 = av3'],
+            riesgos: ['referencias legacy y lectura de multiples fuentes globales']
+        },
+        mutacionEstado: {
+            orden: 5,
+            descripcion: 'Enriquecimiento parcial de window.analisisActual con campos V3.',
+            entradas: ['av3', 'window.analisisActual'],
+            salidas: ['campos _v3_*', 'alertasInequidad', 'propuestaEPVSA condicional'],
+            mutaciones: [
+                'window.analisisActual._v3_prioridades',
+                'window.analisisActual._v3_conclusiones',
+                'window.analisisActual._v3_recomendaciones',
+                'window.analisisActual._v3_propuestaEPVSA',
+                'window.analisisActual._v3_divergencias',
+                'window.analisisActual._v3_estudiosAn',
+                'window.analisisActual.alertasInequidad',
+                'window.analisisActual.propuestaEPVSA solo si faltaba o contenia IDs invalidos'
+            ],
+            riesgos: ['estado global mutable', 'coexistencia de campos v2/v3', 'propuestaEPVSA solo parcialmente gobernada']
+        },
+        trazabilidad: {
+            orden: 6,
+            descripcion: 'Resincronización parcial si V3 reemplaza propuestaEPVSA.',
+            entradas: ['window.analisisActual.trazabilidad', 'av3.propuestaEPVSA'],
+            salidas: ['trazabilidad.propuesta_por_linea', 'trazabilidad.cadena_completa[].lineas_epvsa', 'origen_propuesta_actual'],
+            mutaciones: ['resync parcial de subcampos derivados de propuestaEPVSA'],
+            limitesActuales: ['v3 no genera enlaces conclusion→linea completos', 'conclusion_ids queda vacio en propuesta_por_linea'],
+            riesgos: ['trazabilidad incompleta para auditoria conclusion→LE']
+        },
+        sintesisTerritorial: {
+            orden: 7,
+            descripcion: 'Síntesis territorial moderna disponible en analisisActual cuando el motor territorial la produjo.',
+            entradas: ['motor de sintesis territorial moderno', 'window.analisisActual'],
+            salidas: ['window.analisisActual._sintesisTerritorial'],
+            mutaciones: [],
+            riesgos: ['V3 la respeta como guarda visual pero no gobierna su contrato completo']
+        },
+        render: {
+            orden: 8,
+            descripcion: 'Render diferido de resultados V3 en UI.',
+            entradas: ['window.analisisActualV3', 'window.analisisActual._sintesisTerritorial'],
+            salidas: ['#ia-conclusiones', '#ia-recomendaciones', 'banner propuesta v3'],
+            mutaciones: ['DOM/UI mediante setTimeout(window._renderizarV3EnUI, 0)'],
+            riesgos: ['render diferido no transaccional', 'guarda visual basada en _sintesisTerritorial']
+        },
+        consumidoresPosteriores: {
+            orden: 9,
+            descripcion: 'Bloques posteriores que pueden leer analisisActual, campos _v3_* o propuestaEPVSA.',
+            consumidores: ['evaluacion', 'plan de accion', 'compilador', 'snapshot', 'conclusiones/recomendaciones', 'propuesta EPVSA'],
+            riesgos: ['lecturas posteriores pueden mezclar estado base, v3 y sintesis territorial']
+        },
+        riesgosPendientes: {
+            orden: 10,
+            descripcion: 'Deuda tecnica pendiente antes de modularizacion.',
+            riesgos: [
+                'mezcla de calculo, mutacion, bridge y render',
+                'referencias legacy',
+                'render async',
+                'estado global mutable',
+                'dificultad de auditoria',
+                'deuda antes de modularizacion'
+            ]
+        }
+    }
+};
+
+window.COMPAS_inspeccionarCicloAnaliticoV3 = function() {
+    return window.__COMPAS_CICLO_ANALITICO_V3;
+};
+
 // Hook: ejecutar v3 después de generarAnalisisIA
 
 window.addEventListener('load',function(){
