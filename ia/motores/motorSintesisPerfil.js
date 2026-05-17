@@ -407,14 +407,25 @@ function _calcularAnalisisModular(contextoIA) {
     const conclusiones = [];
 
     // Tendencias CMI (ID: 'tendencias')
+    // [2026-05-17] Lectura con gradación epistémica: introduce nota sobre qué significa el porcentaje
+    // en términos de capacidad de monitorización y no solo como estado descriptivo.
     if (cmi && cmi.conTendencias > 0) {
         const pct = cmi.componenteCI;
-        const estado = pct >= 60 ? 'favorable' : pct >= 40 ? 'intermedio' : 'con áreas de mejora prioritarias';
+        let _textTend;
+        if (pct !== null) {
+            if (pct >= 60) {
+                _textTend = `La mayoría de los indicadores CMI con tendencias registradas (${pct}%) muestra evolución favorable. Conviene verificar si este patrón refleja mejora real en el territorio o si los indicadores disponibles tienen umbrales de clasificación favorables; la cobertura de medición condiciona la lectura.`;
+            } else if (pct >= 40) {
+                _textTend = `Una parte relevante de los indicadores CMI (${pct}%) evoluciona favorablemente, pero el perfil es intermedio. La concentración de señales desfavorables en áreas específicas —no el promedio— debe orientar la priorización.`;
+            } else {
+                _textTend = `Una minoría de los indicadores CMI (${pct}%) muestra evolución favorable. El perfil sugiere un contexto de mejora que puede requerir refuerzo de la capacidad de respuesta institucional, no solo ampliación de la agenda de actuaciones.`;
+            }
+        } else {
+            _textTend = `Se dispone de ${cmi.conDatos} de 50 indicadores CMI con datos. La cobertura de seguimiento es parcial; la lectura debe interpretarse con cautela metodológica hasta disponer de mayor densidad de indicadores.`;
+        }
         conclusiones.push({
             id:    'tendencias',
-            texto: pct !== null
-                ? `El ${pct}% de los indicadores de salud con tendencias registradas evoluciona favorablemente. El estado general del municipio es ${estado}.`
-                : `Se han analizado las tendencias del Cuadro de Mandos Integral (${cmi.conDatos} de 50 indicadores con datos).`,
+            texto: _textTend,
         });
     }
 
@@ -456,14 +467,30 @@ function _calcularAnalisisModular(contextoIA) {
     const recomendaciones = [];
 
     // Intervenciones por área prioritaria (sin ID reservado → usa { area, texto })
+    // [2026-05-17] Texto diferenciado por intensidad de señal: elimina el checklist automático
+    // uniforme. Distingue tres situaciones:
+    //   a) sin señal: vigilancia pasiva, no acción específica.
+    //   b) señal alta (≥60% desfavorable): brecha estructural, evaluación de causas y sostenibilidad.
+    //   c) señal moderada: refuerzo del seguimiento, validación de lo existente.
     priorizacion.slice(0, 3).forEach(area => {
+        const _pctDesfav = area.nConDatos > 0 ? Math.round((area.nAMejorar / area.nConDatos) * 100) : 0;
+        let _textRec;
+        if (area.nAMejorar === 0) {
+            _textRec = `Mantener vigilancia pasiva en "${area.label}": sin indicadores desfavorables en el ciclo analizado. No procede comprometer actuación específica hasta confirmar señal.`;
+        } else if (_pctDesfav >= 60) {
+            _textRec = `Priorizar atención en "${area.label}" (${area.nAMejorar}/${area.nConDatos} indicadores desfavorables, ${_pctDesfav}%). La concentración de señal sugiere una brecha que puede requerir evaluación de causas y sostenibilidad de la respuesta, no solo incorporación de nuevas actuaciones.`;
+        } else {
+            _textRec = `Reforzar el seguimiento en "${area.label}" (${area.nAMejorar}/${area.nConDatos} indicadores desfavorables). Conviene validar el alcance y continuidad de las actuaciones existentes antes de comprometer nuevas acciones en esta área.`;
+        }
         recomendaciones.push({
             area:  area.label,
-            texto: `Desarrollar acciones específicas en "${area.label}" (${area.nAMejorar} indicadores con tendencia desfavorable sobre ${area.nConDatos} con datos).`,
+            texto: _textRec,
         });
     });
 
     // Prioridades ciudadanas (IDs rec_popular_N)
+    // [2026-05-17] Introduce nota sobre el tipo de escucha necesaria para traducir la prioridad
+    // ciudadana en actuaciones concretas. Evita la enumeración sin lectura.
     const pop = contextoIA.participacion;
     if (pop && pop.temasFreq) {
         Object.entries(pop.temasFreq)
@@ -472,7 +499,7 @@ function _calcularAnalisisModular(contextoIA) {
             .forEach(([tema, votos], idx) => {
                 recomendaciones.push({
                     id:    `rec_popular_${idx}`,
-                    texto: `Prioridad ciudadana #${idx + 1}: "${tema}" (${votos} votos).`,
+                    texto: `La ciudadanía ha señalado "${tema}" como área de interés (${votos} menciones). Esta demanda documentada requiere escucha cualitativa adicional para identificar qué aspecto concreto preocupa antes de traducirla en una actuación específica: la frecuencia de mención indica relevancia percibida, no diagnóstico.`,
                 });
             });
     }
@@ -1285,14 +1312,18 @@ function _v4_leerGobernanzaLongitudinal(salida) {
         });
     }
 
-    // Tensión: arrastre cronificado → barreras estructurales persistentes
+    // Tensión: arrastre cronificado → lectura organizacional diferenciada de causas posibles
     if (_arrastre !== null && _arrastre >= 50) {
         _v4_push(salida.tensiones, {
             id: 'ten_arrastre_cronificado',
             tipo: 'tension', categoria: 'fragilidad_institucional',
-            texto: 'Más del 50% de las actuaciones del ciclo presenta arrastre. Existe riesgo de cronificación de barreras que impiden cerrar el ciclo planificado. Conviene revisar causas antes de ampliar la agenda.',
+            // [2026-05-17] Lectura organizacional: el arrastre no implica fracaso por sí solo.
+            // Introduce hipótesis interpretativas cautas sobre causas posibles en lugar de describir
+            // el dato. Distingue: complejidad estructural, capacidad operativa, dependencia de actores,
+            // exceso de carga estratégica, madurez insuficiente de la red de implementación.
+            texto: 'El ' + Math.round(_arrastre) + '% de actuaciones del ciclo presenta arrastre. Este patrón puede responder a causas distintas — complejidad estructural de las acciones, capacidad operativa del equipo insuficiente para el volumen comprometido, dependencia de actores o recursos externos no asegurados, o exceso de carga estratégica respecto a la madurez institucional disponible — que conviene explorar antes de comprometer nuevos objetivos. No implica necesariamente fracaso: puede reflejar una transición de ciclo o una red de implementación en proceso de consolidación.',
             fuentes: ['agenda_evaluacion'], nivelEvidencia: 2, certeza: 'media',
-            justificacion: 'tasaArrastre = ' + _arrastre + '% (>= 50%) en lecturaEvaluativaLongitudinal. Dato cuantitativo del ciclo evaluado.',
+            justificacion: 'tasaArrastre = ' + _arrastre + '% (>= 50%) en lecturaEvaluativaLongitudinal. Dato cuantitativo real del ciclo. Lectura organizacional: hipótesis de causa, no certeza diagnóstica.',
             habilitaRecomendacion: true, habilitaEPVSA: false,
             regla: 'fragilidad_arrastre_cronificado',
         });
@@ -2171,13 +2202,20 @@ function _v4_construirSintesisTerritorial(v4, analisis) {
         if (_govEj === 'solida') {
             _fraGov = 'La ejecución del ciclo evaluado muestra solidez institucional';
             if (_govRed === 'activa') _fraGov += ' y la red comunitaria está activa';
-            _fraGov += '.';
+            _fraGov += '. Esta capacidad de cierre es un activo institucional que conviene sostener y no sobrecargar con compromisos que excedan la red actual.';
         } else if (_govEj === 'baja') {
-            _fraGov = 'El ciclo de actuaciones presenta dificultades relevantes de ejecución' +
-                      (_govArr !== null && _govArr >= 50 ? ' (tasa de arrastre: ' + Math.round(_govArr) + '%)' : '') + '.';
+            // [2026-05-17] Hipótesis organizacional: distinguir causas posibles de baja ejecución
+            // en lugar de describir el dato administrativamente.
+            _fraGov = 'El ciclo muestra una tasa de finalización baja' +
+                      (_govArr !== null && _govArr >= 50 ? ' (' + Math.round(_govArr) + '% de arrastre)' : '') +
+                      '. Este patrón puede reflejar complejidad estructural de las acciones comprometidas, sobrecarga de la capacidad operativa disponible, o una red de implementación que aún no ha alcanzado madurez suficiente. Ampliar la agenda antes de resolver estas condiciones puede agravar el patrón.';
         } else if (_govEj === 'parcial') {
+            // [2026-05-17] Distinguir arrastre significativo de moderado; introducir hipótesis
+            // sobre condicionantes de la capacidad de cierre (densidad de agenda, dependencias).
+            var _nivelArr = (_govArr !== null && _govArr > 35) ? 'significativo' : 'moderado';
             _fraGov = 'La ejecución del ciclo es parcial' +
-                      (_govArr !== null && _govArr > 25 ? ' (' + Math.round(_govArr) + '% de arrastre)' : '') + '.';
+                      (_govArr !== null && _govArr > 25 ? ' (' + Math.round(_govArr) + '% de arrastre, nivel ' + _nivelArr + ')' : '') +
+                      '. La capacidad de cierre puede estar condicionada por la densidad de la agenda o por dependencias externas no aseguradas; conviene identificar cuáles actuaciones arrastradas son recuperables y cuáles requieren reformulación.';
         }
         if (_govTrazab === 'no_verificable') {
             _fraGov += (_fraGov ? ' ' : '') + 'La trazabilidad de evidencias del ciclo no es verificable, lo que limita la rendición de cuentas.';
@@ -2201,22 +2239,31 @@ function _v4_construirSintesisTerritorial(v4, analisis) {
     }
     _p2.push(_cualif);
 
-    // Conclusión interpretativa — adaptada al patrón de señales y calidad de evidencia
+    // Conclusión interpretativa — adaptada al patrón de señales, calidad de evidencia y gobernanza.
+    // [2026-05-17] Reescrita para eliminar universalidad genérica e introducir la dimensión
+    // organizacional: la sostenibilidad del ciclo como condición de viabilidad, la madurez de
+    // la red como variable, la cautela sobre ampliar compromisos sin resolver primero la capacidad.
     var _concl;
+    var _hayArrastreAlto = (_govArr !== null && _govArr >= 50);
+    var _hayEjecucionBaja = (_govEj === 'baja' || _govEj === 'parcial');
     if (_peso < 2) {
-        _concl = 'Se recomienda completar la base de información antes de comprometer líneas de actuación.';
+        _concl = 'La base de información es insuficiente para priorizar actuaciones con fundamento: completar las fuentes de evidencia directa es la primera acción metodológicamente justificada.';
     } else if (_nTens >= 2 && _nInequidad > 0) {
-        _concl = 'El perfil apunta a un territorio con necesidades estructurales que requieren abordaje integral, no temático ni puntual.';
+        _concl = _hayEjecucionBaja
+            ? 'El territorio concentra tensiones estructurales y señales de inequidad, pero la capacidad de implementación del ciclo muestra limitaciones. Responder a necesidades complejas con una capacidad operativa debilitada puede reproducir el ciclo de arrastre: antes de ampliar compromisos, conviene evaluar qué red de implementación existe realmente.'
+            : 'El perfil combina tensiones estructurales y señales de inequidad; la respuesta requiere sostenibilidad organizacional, no solo amplitud temática. Un abordaje integral que no asegure la capacidad de cierre del ciclo tiende a producir más arrastre, no más impacto.';
     } else if (_nTens > 0 && _nFort === 0) {
-        _concl = 'El perfil sugiere vulnerabilidades que merecen atención prioritaria en la siguiente planificación del ciclo de salud.';
+        _concl = _hayArrastreAlto
+            ? 'El perfil muestra vulnerabilidades estructurales en un contexto de capacidad de ejecución limitada. Comprometer nuevas actuaciones sin resolver primero las condiciones de implementación puede agravar la brecha entre planificación y resultado real.'
+            : 'El perfil identifica vulnerabilidades que merecen atención prioritaria. Antes de ampliar el alcance del ciclo, conviene verificar que la red de implementación disponible puede sostener las acciones comprometidas.';
     } else if (_nFort > 0 && _nTens === 0 && _peso >= 3) {
-        _concl = 'El territorio muestra condiciones institucionales favorables para sostener un ciclo de salud con continuidad y proyección.';
+        _concl = 'El territorio muestra condiciones institucionales favorables. Esta capacidad es un activo que conviene sostener con continuidad, sin sobrecargar la agenda más allá de lo que la red puede implementar de forma efectiva.';
     } else if (_nTens > 0 && _nFort > 0) {
-        _concl = 'La planificación debe equilibrar la respuesta a tensiones estructurales con la consolidación de las capacidades institucionales identificadas.';
+        _concl = 'El perfil es mixto: las capacidades institucionales identificadas pueden actuar como palanca para abordar las tensiones estructurales, pero solo si la planificación garantiza sostenibilidad operativa. Consolidar lo existente antes de ampliar puede ser más eficaz que diversificar la agenda.';
     } else if (_nHips > 0) {
-        _concl = 'Las limitaciones metodológicas identificadas condicionan el alcance de la lectura; ampliar la base de información debe ser prioridad antes de planificar actuaciones.';
+        _concl = 'Las limitaciones metodológicas identificadas condicionan el alcance de la lectura. Invertir en mejorar la base de información —incluyendo fuentes participativas y evaluación local— es una condición previa para una planificación bien fundamentada.';
     } else {
-        _concl = 'Con la información disponible no emerge un patrón territorial dominante; el análisis puede informar vigilancia y orientación, no priorización específica.';
+        _concl = 'Con la información disponible no emerge un patrón territorial dominante. El análisis puede orientar vigilancia activa; no justifica priorización específica sin evidencia adicional.';
     }
     _p2.push(_concl);
 

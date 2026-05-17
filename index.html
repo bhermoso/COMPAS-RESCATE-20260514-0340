@@ -61345,9 +61345,15 @@ window.COMPAS_ejecutarMotorV3 = function(){
 
     try{
 
+        var _t0=Date.now();
+        console.log('[COMPÁS ciclo V3] INICIO | _sintesisTerritorial previa:', !!(window.analisisActual && window.analisisActual._sintesisTerritorial));
+
+        console.log('[COMPÁS ciclo V3] llamando COMPAS_analizarV3...');
         var av3=window.COMPAS_analizarV3();
+        console.log('[COMPÁS ciclo V3] COMPAS_analizarV3 devuelto | sinDatos:', !!av3.sinDatos, '| municipio:', av3.municipio);
 
         window.analisisActualV3=av3;
+        console.log('[COMPÁS ciclo V3] window.analisisActualV3 escrito | concl_v3:', av3.conclusiones_v3 && av3.conclusiones_v3.length, '| rec_v3:', av3.recomendaciones_v3 && av3.recomendaciones_v3.length);
 
         // [MUTACIÓN PARCIAL — window.analisisActual] Enriquece el objeto existente con campos v3.
 
@@ -61365,6 +61371,8 @@ window.COMPAS_ejecutarMotorV3 = function(){
 
         if(!av3.sinDatos&&window.analisisActual){
 
+            console.log('[COMPÁS ciclo V3] ENTRADA bloque mutación window.analisisActual');
+
             window.analisisActual._v3_prioridades    =av3.prioridades;
 
             window.analisisActual._v3_conclusiones   =av3.conclusiones_v3;
@@ -61379,6 +61387,8 @@ window.COMPAS_ejecutarMotorV3 = function(){
 
             window.analisisActual.alertasInequidad   =av3.inequidades;
 
+            console.log('[COMPÁS ciclo V3] campos _v3_* escritos | prioridades:', av3.prioridades && av3.prioridades.length, '| divergencias:', av3.areasConDivergencia && av3.areasConDivergencia.length, '| inequidades:', av3.inequidades && av3.inequidades.length);
+
             // Reparar IDs inválidos (>4) en propuesta EPVSA del motor v2
 
             var leV=[1,2,3,4];
@@ -61387,6 +61397,7 @@ window.COMPAS_ejecutarMotorV3 = function(){
 
                window.analisisActual.propuestaEPVSA.some(function(p){return leV.indexOf(p.lineaId)===-1;})){
 
+                console.log('[COMPÁS ciclo V3] propuestaEPVSA con IDs inválidos detectada — sustituyendo por v3');
                 window.analisisActual.propuestaEPVSA=av3.propuestaEPVSA;
 
                 console.warn('COMPÁS v3: IDs inválidos en propuesta v2 — reemplazada por v3.');
@@ -61400,6 +61411,8 @@ window.COMPAS_ejecutarMotorV3 = function(){
                 // no dependen de propuestaEPVSA y permanecen sin cambio.
 
                 if(window.analisisActual.trazabilidad){
+
+                    console.log('[COMPÁS ciclo V3] resincronizando trazabilidad (propuesta_por_linea + cadena_completa)');
 
                     var _traza=window.analisisActual.trazabilidad;
 
@@ -61451,6 +61464,8 @@ window.COMPAS_ejecutarMotorV3 = function(){
 
                     _traza.fecha_resincronizacion=new Date().toISOString();
 
+                    console.log('[COMPÁS ciclo V3] trazabilidad resincronizada | origen_propuesta_actual:', _traza.origen_propuesta_actual);
+
                 }
 
                 // ─────────────────────────────────────────────────────────────────────
@@ -61478,8 +61493,13 @@ window.COMPAS_ejecutarMotorV3 = function(){
 
         console.log('✅ Motor v3: '+av3.municipio+' | prioAltas:'+nPA+' | divg:'+av3.areasConDivergencia.length+' | estudiosAn:'+av3.estudiosAnalizados.length+' | concl:'+av3.conclusiones_v3.length);
 
+        console.log('[COMPÁS ciclo V3] _sintesisTerritorial post-ciclo:', !!(window.analisisActual && window.analisisActual._sintesisTerritorial));
+        console.log('[COMPÁS ciclo V3] programando _renderizarV3EnUI (setTimeout 0)...');
+
         // Actualizar UI con resultados v3
         if(typeof window._renderizarV3EnUI==='function') setTimeout(window._renderizarV3EnUI,0);
+
+        console.log('[COMPÁS ciclo V3] FIN | duración aprox:', (Date.now()-_t0)+'ms');
 
         return av3;
 
