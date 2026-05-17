@@ -61749,6 +61749,188 @@ window.COMPAS_inspeccionarEstadoAnaliticoActual = function() {
     };
 };
 
+// -- Payload persistible normalizado de analisis IA --------------------------
+// Solo lectura: reconstruye una version consolidada desde el runtime vivo.
+// No guarda, no renderiza y no muta analisisActual ni analisisActualV3.
+window.COMPAS_prepararPayloadAnalisisIAParaGuardado = function() {
+    var w = window;
+    var analisis = w.analisisActual || null;
+    var v3 = w.analisisActualV3 || null;
+    var pendiente = w.__COMPAS_analisisIA_pendienteGuardar || null;
+    var sintesis = analisis && analisis._sintesisTerritorial || null;
+
+    function _arr(v) { return Array.isArray(v) ? v.slice() : []; }
+    function _obj(v) { return v && typeof v === 'object' && !Array.isArray(v) ? v : null; }
+    function _clone(v) {
+        if (v === null || typeof v === 'undefined') return v;
+        try { return JSON.parse(JSON.stringify(v)); }
+        catch (e) {
+            if (Array.isArray(v)) return v.slice();
+            if (_obj(v)) {
+                var out = {};
+                Object.keys(v).forEach(function(k) {
+                    var val = v[k];
+                    if (typeof val !== 'function') out[k] = val;
+                });
+                return out;
+            }
+            return v;
+        }
+    }
+    function _primeroArray() {
+        for (var i = 0; i < arguments.length; i++) {
+            if (Array.isArray(arguments[i]) && arguments[i].length) return _clone(arguments[i]);
+        }
+        return [];
+    }
+    function _primeroValor() {
+        for (var i = 0; i < arguments.length; i++) {
+            if (arguments[i] !== null && typeof arguments[i] !== 'undefined') return _clone(arguments[i]);
+        }
+        return null;
+    }
+    function _keysPrefijo(obj, prefijo) {
+        if (!_obj(obj)) return [];
+        return Object.keys(obj).filter(function(k) { return k.indexOf(prefijo) === 0; });
+    }
+
+    var base = analisis || {};
+    var trazabilidadOrigenV3 = !!(base.trazabilidad && base.trazabilidad.origen_propuesta_actual === 'v3');
+    var propuestaConsolidada = trazabilidadOrigenV3
+        ? _primeroArray(base._v3_propuestaEPVSA, v3 && v3.propuestaEPVSA, base.propuestaEPVSA, pendiente && pendiente.propuestaEPVSA)
+        : _primeroArray(base.propuestaEPVSA, base._v3_propuestaEPVSA, v3 && v3.propuestaEPVSA, pendiente && pendiente.propuestaEPVSA);
+    var payload = {
+        contrato: 'payload_analisis_ia_persistible_v1',
+        estado: 'normalizado_runtime_sin_guardar',
+        noPersiste: true,
+        noRenderiza: true,
+        noModificaEstado: true,
+        fechaPreparacionPayload: new Date().toISOString(),
+        fechaGeneracion: _primeroValor(base.fechaGeneracion, base.fecha, pendiente && pendiente.fechaGeneracion),
+        fuentes: _primeroArray(base.fuentes, pendiente && pendiente.fuentes),
+        conclusiones: _primeroArray(base._v3_conclusiones, v3 && (v3.conclusiones_v3 || v3.conclusiones), base.conclusiones, pendiente && pendiente.conclusiones),
+        recomendaciones: _primeroArray(base._v3_recomendaciones, v3 && (v3.recomendaciones_v3 || v3.recomendaciones), base.recomendaciones, pendiente && pendiente.recomendaciones),
+        prioridades_epvsa: _primeroValor(base.prioridades_epvsa, pendiente && pendiente.prioridades_epvsa, []),
+        fortalezas: _primeroArray(base.fortalezas, pendiente && pendiente.fortalezas),
+        oportunidades: _primeroArray(base.oportunidades, pendiente && pendiente.oportunidades),
+        alertasInequidad: _primeroArray(base.alertasInequidad, v3 && v3.inequidades, pendiente && pendiente.alertasInequidad),
+        perfilSOC: _primeroValor(base.perfilSOC, pendiente && pendiente.perfilSOC),
+        patronesTransversales: _primeroArray(base.patronesTransversales, pendiente && pendiente.patronesTransversales),
+        propuestaEPVSA: propuestaConsolidada,
+        priorizacion: _primeroValor(base.priorizacion, v3 && v3.prioridades, pendiente && pendiente.priorizacion, []),
+        narrativa: _primeroValor(base.narrativa, sintesis && sintesis.narrativa, pendiente && pendiente.narrativa),
+        trazabilidad: _clone(base.trazabilidad || null),
+        sintesisTerritorial: _clone(sintesis || null),
+        v3: {
+            disponible: !!v3,
+            fecha: v3 && (v3.fecha || v3.fechaGeneracion || v3.timestamp) || null,
+            camposEnAnalisisActual: _keysPrefijo(base, '_v3_'),
+            prioridades: _clone(v3 && v3.prioridades || base._v3_prioridades || []),
+            conclusiones: _clone(v3 && (v3.conclusiones_v3 || v3.conclusiones) || base._v3_conclusiones || []),
+            recomendaciones: _clone(v3 && (v3.recomendaciones_v3 || v3.recomendaciones) || base._v3_recomendaciones || []),
+            propuestaEPVSA: _clone(v3 && v3.propuestaEPVSA || base._v3_propuestaEPVSA || []),
+            divergencias: _clone(v3 && v3.areasConDivergencia || base._v3_divergencias || []),
+            estudiosAnalizados: _clone(v3 && v3.estudiosAnalizados || base._v3_estudiosAn || [])
+        },
+        renderCientifico: {
+            narrativa: _primeroValor(base.narrativa, sintesis && sintesis.narrativa, pendiente && pendiente.narrativa),
+            perfilSOC: _primeroValor(base.perfilSOC, pendiente && pendiente.perfilSOC),
+            alertasInequidad: _primeroArray(base.alertasInequidad, v3 && v3.inequidades, pendiente && pendiente.alertasInequidad),
+            fortalezas: _primeroArray(base.fortalezas, pendiente && pendiente.fortalezas).slice(0, 10),
+            oportunidades: _primeroArray(base.oportunidades, pendiente && pendiente.oportunidades).slice(0, 10),
+            patronesTransversales: _primeroArray(base.patronesTransversales, pendiente && pendiente.patronesTransversales),
+            conclusiones: _primeroArray(base._v3_conclusiones, v3 && (v3.conclusiones_v3 || v3.conclusiones), base.conclusiones, pendiente && pendiente.conclusiones),
+            recomendaciones: _primeroArray(base._v3_recomendaciones, v3 && (v3.recomendaciones_v3 || v3.recomendaciones), base.recomendaciones, pendiente && pendiente.recomendaciones),
+            propuestaEPVSA: propuestaConsolidada,
+            priorizacion: _primeroValor(base.priorizacion, v3 && v3.prioridades, pendiente && pendiente.priorizacion, [])
+        },
+        metadataRuntime: {
+            origen: 'analisisActual_consolidado',
+            tieneAnalisisActual: !!analisis,
+            tieneAnalisisActualV3: !!v3,
+            tieneSintesisTerritorial: !!sintesis,
+            tienePendientePrevio: !!pendiente,
+            propuestaOrigen: trazabilidadOrigenV3 && (base._v3_propuestaEPVSA || v3 && v3.propuestaEPVSA) ? 'v3_por_trazabilidad_resincronizada' : ((base.propuestaEPVSA && base.propuestaEPVSA.length) ? 'analisisActual.propuestaEPVSA' : ((base._v3_propuestaEPVSA && base._v3_propuestaEPVSA.length) ? 'analisisActual._v3_propuestaEPVSA' : 'no_disponible')),
+            trazabilidadResincronizada: trazabilidadOrigenV3,
+            pendienteAnteriorFechaGeneracion: pendiente && pendiente.fechaGeneracion || null
+        }
+    };
+
+    return payload;
+};
+
+window.COMPAS_inspeccionarPayloadPersistible = function() {
+    var pendiente = window.__COMPAS_analisisIA_pendienteGuardar || null;
+    var finalPayload = window.COMPAS_prepararPayloadAnalisisIAParaGuardado();
+
+    function _json(v) {
+        try { return JSON.stringify(v || null); }
+        catch (e) { return String(v); }
+    }
+    function _count(v) {
+        return Array.isArray(v) ? v.length : (v && typeof v === 'object' ? Object.keys(v).length : (v ? 1 : 0));
+    }
+    function _lineas(arr) {
+        return Array.isArray(arr) ? arr.map(function(p) { return p && p.lineaId; }).filter(Boolean).join('|') : '';
+    }
+    function _campoAusente(campo) {
+        return !!(finalPayload && finalPayload[campo]) && !(pendiente && pendiente[campo]);
+    }
+
+    var campos = ['conclusiones', 'recomendaciones', 'propuestaEPVSA', 'priorizacion', 'trazabilidad', 'sintesisTerritorial', 'v3', 'renderCientifico'];
+    var camposAusentes = campos.filter(_campoAusente);
+    var diferencias = [];
+    campos.forEach(function(campo) {
+        if (_json(pendiente && pendiente[campo]) !== _json(finalPayload && finalPayload[campo])) diferencias.push(campo);
+    });
+
+    var divergenciasV3 = {
+        v3Disponible: !!(finalPayload && finalPayload.v3 && finalPayload.v3.disponible),
+        pendienteTieneV3: !!(pendiente && pendiente.v3),
+        camposV3EnFinal: finalPayload && finalPayload.v3 ? finalPayload.v3.camposEnAnalisisActual : [],
+        nConclusionesV3Final: _count(finalPayload && finalPayload.v3 && finalPayload.v3.conclusiones),
+        nRecomendacionesV3Final: _count(finalPayload && finalPayload.v3 && finalPayload.v3.recomendaciones)
+    };
+
+    var divergenciasPropuesta = {
+        pendiente: _lineas(pendiente && pendiente.propuestaEPVSA),
+        final: _lineas(finalPayload && finalPayload.propuestaEPVSA),
+        difiere: _lineas(pendiente && pendiente.propuestaEPVSA) !== _lineas(finalPayload && finalPayload.propuestaEPVSA)
+    };
+
+    var divergenciasTrazabilidad = {
+        pendienteTieneTrazabilidad: !!(pendiente && pendiente.trazabilidad),
+        finalTieneTrazabilidad: !!(finalPayload && finalPayload.trazabilidad),
+        finalOrigenPropuesta: finalPayload && finalPayload.trazabilidad && finalPayload.trazabilidad.origen_propuesta_actual || null,
+        finalFechaResincronizacion: finalPayload && finalPayload.trazabilidad && finalPayload.trazabilidad.fecha_resincronizacion || null,
+        difiere: _json(pendiente && pendiente.trazabilidad) !== _json(finalPayload && finalPayload.trazabilidad)
+    };
+
+    return {
+        contrato: 'inspeccion_payload_persistible_v1',
+        modo: 'solo_lectura_sin_persistencia',
+        timestamp: new Date().toISOString(),
+        pendienteExiste: !!pendiente,
+        payloadFinalConstruido: !!finalPayload,
+        diferenciasDetectadas: diferencias,
+        camposAusentes: camposAusentes,
+        divergenciasV3: divergenciasV3,
+        divergenciasPropuesta: divergenciasPropuesta,
+        divergenciasTrazabilidad: divergenciasTrazabilidad,
+        conteos: {
+            pendienteConclusiones: _count(pendiente && pendiente.conclusiones),
+            finalConclusiones: _count(finalPayload && finalPayload.conclusiones),
+            pendienteRecomendaciones: _count(pendiente && pendiente.recomendaciones),
+            finalRecomendaciones: _count(finalPayload && finalPayload.recomendaciones),
+            pendientePropuesta: _count(pendiente && pendiente.propuestaEPVSA),
+            finalPropuesta: _count(finalPayload && finalPayload.propuestaEPVSA)
+        },
+        riesgoPersistenciaDesactualizada: !!(pendiente && (diferencias.length || divergenciasPropuesta.difiere || divergenciasTrazabilidad.difiere || divergenciasV3.v3Disponible && !divergenciasV3.pendienteTieneV3)),
+        pendiente: pendiente,
+        payloadFinalNormalizado: finalPayload
+    };
+};
+
 window.COMPAS_imprimirEstadoAnaliticoActual = function() {
     var estado = window.COMPAS_inspeccionarEstadoAnaliticoActual();
     var fila = {
