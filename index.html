@@ -71859,8 +71859,9 @@ function eval_actualizarDashboard() {
         if (_totalFueraCicloDash > 0) {
             longitudinalHtml += '<span>Fuera de ciclo: <strong>' + _totalFueraCicloDash + '</strong></span>';
         }
-        if (_estadoTempDash) longitudinalHtml += '<span>Temporalidad: <strong>' + _estadoTempDash + '</strong></span>';
-        if (_estadoTrazDash) longitudinalHtml += '<span>Trazabilidad: <strong>' + _estadoTrazDash + '</strong></span>';
+        if (_clasDash.ejecucion) longitudinalHtml += _badgeLongitudinal('Ejecución', _clasDash.ejecucion.estado, Math.round(_clasDash.ejecucion.porcentaje || 0));
+        if (_clasDash.temporalidad) longitudinalHtml += _badgeLongitudinal('Temporalidad', _clasDash.temporalidad.estado, Math.round(_clasDash.temporalidad.porcentaje || 0));
+        if (_clasDash.trazabilidad) longitudinalHtml += _badgeLongitudinal('Trazabilidad', _clasDash.trazabilidad.estado, Math.round(_clasDash.trazabilidad.porcentaje || 0));
         longitudinalHtml += '</div>';
         if (_valDash.valido === false) {
             longitudinalHtml += '<div style="margin-top:0.3rem;color:#92400e;">Aviso t&#233;cnico: validaci&#243;n interna del snapshot con incidencias.</div>';
@@ -71869,6 +71870,7 @@ function eval_actualizarDashboard() {
     }
 
     // ── Aviso de modo de evaluación ────────────────────────────────────
+
     var _modoEval = (window.COMPAS && window.COMPAS.state && window.COMPAS.state._evaluacionModo)
         ? window.COMPAS.state._evaluacionModo : 'exploratorio';
     // ── Ensamblar ──────────────────────────────────────────────────────
@@ -71901,6 +71903,28 @@ function eval_actualizarDashboard() {
 }
 
 
+
+function _badgeLongitudinal(label, estado, porcentaje) {
+
+        var color = '#94a3b8';
+        var fondo = '#f1f5f9';
+
+        if (porcentaje >= 75) {
+            color = '#166534';
+            fondo = '#dcfce7';
+        } else if (porcentaje >= 50) {
+            color = '#92400e';
+            fondo = '#fef3c7';
+        } else if (porcentaje >= 25) {
+            color = '#c2410c';
+            fondo = '#ffedd5';
+        } else {
+            color = '#991b1b';
+            fondo = '#fee2e2';
+        }
+
+        return '<span style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.2rem 0.55rem;border-radius:999px;font-size:0.68rem;font-weight:700;background:' + fondo + ';color:' + color + ';">' + label + ': ' + estado + ' · ' + porcentaje + '%' + '</span>';
+    }
 
 // ── Bloque 1: Evaluación del proceso ─────────────────────────────────
 
@@ -72679,9 +72703,9 @@ function eval_actualizarJornada() {
         if (_totalFueraCicloJornada > 0) {
             html += '<span>Fuera de ciclo: <strong>' + _totalFueraCicloJornada + '</strong></span>';
         }
-        if (_clasJornada.ejecucion) html += '<span>Ejecuci&#243;n: <strong>' + _clasJornada.ejecucion.estado + '</strong></span>';
-        if (_estadoTempJornada) html += '<span>Temporalidad: <strong>' + _estadoTempJornada + '</strong></span>';
-        if (_estadoTrazJornada) html += '<span>Trazabilidad: <strong>' + _estadoTrazJornada + '</strong></span>';
+        if (_clasJornada.ejecucion) html += _badgeLongitudinal('Ejecución', _clasJornada.ejecucion.estado, Math.round(_clasJornada.ejecucion.porcentaje || 0));
+        if (_clasJornada.temporalidad) html += _badgeLongitudinal('Temporalidad', _clasJornada.temporalidad.estado, Math.round(_clasJornada.temporalidad.porcentaje || 0));
+        if (_clasJornada.trazabilidad) html += _badgeLongitudinal('Trazabilidad', _clasJornada.trazabilidad.estado, Math.round(_clasJornada.trazabilidad.porcentaje || 0));
         html += '</div>';
 
         if (_errJornada.length || _advJornada.length) {
