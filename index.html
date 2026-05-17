@@ -16999,7 +16999,34 @@ async function verificarYGenerarAnalisisAutomatico() {
 
     if (!datosMunicipioActual) return;
 
-    
+    // [COMPÁS AM] Guard: payload persistible rehidratado → omitir generación automática.
+    // La generación automática solo debe ejecutarse cuando NO existe un análisis
+    // persistible enriquecido ya cargado desde Firebase.
+    // NO afecta a:
+    // - generarAnalisisIA() manual;
+    // - regenerarAnalisisIA();
+    // - motores;
+    // - municipios legacy;
+    // - municipios sin analisisIA.
+    if (
+        (
+            window.analisisActual &&
+            window.analisisActual._fuente_rehidratacion ===
+                'rehidratado_desde_analisisIA_persistible_v1'
+        )
+        ||
+        (
+            datosMunicipioActual &&
+            datosMunicipioActual.analisisIA &&
+            datosMunicipioActual.analisisIA.contrato ===
+                'payload_analisis_ia_persistible_v1'
+        )
+    ) {
+        console.log(
+            '[COMPÁS AM] analisisIA persistible detectado — generación automática omitida. Usa "🔄 Regenerar" para forzar.'
+        );
+        return;
+    }
 
     const datos = datosMunicipioActual;
 
@@ -55872,6 +55899,8 @@ async function COMPAS_guardarAnalisisIAExplicito() {
 
     var pendiente = window.__COMPAS_analisisIA_pendienteGuardar;
 
+    var payloadGuardar = pendiente;
+
     if (!municipioId || typeof db === 'undefined' || !pendiente) {
 
         alert('⚠️ No hay análisis IA pendiente de guardar.');
@@ -55882,13 +55911,39 @@ async function COMPAS_guardarAnalisisIAExplicito() {
 
     try {
 
-        pendiente.fechaGuardadoExplicito = new Date().toISOString();
+        if (typeof window.COMPAS_prepararPayloadAnalisisIAParaGuardado === 'function') {
+            try {
+                payloadGuardar = window.COMPAS_prepararPayloadAnalisisIAParaGuardado();
+            } catch (prepErr) {
+                console.warn('[COMPAS] No se pudo preparar payload consolidado; se guarda payload pendiente heredado.', prepErr);
+                payloadGuardar = pendiente;
+            }
+        }
 
-        await db.ref('estrategias/' + estrategiaActual + '/municipios/' + municipioId + '/analisisIA').set(pendiente);
+        function _sanearPayloadFirebase(valor) {
+            if (Array.isArray(valor)) {
+                return valor.map(_sanearPayloadFirebase).filter(function(v) { return typeof v !== 'undefined'; });
+            }
+            if (valor && typeof valor === 'object') {
+                var limpio = {};
+                Object.keys(valor).forEach(function(k) {
+                    var v = _sanearPayloadFirebase(valor[k]);
+                    if (typeof v !== 'undefined') limpio[k] = v;
+                });
+                return limpio;
+            }
+            return typeof valor === 'undefined' ? undefined : valor;
+        }
+
+        payloadGuardar = _sanearPayloadFirebase(payloadGuardar || pendiente);
+
+        payloadGuardar.fechaGuardadoExplicito = new Date().toISOString();
+
+        await db.ref('estrategias/' + estrategiaActual + '/municipios/' + municipioId + '/analisisIA').set(payloadGuardar);
 
         if (window.datosMunicipioActual) {
 
-            window.datosMunicipioActual.analisisIA = pendiente;
+            window.datosMunicipioActual.analisisIA = payloadGuardar;
 
         }
 
@@ -57244,10 +57299,16 @@ function poblarPerfilNuevo(datos, nombre) {
 
 
 
-    // [COMPÁS limpio] analisisIA guardado detectado, no rehidratado automáticamente.
-    // El análisis IA se genera en memoria bajo demanda; no se restaura desde Firebase al cambiar de municipio.
+    // [COMPÁS limpio] analisisIA guardado detectado.
+    // Si el contrato es 'payload_analisis_ia_persistible_v1' y window.analisisActual está vacío,
+    // rehidratación defensiva parcial (solo lectura, sin generar análisis, sin guardar nada).
+    // Si el contrato no coincide o analisisActual ya tiene contenido vivo → comportamiento anterior.
     if (datos.analisisIA) {
-        console.log('[COMPÁS limpio] analisisIA guardado detectado en Firebase para', getMunicipioActual(), '— no rehidratado automáticamente.');
+        if (typeof window.COMPAS_rehidratarAnalisisIADefensivo === 'function') {
+            window.COMPAS_rehidratarAnalisisIADefensivo(datos);
+        } else {
+            console.log('[COMPÁS limpio] analisisIA guardado detectado en Firebase para', getMunicipioActual(), '— no rehidratado automáticamente.');
+        }
     }
 
 
@@ -61929,6 +61990,92 @@ window.COMPAS_inspeccionarPayloadPersistible = function() {
         pendiente: pendiente,
         payloadFinalNormalizado: finalPayload
     };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPAS_rehidratarAnalisisIADefensivo(datos)
+// ─────────────────────────────────────────────────────────────────────────────
+// Rehidratación parcial y defensiva del nuevo contrato persistible.
+// Solo actúa si:
+//   1. datos.analisisIA.contrato === 'payload_analisis_ia_persistible_v1'
+//   2. window.analisisActual no existe o está vacío de contenido analítico
+// Crea una copia mínima en window.analisisActual y, si el payload incluye
+// bloque v3 disponible, crea también window.analisisActualV3.
+// NO guarda, NO genera análisis, NO llama a motores, NO crea pendiente.
+// ─────────────────────────────────────────────────────────────────────────────
+window.COMPAS_rehidratarAnalisisIADefensivo = function(datos) {
+    if (!datos || !datos.analisisIA) return false;
+    var _payload = datos.analisisIA;
+    var _municipio = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : '?';
+
+    // Guard 1: contrato obligatorio — si no es el nuevo contrato, comportamiento anterior.
+    if (_payload.contrato !== 'payload_analisis_ia_persistible_v1') {
+        console.log('[COMPÁS limpio] analisisIA guardado detectado en Firebase para', _municipio,
+            '— no rehidratado automáticamente (contrato no reconocido: ' + (_payload.contrato || 'legacy') + ').');
+        return false;
+    }
+
+    // Guard 2: no sobreescribir window.analisisActual vivo con contenido analítico real.
+    var _actual = window.analisisActual;
+    var _vivo = _actual && (
+        (Array.isArray(_actual.conclusiones)    && _actual.conclusiones.length    > 0) ||
+        (Array.isArray(_actual.recomendaciones) && _actual.recomendaciones.length > 0) ||
+        (_actual.renderCientifico && _actual.renderCientifico.narrativa && _actual.renderCientifico.narrativa.contexto)
+    );
+    if (_vivo) {
+        console.log('[COMPÁS limpio] analisisIA persistible detectado para', _municipio,
+            '— no rehidratado: window.analisisActual ya tiene contenido analítico vivo.');
+        return false;
+    }
+
+    // ── Rehidratar window.analisisActual ─────────────────────────────────────
+    var _sint = (_payload.sintesisTerritorial && typeof _payload.sintesisTerritorial === 'object')
+                ? _payload.sintesisTerritorial : null;
+    var _rc   = (_payload.renderCientifico && typeof _payload.renderCientifico === 'object')
+                ? _payload.renderCientifico : null;
+
+    window.analisisActual = {
+        conclusiones:           Array.isArray(_payload.conclusiones)    ? _payload.conclusiones    : [],
+        recomendaciones:        Array.isArray(_payload.recomendaciones) ? _payload.recomendaciones : [],
+        propuestaEPVSA:         Array.isArray(_payload.propuestaEPVSA)  ? _payload.propuestaEPVSA  : [],
+        renderCientifico:       _rc,
+        narrativa:              _payload.narrativa || (_rc && _rc.narrativa) || null,
+        _sintesisTerritorial:   _sint,
+        trazabilidad:           (_payload.trazabilidad && typeof _payload.trazabilidad === 'object') ? _payload.trazabilidad : null,
+        metadataRuntime:        (_payload.metadataRuntime && typeof _payload.metadataRuntime === 'object') ? _payload.metadataRuntime : null,
+        fechaGeneracion:        _payload.fechaGeneracion || null,
+        fuentes:                Array.isArray(_payload.fuentes) ? _payload.fuentes : [],
+        // Trazabilidad de rehidratación — no altera comportamiento de motores ni guardado.
+        _fuente_rehidratacion:  'rehidratado_desde_analisisIA_persistible_v1',
+        _fechaRehidratacion:    new Date().toISOString()
+    };
+
+    // ── Rehidratar window.analisisActualV3 si el payload lo tiene ────────────
+    // Solo si no existe ya un V3 en runtime (no sobreescribir motor activo).
+    var _v3payload = _payload.v3;
+    if (_v3payload && _v3payload.disponible && !window.analisisActualV3) {
+        window.analisisActualV3 = {
+            conclusiones_v3:      Array.isArray(_v3payload.conclusiones)      ? _v3payload.conclusiones      : [],
+            recomendaciones_v3:   Array.isArray(_v3payload.recomendaciones)   ? _v3payload.recomendaciones   : [],
+            prioridades:          Array.isArray(_v3payload.prioridades)        ? _v3payload.prioridades        : [],
+            propuestaEPVSA:       Array.isArray(_v3payload.propuestaEPVSA)    ? _v3payload.propuestaEPVSA    : [],
+            areasConDivergencia:  Array.isArray(_v3payload.divergencias)      ? _v3payload.divergencias      : [],
+            estudiosAnalizados:   Array.isArray(_v3payload.estudiosAnalizados)? _v3payload.estudiosAnalizados: [],
+            _fuente_rehidratacion: 'rehidratado_desde_analisisIA_persistible_v1_v3',
+            _fechaRehidratacion:   new Date().toISOString()
+        };
+    }
+
+    console.log('[COMPÁS limpio] analisisIA persistible rehidratado defensivamente desde Firebase',
+        '| municipio:', _municipio,
+        '| conclusiones:', window.analisisActual.conclusiones.length,
+        '| recomendaciones:', window.analisisActual.recomendaciones.length,
+        '| propuestaEPVSA:', window.analisisActual.propuestaEPVSA.length,
+        '| _sintesisTerritorial:', !!window.analisisActual._sintesisTerritorial,
+        '| V3 rehidratado:', !!(window.analisisActualV3 && window.analisisActualV3._fuente_rehidratacion)
+    );
+
+    return true;
 };
 
 window.COMPAS_imprimirEstadoAnaliticoActual = function() {
