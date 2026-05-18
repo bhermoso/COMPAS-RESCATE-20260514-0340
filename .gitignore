@@ -27,3 +27,6 @@ _fuera_repo_*/
 temp_*.txt
 
 BACKUPS_20260517/
+
+BACKUPS_20260518/
+*.backup_*
