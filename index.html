@@ -8030,73 +8030,185 @@
 
 <div id="modal-metodologia" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; overflow-y:auto; padding:2rem;">
 
-    <div style="background:white; max-width:720px; margin:0 auto; border-radius:8px; overflow:hidden;">
+    <div style="background:white; max-width:820px; margin:0 auto; border-radius:8px; overflow:hidden;">
 
-        <div style="border-bottom:3px solid; border-image:linear-gradient(90deg,#0074c8,#00acd9,#94d40b,#ffb61b,#dc143c) 1; padding:1.25rem 2rem; display:flex; justify-content:space-between; align-items:center;">
-
-            <h2 style="margin:0; font-size:1.15rem; font-weight:700; color:#1e293b; letter-spacing:.02em;">Qué es <span style="background:linear-gradient(90deg,#0074c8 0%,#00acd9 20%,#94d40b 40%,#ffb61b 60%,#ff6600 80%,#dc143c 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">COMPÁS</span></h2>
-
-            <button onclick="cerrarMetodologia()" style="background:none; border:1px solid #e2e8f0; color:#64748b; width:30px; height:30px; border-radius:4px; cursor:pointer; font-size:1rem; line-height:1;">✕</button>
-
+        <!-- CABECERA -->
+        <div style="border-bottom:4px solid; border-image:linear-gradient(90deg,#0074c8 0%,#00acd9 20%,#94d40b 40%,#ffb61b 60%,#ff6600 80%,#dc143c 100%) 1; padding:1.1rem 1.75rem; display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+                <div style="font-size:1.5rem; font-weight:800; letter-spacing:10px; background:linear-gradient(90deg,#0074c8 0%,#00acd9 20%,#94d40b 40%,#ffb61b 60%,#ff6600 80%,#dc143c 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent; line-height:1.1;">COMPÁS</div>
+                <div style="font-size:.71rem; color:#64748b; margin-top:.3rem; letter-spacing:.01em; line-height:1.4;">Infraestructura pública longitudinal de inteligencia territorial · Acción Local en Salud</div>
+            </div>
+            <button onclick="cerrarMetodologia()" style="background:none; border:1px solid #e2e8f0; color:#64748b; width:30px; height:30px; border-radius:4px; cursor:pointer; font-size:1rem; line-height:1; flex-shrink:0; margin-left:1rem; margin-top:.15rem;">✕</button>
         </div>
 
-        <div id="compas-texto-modal-metodologia" data-compas-text-key="modal_metodologia" style="padding:2rem 2rem 1.5rem; color:#334155; font-size:.88rem; line-height:1.7;">
+        <div id="compas-texto-modal-metodologia" data-compas-text-key="modal_metodologia" style="padding:1.4rem 1.75rem 1.75rem; color:#334155; font-size:.82rem; line-height:1.5;">
 
-            <p style="margin-top:0;"><strong style="background:linear-gradient(90deg,#0074c8 0%,#00acd9 20%,#94d40b 40%,#ffb61b 60%,#ff6600 80%,#dc143c 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">COMPÁS</strong> es una infraestructura pública de inteligencia territorial para la Acción Local en Salud. No es un software sanitario ni un cuadro de mando clínico: es un entorno de convergencia epistemológica que integra evidencia científica, conocimiento situado, participación deliberativa y gobernanza intersectorial en un ciclo longitudinal de planificación local.</p>
+            <!-- 01 · DEFINICIÓN OPERACIONAL -->
+            <div style="margin-bottom:1.4rem;">
+                <div style="font-size:.62rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#0074c8; margin-bottom:.55rem; padding-bottom:.3rem; border-bottom:1px solid #e2e8f0;">01 · Definición operacional</div>
+                <table style="width:100%; border-collapse:collapse; font-size:.79rem;">
+                    <tbody>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.32rem .5rem; color:#64748b; width:33%; font-weight:600; white-space:nowrap; vertical-align:top;">Naturaleza</td><td style="padding:.32rem .5rem; color:#1e293b;">Infraestructura pública de inteligencia territorial</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.32rem .5rem; color:#64748b; font-weight:600; vertical-align:top;">Dominio</td><td style="padding:.32rem .5rem; color:#1e293b;">Salud comunitaria · planificación local · gobernanza intersectorial</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.32rem .5rem; color:#64748b; font-weight:600; vertical-align:top;">Función</td><td style="padding:.32rem .5rem; color:#1e293b;">Convergencia epistemológica entre evidencia científica, conocimiento situado y deliberación comunitaria</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.32rem .5rem; color:#64748b; font-weight:600; vertical-align:top;">Paradigma</td><td style="padding:.32rem .5rem; color:#1e293b;">Promoción de la Salud · Nueva Salud Pública · Determinantes sociales · ESCA 2026-2030</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.32rem .5rem; color:#64748b; font-weight:600; vertical-align:top;">Ontología</td><td style="padding:.32rem .5rem; color:#1e293b;">Salud como fenómeno social, territorial y político — no reducible a dato clínico ni sanitario</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.32rem .5rem; color:#64748b; font-weight:600; vertical-align:top;">Persistencia</td><td style="padding:.32rem .5rem; color:#1e293b;">Longitudinal · memoria municipal · aprendizaje territorial acumulativo</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.32rem .5rem; color:#64748b; font-weight:600; vertical-align:top;">Arquitectura</td><td style="padding:.32rem .5rem; color:#1e293b;">Monolito SPA + motores analíticos modulares + Firebase + ciclo RELAS</td></tr>
+                        <tr><td style="padding:.32rem .5rem; color:#64748b; font-weight:600; vertical-align:top;">Estado</td><td style="padding:.32rem .5rem; color:#1e293b;">Operativo · longitudinalidad emergente · integración ESCA en curso</td></tr>
+                    </tbody>
+                </table>
+            </div>
 
-            <p>Su premisa es que la salud de una comunidad es un fenómeno social, comunitario y territorial: está determinada por condiciones materiales de vida, relaciones de poder, desigualdades estructurales, activos colectivos y decisiones políticas. El sistema sanitario es un actor estratégico y un aliado relevante en ese proceso, pero no su director absoluto ni su único protagonista. La Acción Local en Salud requiere intersectorialidad real, gobernanza compartida y construcción colectiva de agenda.</p>
+            <!-- 02 · CAPAS DEL SISTEMA -->
+            <div style="margin-bottom:1.4rem;">
+                <div style="font-size:.62rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#00acd9; margin-bottom:.55rem; padding-bottom:.3rem; border-bottom:1px solid #e2e8f0;">02 · Capas del sistema</div>
+                <div style="display:flex; gap:1px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                    <div style="flex:1; padding:.5rem .45rem; background:#f8fafc; border-left:3px solid #0074c8;">
+                        <div style="font-size:.6rem; font-weight:700; color:#0074c8; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem;">Fuentes</div>
+                        <div style="font-size:.67rem; color:#475569; line-height:1.35;">EAS · IBSE · escalas · informes · determinantes</div>
+                    </div>
+                    <div style="flex:1; padding:.5rem .45rem; background:#f8fafc; border-left:3px solid #0074c8;">
+                        <div style="font-size:.6rem; font-weight:700; color:#0074c8; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem;">Análisis</div>
+                        <div style="font-size:.67rem; color:#475569; line-height:1.35;">Perfil territorial · señales · inferencias · síntesis V3</div>
+                    </div>
+                    <div style="flex:1; padding:.5rem .45rem; background:#f8fafc; border-left:3px solid #00acd9;">
+                        <div style="font-size:.6rem; font-weight:700; color:#00acd9; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem;">Priorización</div>
+                        <div style="font-size:.67rem; color:#475569; line-height:1.35;">Deliberación · EPVSA · convergencia ciudadanía–evidencia</div>
+                    </div>
+                    <div style="flex:1; padding:.5rem .45rem; background:#f8fafc; border-left:3px solid #6ea80a;">
+                        <div style="font-size:.6rem; font-weight:700; color:#6ea80a; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem;">Plan</div>
+                        <div style="font-size:.67rem; color:#475569; line-height:1.35;">Objetivos · actores · líneas RELAS-EPVSA · trazabilidad</div>
+                    </div>
+                    <div style="flex:1; padding:.5rem .45rem; background:#f8fafc; border-left:3px solid #b45309;">
+                        <div style="font-size:.6rem; font-weight:700; color:#b45309; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem;">Ejecución</div>
+                        <div style="font-size:.67rem; color:#475569; line-height:1.35;">Agenda · actuaciones · intersectorialidad · evidencias</div>
+                    </div>
+                    <div style="flex:1; padding:.5rem .45rem; background:#f8fafc; border-left:3px solid #dc143c;">
+                        <div style="font-size:.6rem; font-weight:700; color:#dc143c; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem;">Evaluación</div>
+                        <div style="font-size:.67rem; color:#475569; line-height:1.35;">Arrastres · aprendizajes · indicadores ESCA · calidad</div>
+                    </div>
+                    <div style="flex:1; padding:.5rem .45rem; background:#f5f3ff; border-left:3px solid #7c3aed;">
+                        <div style="font-size:.6rem; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem;">LONGI ↗</div>
+                        <div style="font-size:.67rem; color:#475569; line-height:1.35;">Memoria municipal · ciclos acumulativos · inteligencia institucional</div>
+                    </div>
+                </div>
+            </div>
 
-            <p>COMPÁS produce interpretación territorial, no automatización de decisiones. Diferencia señales observadas, inferencias razonables, hipótesis prudentes, brechas de información y conocimiento no disponible. La síntesis analítica está subordinada al criterio técnico, municipal y comunitario: ningún resultado del sistema tiene valor normativo sin validación local.</p>
+            <!-- 03 · MARCOS EPISTEMOLÓGICOS -->
+            <div style="margin-bottom:1.4rem;">
+                <div style="font-size:.62rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#6ea80a; margin-bottom:.55rem; padding-bottom:.3rem; border-bottom:1px solid #e2e8f0;">03 · Marcos epistemológicos</div>
+                <table style="width:100%; border-collapse:collapse; font-size:.78rem;">
+                    <thead>
+                        <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                            <th style="padding:.28rem .5rem; text-align:left; color:#64748b; font-weight:700; width:28%;">Marco</th>
+                            <th style="padding:.28rem .5rem; text-align:left; color:#64748b; font-weight:700;">Función en COMPÁS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.28rem .5rem; font-weight:600; color:#0074c8; white-space:nowrap;">Ottawa · OMS 1986</td><td style="padding:.28rem .5rem; color:#334155;">Paradigma fundacional: acción sobre determinantes, entornos saludables, políticas públicas y capacidades comunitarias</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.28rem .5rem; font-weight:600; color:#0074c8; white-space:nowrap;">Marmot / OMS</td><td style="padding:.28rem .5rem; color:#334155;">Determinantes sociales de la salud · equidad · gradiente social · enfoque ecosocial</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.28rem .5rem; font-weight:600; color:#00acd9; white-space:nowrap;">RELAS</td><td style="padding:.28rem .5rem; color:#334155;">Gobernanza local · red de acción intersectorial · ciclo metodológico municipal</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.28rem .5rem; font-weight:600; color:#00acd9; white-space:nowrap;">EPVSA 2024-2030</td><td style="padding:.28rem .5rem; color:#334155;">Marco estratégico poblacional · líneas de acción · priorización territorial</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.28rem .5rem; font-weight:600; color:#6ea80a; white-space:nowrap;">ESCA 2026-2030</td><td style="padding:.28rem .5rem; color:#334155;">Salud comunitaria operativa · activos · orientación comunitaria · indicadores de evaluación e investigación</td></tr>
+                        <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:.28rem .5rem; font-weight:600; color:#b45309; white-space:nowrap;">SeTP</td><td style="padding:.28rem .5rem; color:#334155;">Horizonte intersectorial: salud como consecuencia de urbanismo, movilidad, educación, alimentación y empleo</td></tr>
+                        <tr><td style="padding:.28rem .5rem; font-weight:600; color:#94a3b8; white-space:nowrap;">One Health</td><td style="padding:.28rem .5rem; color:#334155;">Horizonte ecosistémico emergente · interdependencia salud humana, entorno y territorio · integración futura</td></tr>
+                    </tbody>
+                </table>
+            </div>
 
-            <p>El sistema se alinea con RELAS, la EPVSA 2024-2030 y la Estrategia de Salud Comunitaria de Andalucía 2026-2030 (ESCA). La ESCA aporta el marco específico de salud comunitaria: define la salud desde la interacción de factores personales, familiares, sociales, culturales, ambientales, políticos y comunitarios, y articula los roles de Atención Primaria, Salud Pública, ayuntamientos, ciudadanía y red local en una relación de reciprocidad, no de jerarquía sanitaria.</p>
+            <!-- 04 + 05 · ENTRADAS / SALIDAS -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.4rem;">
 
-            <h3 style="font-size:.9rem; font-weight:700; color:#1e293b; margin:1.5rem 0 .6rem; padding-bottom:.35rem; border-bottom:2px solid #e2e8f0;">Arquitectura del ciclo territorial</h3>
+                <div>
+                    <div style="font-size:.62rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#b45309; margin-bottom:.55rem; padding-bottom:.3rem; border-bottom:1px solid #e2e8f0;">04 · Entradas del sistema</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:.28rem; align-content:flex-start;">
+                        <span style="background:#eff6ff; color:#0074c8; border:1px solid #bfdbfe; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">EAS</span>
+                        <span style="background:#eff6ff; color:#0074c8; border:1px solid #bfdbfe; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">IBSE</span>
+                        <span style="background:#eff6ff; color:#0074c8; border:1px solid #bfdbfe; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">SF-12</span>
+                        <span style="background:#eff6ff; color:#0074c8; border:1px solid #bfdbfe; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Duke</span>
+                        <span style="background:#eff6ff; color:#0074c8; border:1px solid #bfdbfe; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">CAGE</span>
+                        <span style="background:#eff6ff; color:#0074c8; border:1px solid #bfdbfe; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">PREDIMED</span>
+                        <span style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Informes</span>
+                        <span style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Determinantes</span>
+                        <span style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Indicadores</span>
+                        <span style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Estudios</span>
+                        <span style="background:#fef9c3; color:#713f12; border:1px solid #fde68a; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Participación</span>
+                        <span style="background:#fef9c3; color:#713f12; border:1px solid #fde68a; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Priorización</span>
+                        <span style="background:#fef9c3; color:#713f12; border:1px solid #fde68a; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Activos</span>
+                        <span style="background:#fdf4ff; color:#6b21a8; border:1px solid #e9d5ff; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Actuaciones</span>
+                        <span style="background:#fdf4ff; color:#6b21a8; border:1px solid #e9d5ff; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Agenda</span>
+                        <span style="background:#fdf4ff; color:#6b21a8; border:1px solid #e9d5ff; padding:.12rem .4rem; border-radius:3px; font-size:.71rem; font-weight:600;">Snapshots</span>
+                    </div>
+                </div>
 
-            <p>COMPÁS organiza el proceso local de salud en cinco fases que forman un ciclo continuo de aprendizaje acumulativo:</p>
+                <div>
+                    <div style="font-size:.62rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#dc143c; margin-bottom:.55rem; padding-bottom:.3rem; border-bottom:1px solid #e2e8f0;">05 · Salidas del sistema</div>
+                    <div style="display:flex; flex-direction:column; gap:.28rem;">
+                        <div style="background:#f8fafc; border-left:3px solid #0074c8; padding:.28rem .55rem; font-size:.75rem;"><strong style="color:#0074c8;">Síntesis territorial</strong> — señales, inferencias, trazabilidad metodológica</div>
+                        <div style="background:#f8fafc; border-left:3px solid #00acd9; padding:.28rem .55rem; font-size:.75rem;"><strong style="color:#00acd9;">Priorización</strong> — convergencia técnica, ciudadana y estratégica EPVSA</div>
+                        <div style="background:#f8fafc; border-left:3px solid #6ea80a; padding:.28rem .55rem; font-size:.75rem;"><strong style="color:#6ea80a;">Plan local</strong> — objetivos, actores, trazabilidad intersectorial</div>
+                        <div style="background:#f8fafc; border-left:3px solid #b45309; padding:.28rem .55rem; font-size:.75rem;"><strong style="color:#b45309;">Evaluación</strong> — arrastres, aprendizajes, indicadores ESCA, calidad</div>
+                        <div style="background:#f5f3ff; border-left:3px solid #7c3aed; padding:.28rem .55rem; font-size:.75rem;"><strong style="color:#7c3aed;">LONGI</strong> — memoria territorial · inteligencia institucional acumulativa</div>
+                    </div>
+                </div>
 
-            <ol style="padding-left:1.25rem; margin:.6rem 0 1rem;">
-                <li style="margin-bottom:.5rem;"><strong style="color:#0074c8;">Analizar.</strong> Reconstrucción del perfil territorial desde una perspectiva de determinantes sociales y desigualdades en salud: informes epidemiológicos, indicadores socioeconómicos, escalas diagnósticas (IBSE, SF-12, Duke, CAGE, PREDIMED), estudios complementarios y fuentes municipales. La lectura integra modelos salutogénicos y activos comunitarios conforme al enfoque biopsicosocial y de equidad de la ESCA, no solo déficits y patologías.</li>
-                <li style="margin-bottom:.5rem;"><strong style="color:#00acd9;">Priorizar.</strong> Convergencia entre evidencia técnica, experiencia comunitaria y prioridades estratégicas EPVSA, mediante procesos deliberativos con la ciudadanía y la red local. No sustituye la deliberación: la organiza, la documenta y la hace trazable metodológicamente.</li>
-                <li style="margin-bottom:.5rem;"><strong style="color:#6ea80a;">Planificar.</strong> Traducción del diagnóstico territorial y las prioridades comunitarias en un Plan Local de Salud operativo, intersectorial y compatible con RELAS y EPVSA 2024-2030. Cada línea del plan incluye las fuentes que la fundamentan y los actores corresponsables.</li>
-                <li style="margin-bottom:.5rem;"><strong style="color:#b45309;">Ejecutar.</strong> Organización territorial de actuaciones: agenda anual, responsables institucionales y comunitarios, cronograma, coordinación intersectorial y trazabilidad de implementación. La ejecución es parte del ciclo de aprendizaje, no solo cumplimiento de tareas.</li>
-                <li style="margin-bottom:.5rem;"><strong style="color:#dc143c;">Evaluar.</strong> Lectura longitudinal y acumulativa del proceso, los resultados y los arrastres: qué funcionó, qué no se pudo ejecutar, qué condiciones cambiaron, qué aprendizajes alimentan el siguiente ciclo. La evaluación construye memoria territorial e inteligencia institucional. La ESCA aporta un marco de indicadores de contexto, impacto, resultado y realización aplicables al ciclo local de salud comunitaria.</li>
-            </ol>
+            </div>
 
-            <h3 style="font-size:.9rem; font-weight:700; color:#1e293b; margin:1.5rem 0 .6rem; padding-bottom:.35rem; border-bottom:2px solid #e2e8f0;">Quién sostiene el proceso</h3>
+            <!-- 06 · LÍMITES EPISTEMOLÓGICOS -->
+            <div style="margin-bottom:1.4rem;">
+                <div style="font-size:.62rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#64748b; margin-bottom:.55rem; padding-bottom:.3rem; border-bottom:1px solid #e2e8f0;">06 · Límites epistemológicos</div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:3px solid #94a3b8; padding:.65rem 1rem; border-radius:0 4px 4px 0; font-size:.77rem; color:#475569; line-height:1.6;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.2rem .8rem;">
+                        <div>· Produce observaciones, no verdades</div>
+                        <div>· No automatiza decisiones</div>
+                        <div>· Diferencia datos, inferencias e hipótesis</div>
+                        <div>· No genera planes sin validación local</div>
+                        <div>· No produce datos epidemiológicos propios</div>
+                        <div>· No opera sobre gestión clínica</div>
+                        <div>· Documenta brechas de información</div>
+                        <div>· Validación técnica y comunitaria obligatoria</div>
+                    </div>
+                </div>
+            </div>
 
-            <ul style="padding-left:1.25rem; margin:.4rem 0 1rem;">
-                <li style="margin-bottom:.35rem;"><strong>El ayuntamiento</strong>, responsable político de la planificación local y de la aprobación institucional del plan.</li>
-                <li style="margin-bottom:.35rem;"><strong>El grupo motor local</strong>, órgano técnico-participativo que coordina el proceso y articula actores.</li>
-                <li style="margin-bottom:.35rem;"><strong>La red local de acción en salud (RELAS)</strong>, conjunto de actores comunitarios, sanitarios, sociales y educativos que participan en el diagnóstico, la priorización y la acción.</li>
-                <li style="margin-bottom:.35rem;"><strong>El sistema sanitario</strong>, como actor estratégico y aliado relevante, aportando evidencia epidemiológica, capacidad técnica y articulación con la política de salud pública autonómica. La ESCA refuerza explícitamente la coordinación entre Atención Primaria y Comunitaria, Salud Pública, ayuntamientos y red local como condición para la salud comunitaria efectiva.</li>
-            </ul>
+            <!-- 07 · HOJA DE RUTA -->
+            <div style="margin-bottom:1.1rem;">
+                <div style="font-size:.62rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#7c3aed; margin-bottom:.55rem; padding-bottom:.3rem; border-bottom:1px solid #e2e8f0;">07 · Hoja de ruta</div>
+                <div style="display:flex; align-items:center; gap:0; overflow-x:auto;">
+                    <div style="text-align:center; flex-shrink:0; padding:.3rem .55rem; background:#dbeafe; border-radius:4px; font-size:.67rem; font-weight:700; color:#1d4ed8;">Motor V3<br><span style="font-weight:400; color:#64748b; font-size:.6rem;">✓ activo</span></div>
+                    <div style="width:14px; height:1px; background:#cbd5e1; flex-shrink:0;"></div>
+                    <div style="text-align:center; flex-shrink:0; padding:.3rem .55rem; background:#dbeafe; border-radius:4px; font-size:.67rem; font-weight:700; color:#1d4ed8;">Persistencia<br><span style="font-weight:400; color:#64748b; font-size:.6rem;">✓ activo</span></div>
+                    <div style="width:14px; height:1px; background:#cbd5e1; flex-shrink:0;"></div>
+                    <div style="text-align:center; flex-shrink:0; padding:.3rem .55rem; background:#dcfce7; border-radius:4px; font-size:.67rem; font-weight:700; color:#15803d;">ESCA<br><span style="font-weight:400; color:#64748b; font-size:.6rem;">✓ integrado</span></div>
+                    <div style="width:14px; height:1px; background:#cbd5e1; flex-shrink:0;"></div>
+                    <div style="text-align:center; flex-shrink:0; padding:.3rem .55rem; background:#dcfce7; border-radius:4px; font-size:.67rem; font-weight:700; color:#15803d;">Ottawa<br><span style="font-weight:400; color:#64748b; font-size:.6rem;">✓ marco</span></div>
+                    <div style="width:14px; height:1px; background:#cbd5e1; flex-shrink:0;"></div>
+                    <div style="text-align:center; flex-shrink:0; padding:.3rem .55rem; background:#fef9c3; border-radius:4px; font-size:.67rem; font-weight:700; color:#92400e;">LONGI<br><span style="font-weight:400; color:#64748b; font-size:.6rem;">→ próximo</span></div>
+                    <div style="width:14px; height:1px; background:#cbd5e1; flex-shrink:0;"></div>
+                    <div style="text-align:center; flex-shrink:0; padding:.3rem .55rem; background:#f1f5f9; border-radius:4px; font-size:.67rem; font-weight:700; color:#475569;">Sectores<br><span style="font-weight:400; color:#94a3b8; font-size:.6rem;">LONGI-1</span></div>
+                    <div style="width:14px; height:1px; background:#cbd5e1; flex-shrink:0;"></div>
+                    <div style="text-align:center; flex-shrink:0; padding:.3rem .55rem; background:#f1f5f9; border-radius:4px; font-size:.67rem; font-weight:700; color:#475569;">SeTP<br><span style="font-weight:400; color:#94a3b8; font-size:.6rem;">LONGI-1</span></div>
+                    <div style="width:14px; height:1px; background:#cbd5e1; flex-shrink:0;"></div>
+                    <div style="text-align:center; flex-shrink:0; padding:.3rem .55rem; background:#f1f5f9; border-radius:4px; font-size:.67rem; font-weight:700; color:#94a3b8;">One Health<br><span style="font-weight:400; color:#cbd5e1; font-size:.6rem;">fase futura</span></div>
+                </div>
+            </div>
 
-            <h3 style="font-size:.9rem; font-weight:700; color:#1e293b; margin:1.5rem 0 .6rem; padding-bottom:.35rem; border-bottom:2px solid #e2e8f0;">Lo que COMPÁS no sustituye</h3>
+            <!-- MARCO NORMATIVO -->
+            <div style="margin-bottom:1.1rem;">
+                <div style="font-size:.62rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#64748b; margin-bottom:.45rem; padding-bottom:.3rem; border-bottom:1px solid #e2e8f0;">Marco normativo</div>
+                <div style="font-size:.73rem; color:#64748b; line-height:1.7;">
+                    LAULA 5/2010 · Ley SP Andalucía 16/2011 · EPVSA 2024-2030 · ESCA 2026-2030 (BOJA 23/01/2026) · Carta de Ottawa OMS 1986 · Marco Determinantes Sociales OMS/Marmot
+                </div>
+            </div>
 
-            <p>COMPÁS es una infraestructura de apoyo, no un sustituto de la acción humana e institucional:</p>
+            <!-- FIRMA -->
+            <div style="font-size:.7rem; color:#94a3b8; padding-top:.7rem; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+                <span>B. Hermoso · SAS / Distrito Sanitario Granada-Metropolitano</span>
+                <span style="background:linear-gradient(90deg,#0074c8 0%,#dc143c 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent; font-weight:800; font-size:.72rem; letter-spacing:4px;">COMPÁS</span>
+            </div>
 
-            <ul style="padding-left:1.25rem; margin:.4rem 0 1rem;">
-                <li style="margin-bottom:.3rem;">No reemplaza la decisión política municipal ni el liderazgo técnico local del proceso.</li>
-                <li style="margin-bottom:.3rem;">No produce datos epidemiológicos propios: trabaja con la evidencia que se le aporta y documenta sus límites.</li>
-                <li style="margin-bottom:.3rem;">No sustituye la participación ciudadana real: la organiza, la registra y la hace metodológicamente trazable.</li>
-                <li style="margin-bottom:.3rem;">No opera sobre la gestión clínica ni sobre la prestación sanitaria individual.</li>
-                <li style="margin-bottom:.3rem;">No genera certezas donde hay incertidumbre: señala las brechas de información como parte del propio diagnóstico territorial.</li>
-            </ul>
-
-            <h3 style="font-size:.9rem; font-weight:700; color:#1e293b; margin:1.5rem 0 .6rem; padding-bottom:.35rem; border-bottom:2px solid #e2e8f0;">Marco normativo e institucional</h3>
-
-            <ul style="padding-left:1.25rem; margin:.4rem 0 .8rem;">
-                <li style="margin-bottom:.3rem;">Ley de Autonomía Local de Andalucía (LAULA, 5/2010) — competencia municipal en salud pública.</li>
-                <li style="margin-bottom:.3rem;">Ley de Salud Pública de Andalucía (16/2011) — planes locales de salud.</li>
-                <li style="margin-bottom:.3rem;">Estrategia de Promoción de una Vida Saludable en Andalucía (EPVSA 2024-2030).</li>
-                <li style="margin-bottom:.3rem;">Estrategia de Salud Comunitaria de Andalucía 2026-2030 (ESCA) — Orden de 16 de diciembre de 2025, BOJA 23 de enero de 2026. Marco de salud comunitaria, activos para la salud, orientación comunitaria, equidad, participación activa, coordinación intersectorial, registro, evaluación e investigación.</li>
-                <li style="margin-bottom:.3rem;">Planificación territorial en salud comunitaria — gobernanza local, intersectorialidad y aprendizaje acumulativo como condiciones de sostenibilidad del ciclo RELAS-EPVSA-ESCA.</li>
-                <li style="margin-bottom:.3rem;">Marco de Determinantes Sociales de la Salud (OMS / Comisión Marmot) — enfoque ecosocial y de equidad.</li>
-            </ul>
-
-            <p style="font-size:.8rem; color:#94a3b8; margin:1.5rem 0 0; padding-top:.75rem; border-top:1px solid #e2e8f0;">Desarrollo: B. Hermoso · Servicio Andaluz de Salud / Distrito Sanitario Granada-Metropolitano</p>
-
-</div>
+        </div>
 
     </div>
 
