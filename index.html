@@ -61860,6 +61860,32 @@ window.COMPAS_prepararPayloadAnalisisIAParaGuardado = function() {
     var propuestaConsolidada = trazabilidadOrigenV3
         ? _primeroArray(base._v3_propuestaEPVSA, v3 && v3.propuestaEPVSA, base.propuestaEPVSA, pendiente && pendiente.propuestaEPVSA)
         : _primeroArray(base.propuestaEPVSA, base._v3_propuestaEPVSA, v3 && v3.propuestaEPVSA, pendiente && pendiente.propuestaEPVSA);
+    var renderCientificoRuntime = _obj(base.renderCientifico) ? base.renderCientifico : null;
+    function _copiarClaveRenderBloque07(destino, clave) {
+        if (renderCientificoRuntime && typeof renderCientificoRuntime[clave] !== 'undefined') {
+            destino[clave] = _clone(renderCientificoRuntime[clave]);
+        }
+    }
+    var renderCientificoPayload = {
+        narrativa: _primeroValor(base.narrativa, sintesis && sintesis.narrativa, pendiente && pendiente.narrativa),
+        perfilSOC: _primeroValor(base.perfilSOC, pendiente && pendiente.perfilSOC),
+        alertasInequidad: _primeroArray(base.alertasInequidad, v3 && v3.inequidades, pendiente && pendiente.alertasInequidad),
+        fortalezas: _primeroArray(base.fortalezas, pendiente && pendiente.fortalezas).slice(0, 10),
+        oportunidades: _primeroArray(base.oportunidades, pendiente && pendiente.oportunidades).slice(0, 10),
+        patronesTransversales: _primeroArray(base.patronesTransversales, pendiente && pendiente.patronesTransversales),
+        conclusiones: _primeroArray(base._v3_conclusiones, v3 && (v3.conclusiones_v3 || v3.conclusiones), base.conclusiones, pendiente && pendiente.conclusiones),
+        recomendaciones: _primeroArray(base._v3_recomendaciones, v3 && (v3.recomendaciones_v3 || v3.recomendaciones), base.recomendaciones, pendiente && pendiente.recomendaciones),
+        propuestaEPVSA: propuestaConsolidada,
+        priorizacion: _primeroValor(base.priorizacion, v3 && v3.prioridades, pendiente && pendiente.priorizacion, [])
+    };
+    [
+        '_contratoBloque07',
+        '_fuenteBloque07',
+        'recomendacionesInstitucionales',
+        'recomendacionesExploratorias',
+        'recomendacionesEstructuralesRELAS',
+        'vigilanciasNoPrioritarias'
+    ].forEach(function(clave) { _copiarClaveRenderBloque07(renderCientificoPayload, clave); });
     var payload = {
         contrato: 'payload_analisis_ia_persistible_v1',
         estado: 'normalizado_runtime_sin_guardar',
@@ -61893,18 +61919,7 @@ window.COMPAS_prepararPayloadAnalisisIAParaGuardado = function() {
             divergencias: _clone(v3 && v3.areasConDivergencia || base._v3_divergencias || []),
             estudiosAnalizados: _clone(v3 && v3.estudiosAnalizados || base._v3_estudiosAn || [])
         },
-        renderCientifico: {
-            narrativa: _primeroValor(base.narrativa, sintesis && sintesis.narrativa, pendiente && pendiente.narrativa),
-            perfilSOC: _primeroValor(base.perfilSOC, pendiente && pendiente.perfilSOC),
-            alertasInequidad: _primeroArray(base.alertasInequidad, v3 && v3.inequidades, pendiente && pendiente.alertasInequidad),
-            fortalezas: _primeroArray(base.fortalezas, pendiente && pendiente.fortalezas).slice(0, 10),
-            oportunidades: _primeroArray(base.oportunidades, pendiente && pendiente.oportunidades).slice(0, 10),
-            patronesTransversales: _primeroArray(base.patronesTransversales, pendiente && pendiente.patronesTransversales),
-            conclusiones: _primeroArray(base._v3_conclusiones, v3 && (v3.conclusiones_v3 || v3.conclusiones), base.conclusiones, pendiente && pendiente.conclusiones),
-            recomendaciones: _primeroArray(base._v3_recomendaciones, v3 && (v3.recomendaciones_v3 || v3.recomendaciones), base.recomendaciones, pendiente && pendiente.recomendaciones),
-            propuestaEPVSA: propuestaConsolidada,
-            priorizacion: _primeroValor(base.priorizacion, v3 && v3.prioridades, pendiente && pendiente.priorizacion, [])
-        },
+        renderCientifico: renderCientificoPayload,
         metadataRuntime: {
             origen: 'analisisActual_consolidado',
             tieneAnalisisActual: !!analisis,

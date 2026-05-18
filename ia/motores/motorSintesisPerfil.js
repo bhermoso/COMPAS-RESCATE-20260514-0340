@@ -2285,6 +2285,92 @@ function _v4_construirSintesisTerritorial(v4, analisis) {
 //   2. Bridge V4 señales → analisis.conclusiones (fallback si síntesis no activa en UI)
 // No toca propuestaEPVSA, recomendaciones, Firebase, snapshots, compilador.
 // ─────────────────────────────────────────────────────────────────────────────
+function COMPAS_construirSintesisInstitucionalBloque07(analisis, analisisV4) {
+    if (!analisis || !analisisV4) return analisis;
+
+    function _arr(v) { return Array.isArray(v) ? v : []; }
+    function _texto(o) { return String((o && (o.texto || o.titulo || o.orientacion || o.linea_accion_municipal || o.linea_accion)) || ''); }
+    function _esVigilancia(o) {
+        var t = _texto(o).toLowerCase();
+        return /mantener\s+vigilancia\s+pasiva|sin\s+indicadores\s+desfavorables|no\s+procede\s+comprometer\s+actuaci[oó]n\s+espec/i.test(t);
+    }
+    function _dedup(lista) {
+        var vistos = {};
+        return _arr(lista).filter(function(item) {
+            var clave = _texto(item).replace(/\s+/g, ' ').trim().toLowerCase();
+            if (!clave || vistos[clave]) return false;
+            vistos[clave] = true;
+            return true;
+        });
+    }
+    function _rec(item, idx, grupo) {
+        if (!item || !_texto(item)) return null;
+        return {
+            id: item.id || ('rec_inst_' + grupo + '_' + (idx + 1)),
+            titulo: item.categoria || item.tipo || grupo,
+            area: item.area || item.categoria || grupo,
+            texto: _texto(item),
+            fuentes: _arr(item.fuentes),
+            certeza: item.certeza || null,
+            nivelEvidencia: item.nivelEvidencia || null,
+            justificacion: item.justificacion || null,
+            origen: 'bridge_v4_bloque07',
+            grupo: grupo
+        };
+    }
+
+    var rc = Object.assign({}, analisis.renderCientifico || {});
+    var sint = analisis._sintesisTerritorial || {};
+    var narrativaBase = rc.narrativa || analisis.narrativa || {};
+    var narrativaSint = sint.narrativa || {};
+    rc.narrativa = Object.assign({}, narrativaBase, {
+        contexto: narrativaSint.contexto || narrativaBase.contexto || null,
+        sintesis: narrativaSint.sintesis || narrativaBase.sintesis || null
+    });
+
+    var recV4 = analisisV4.recomendaciones || {};
+    var territorialesRaw = _arr(recV4.territoriales).map(function(r, i) { return _rec(r, i, 'territorial'); }).filter(Boolean);
+    var exploratoriasRaw = _arr(recV4.exploratorias).map(function(r, i) { return _rec(r, i, 'exploratoria'); }).filter(Boolean);
+    var estructuralesRaw = _arr(recV4.estructuralesRELAS).map(function(r, i) { return _rec(r, i, 'estructural_relas'); }).filter(Boolean);
+    var territoriales = territorialesRaw.filter(function(r) { return !_esVigilancia(r); });
+    var exploratorias = exploratoriasRaw.filter(function(r) { return !_esVigilancia(r); });
+    var estructurales = estructuralesRaw.filter(function(r) { return !_esVigilancia(r); });
+
+    var tensionesInst = _arr(analisisV4.tensiones).filter(function(t) {
+        return t && t.texto && t.habilitaRecomendacion !== false &&
+            (_V4_CAT_TENSION_ESTRUCTURAL[t.categoria] || /gobernanza|institucional|arrastre|ejecuci[oó]n|desigualdad|activos|red/i.test(String(t.categoria || '') + ' ' + t.texto));
+    }).slice(0, 3).map(function(t, i) { return _rec(t, i, 'orientacion_institucional'); }).filter(Boolean);
+
+    var fortalezasInst = _arr(analisisV4.fortalezas).filter(function(f) {
+        return f && f.texto && _V4_CAT_FORTALEZA_INSTITUCIONAL[f.categoria];
+    }).slice(0, 3).map(function(f, i) { return _rec(f, i, 'capacidad_institucional'); }).filter(Boolean);
+
+    var recomendacionesOriginales = _arr(analisis.recomendaciones);
+    var vigilancias = recomendacionesOriginales.concat(territorialesRaw, exploratoriasRaw, estructuralesRaw).filter(_esVigilancia).map(function(r, i) {
+        return Object.assign({}, r, {
+            id: r.id || ('vig_no_prioritaria_' + (i + 1)),
+            origen: r.origen || 'motor_base_reclasificado_bloque07',
+            categoria: r.categoria || 'vigilancia_no_prioritaria'
+        });
+    });
+    var recomendacionesNoVigilancia = recomendacionesOriginales.filter(function(r) { return !_esVigilancia(r); });
+    var institucionales = _dedup(tensionesInst.concat(territoriales, estructurales, fortalezasInst));
+
+    rc.recomendacionesInstitucionales = institucionales;
+    rc.recomendacionesExploratorias = exploratorias;
+    rc.recomendacionesEstructuralesRELAS = estructurales;
+    rc.vigilanciasNoPrioritarias = vigilancias;
+    rc._contratoBloque07 = 'sintesis_institucional_bloque07_v1';
+    rc._fuenteBloque07 = 'analisisActualV4_bridge_semantico';
+
+    if (vigilancias.length && institucionales.length) {
+        analisis.recomendaciones = _dedup(recomendacionesNoVigilancia.concat(institucionales));
+    }
+
+    analisis.renderCientifico = rc;
+    return analisis;
+}
+
 window.COMPAS_postprocesarConclusionesRecomendaciones = function(analisis) {
     if (typeof window === 'undefined') return analisis;
     var _v4 = window.analisisActualV4;
@@ -2340,6 +2426,8 @@ window.COMPAS_postprocesarConclusionesRecomendaciones = function(analisis) {
         }
         console.log('[COMPAS V4→UI bridge] ' + _nuevas.length + ' señal(es) estructural(es) en conclusiones:', _nuevas.map(function(n) { return n.id; }));
     }
+
+    analisis = COMPAS_construirSintesisInstitucionalBloque07(analisis, _v4) || analisis;
 
     return analisis;
 };
