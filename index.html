@@ -72941,6 +72941,1845 @@ window.COMPAS.auditarPlanMunicipioActual = function() {
 };
 
 
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI FASE 1 · CONTRATO LONGITUDINAL TERRITORIAL
+// ── Versión: contrato_longitudinal_territorial_v1
+// ── Propósito: unificar en una sola capa estructurada todos los estados
+//    longitudinales del municipio: actuaciones, evaluación, snapshots, agenda,
+//    prioridades, activos, actores, indicadores, aprendizajes, arrastres,
+//    discontinuidades y persistencias. SIN inferencias, SIN narrativa.
+// ── Diseño: solo lectura de fuentes existentes. Defensivo. Sin efectos
+//    secundarios. Documenta ausencias explícitamente. Extensible a LONGI-fase-2.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirContratoLongitudinalTerritorial() {
+
+    // ── Utilidades internas ──────────────────────────────────────────────────
+
+    var _fechaGeneracion = new Date().toISOString();
+    var _brechas = [];          // registro acumulativo de ausencias documentadas
+    var _fuentesConsultadas = [];
+
+    function _brecha(id, descripcion) {
+        _brechas.push({ id: id, descripcion: descripcion });
+    }
+    function _fuente(id) {
+        _fuentesConsultadas.push(id);
+    }
+    function _safe(fn, fallback) {
+        try { return fn(); } catch(e) {
+            console.warn('[COMPÁS LONGI]', e);
+            return (fallback !== undefined) ? fallback : null;
+        }
+    }
+    function _arr(v) { return Array.isArray(v) ? v : []; }
+    function _n(v)   { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+    function _hay(v) { return v !== null && v !== undefined && v !== ''; }
+
+    // ── Deduplicación defensiva de actuaciones ───────────────────────────────
+    function _longiNorm(v) {
+        return (v == null ? '' : String(v)).toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+    function _longiClaveActuacion(a) {
+        if (!a) return '__null__';
+        if (_longiNorm(a.id))              return 'id:'   + _longiNorm(a.id);
+        if (_longiNorm(a.uid))             return 'uid:'  + _longiNorm(a.uid);
+        if (_longiNorm(a.codigo))          return 'cod:'  + _longiNorm(a.codigo);
+        if (_longiNorm(a.codigoActuacion)) return 'codA:' + _longiNorm(a.codigoActuacion);
+        var _t = _longiNorm(a.titulo || a.nombre);
+        var _f = _longiNorm(a.fecha || a.fechaPrevista || a.fechaReal || '');
+        var _l = _longiNorm(a.linea || a.lineaEstrategica || '');
+        var _e = _longiNorm(a.estado || '');
+        return 'comp:' + _t + '|' + _f + '|' + _l + '|' + _e;
+    }
+    function _longiDeduplicarActuaciones(lista) {
+        if (!Array.isArray(lista) || lista.length === 0) return lista;
+        var _visto = {};
+        var _result = [];
+        lista.forEach(function(a) {
+            var clave = _longiClaveActuacion(a);
+            if (!_visto[clave]) { _visto[clave] = true; _result.push(a); }
+        });
+        return _result;
+    }
+
+    // ── 1. Municipio ─────────────────────────────────────────────────────────
+
+    var _municipio = _safe(function() {
+        return (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
+    }, null);
+    _fuente('getMunicipioActual');
+    if (!_municipio) _brecha('municipio_nulo', 'getMunicipioActual devuelve null — no hay municipio activo');
+
+    // ── 2. Snapshot de evaluación (fuente longitudinal principal) ────────────
+
+    var _snapEval = null;
+    _safe(function() {
+        if (typeof COMPAS_crearSnapshotEvaluacion === 'function') {
+            _snapEval = COMPAS_crearSnapshotEvaluacion();
+            _fuente('COMPAS_crearSnapshotEvaluacion');
+        } else {
+            _brecha('snapshot_evaluacion_no_disponible', 'COMPAS_crearSnapshotEvaluacion no existe en runtime');
+        }
+    });
+
+    var _indicLong  = (_snapEval && _snapEval.indicadoresLongitudinales)  || null;
+    var _lectEval   = (_snapEval && _snapEval.lecturaEvaluativaLongitudinal) || null;
+    var _resCiclo   = (_snapEval && _snapEval.resumenCicloEvaluacion)     || null;
+    var _diagVivo   = (_snapEval && _snapEval.diagnosticoVivo)            || null;
+
+    // ── 3. Snapshot de plan ──────────────────────────────────────────────────
+
+    var _snapPlan = null;
+    _safe(function() {
+        if (typeof COMPAS_crearSnapshotPlan === 'function') {
+            _snapPlan = COMPAS_crearSnapshotPlan();
+            _fuente('COMPAS_crearSnapshotPlan');
+        } else {
+            _brecha('snapshot_plan_no_disponible', 'COMPAS_crearSnapshotPlan no existe en runtime');
+        }
+    });
+
+    // ── 4. Agenda / actuaciones ──────────────────────────────────────────────
+
+    var _agendaRaw = null;
+    _safe(function() {
+        if (typeof COMPAS_obtenerAgendaEvaluacion === 'function') {
+            _agendaRaw = COMPAS_obtenerAgendaEvaluacion();
+            _fuente('COMPAS_obtenerAgendaEvaluacion');
+        }
+    });
+
+    var _actuacionesBrutas = _arr(_agendaRaw && _agendaRaw.actuaciones);
+    var _actuaciones       = _longiDeduplicarActuaciones(_actuacionesBrutas);
+    var _nBrutos           = _actuacionesBrutas.length;
+    var _nDuplicados       = _nBrutos - _actuaciones.length;
+    var _deduplicacionAplicada = _nDuplicados > 0;
+    if (_deduplicacionAplicada) {
+        console.warn('[COMPÁS LONGI dedup] Duplicados detectados y eliminados:', _nDuplicados, '| bruto:', _nBrutos, '→ neto:', _actuaciones.length);
+    }
+    var _fuenteAgenda   = (_agendaRaw && _agendaRaw.fuente) || 'ninguna';
+    var _totalActuaciones = _actuaciones.length;
+
+    // Ciclos detectados desde actuaciones
+    var _ciclosSet = {};
+    _actuaciones.forEach(function(a) {
+        var _anio = (a && a.anio) ? String(a.anio).trim() : '';
+        if (!_anio && a && a.fechaReal) {
+            var _fr = new Date(a.fechaReal);
+            if (!isNaN(_fr.getTime())) _anio = String(_fr.getFullYear());
+        }
+        if (_anio) _ciclosSet[_anio] = true;
+    });
+    var _ciclosDetectados = Object.keys(_ciclosSet).sort();
+    var _cicloActivo      = (_snapEval && _snapEval.cicloEvaluado) || (_ciclosDetectados.length === 1 ? _ciclosDetectados[0] : String(new Date().getFullYear()));
+    var _tipoCiclo        = _ciclosDetectados.length === 0 ? 'sin_base'
+                          : _ciclosDetectados.length === 1 ? 'anual'
+                          : 'multi-anual';
+
+    if (_totalActuaciones === 0) _brecha('agenda_vacia', 'No hay actuaciones en runtime — agenda no cargada o vacía');
+    if (_tipoCiclo === 'sin_base') _brecha('ciclos_sin_base', 'Ninguna actuación tiene año asignado — ciclos no inferibles');
+
+    // Distribución por estado desde lecturaEvaluativaLongitudinal
+    var _porEstado   = (_resCiclo) ? {
+        pendientes:              _n(_resCiclo.pendientes),
+        enEjecucion:             _n(_resCiclo.enEjecucion),
+        finalizadasDentroCiclo:  _n(_resCiclo.finalizadasDentroCiclo),
+        finalizadasFueraCiclo:   _n(_resCiclo.finalizadasFueraCiclo),
+        finalizadasSinFecha:     _n(_resCiclo.finalizadasSinFecha),
+        suspendidas:             _n(_resCiclo.suspendidas)
+    } : null;
+
+    var _nArrastres = _resCiclo ? _n(_resCiclo.pendientes) + _n(_resCiclo.enEjecucion) + _n(_resCiclo.finalizadasFueraCiclo) + _n(_resCiclo.finalizadasSinFecha) : 0;
+
+    // ── 5. Prioridades ───────────────────────────────────────────────────────
+
+    _fuente('decisionPriorizacionActual + datosFusionPriorizacion + seleccionEPVSA');
+    var _decision   = _safe(function() { return window.decisionPriorizacionActual || null; });
+    var _fusion     = _safe(function() { return window.datosFusionPriorizacion || null; });
+    var _seleccion  = _safe(function() {
+        return (window.COMPAS && window.COMPAS.state && window.COMPAS.state.seleccionEPVSA) || null;
+    });
+    var _hayPrioridades = _hay(_decision) || _hay(_fusion) || (_arr(_seleccion).length > 0);
+    if (!_hayPrioridades) _brecha('prioridades_ausentes', 'Sin decisión de priorización ni selección EPVSA en runtime');
+
+    // ── 6. Indicadores longitudinales ────────────────────────────────────────
+
+    _fuente('indicadoresLongitudinales (desde snapshotEvaluacion)');
+    var _hayIndicadores = _hay(_indicLong) && _hay(_lectEval);
+    if (!_hayIndicadores) _brecha('indicadores_longitudinales_ausentes', 'indicadoresLongitudinales no disponibles — snapshot evaluación sin datos de agenda');
+
+    // ── 7. Actores ───────────────────────────────────────────────────────────
+
+    _fuente('diagnosticoVivo.entidades + datosMunicipioActual');
+    var _entidades        = _n(_diagVivo && _diagVivo.entidades && _diagVivo.entidades.total);
+    var _dmActual         = _safe(function() { return (typeof datosMunicipioActual !== 'undefined') ? datosMunicipioActual : null; });
+    var _hayAyuntamiento  = !!(_dmActual && _dmActual.municipio);
+    _brecha('actores_sin_tipologia_sectorial', 'Sectores de actores no tipificados — pendiente LONGI-fase-1: campo sector en fichas de actuación');
+
+    // ── 8. Sectores ──────────────────────────────────────────────────────────
+
+    // LONGI-fase-1: no implementado. Documentado como brecha estructural.
+    _brecha('sectores_no_implementados', 'Campo sector no existe en fichas de actuación — pendiente LONGI-fase-1 (urbanismo, educación, movilidad, alimentación, medioambiente, empleo, vivienda, cultura, empresa, comunitario)');
+
+    // ── 9. Activos ───────────────────────────────────────────────────────────
+
+    _fuente('window.activosComunitarios (Localiza Salud)');
+    var _activosStore = _safe(function() {
+        return (window.COMPAS && window.COMPAS.state && Array.isArray(window.COMPAS.state.activosComunitarios))
+            ? window.COMPAS.state.activosComunitarios
+            : (Array.isArray(window.activosComunitarios) ? window.activosComunitarios : []);
+    }, []);
+    var _nActivos     = _activosStore.length;
+    var _activosLS    = _n(_diagVivo && _diagVivo.activos && _diagVivo.activos.total);
+    var _nActivosTotal = Math.max(_nActivos, _activosLS);
+    if (_nActivosTotal === 0) _brecha('activos_no_registrados', 'Sin activos comunitarios en runtime — Localiza Salud no cargado o municipio sin activos registrados');
+    _brecha('activos_sin_tipologia', 'Activos no tipificados por categoría (ambiental, comunitario, sanitario, educativo) — pendiente LONGI-fase-1');
+
+    // ── 10. Aprendizajes ─────────────────────────────────────────────────────
+
+    _fuente('diagnosticoVivo.aprendizajes');
+    var _nAprendizajes = _n(_diagVivo && _diagVivo.aprendizajes && _diagVivo.aprendizajes.total);
+    _brecha('aprendizajes_sin_tipologia_cualitativa', 'Aprendizajes contabilizados pero no tipificados cualitativamente — campo libre, no categorizado');
+
+    // ── 11. Arrastres ────────────────────────────────────────────────────────
+
+    var _tasaArrastre = (_indicLong && _indicLong.ejecucion) ? _n(_indicLong.ejecucion.tasaArrastre) : 0;
+
+    // ── 12. Discontinuidades ─────────────────────────────────────────────────
+
+    // Requiere al menos dos ciclos con datos comparables. No inferible en ciclo único.
+    _brecha('discontinuidades_requieren_multicilo', 'Detección de discontinuidades requiere datos de ≥2 ciclos — no disponible en ciclo único');
+
+    // ── 13. Persistencias ────────────────────────────────────────────────────
+
+    _fuente('window.analisisActual + datosMunicipioActual + planLocalSalud');
+    var _analisisActual     = _safe(function() { return window.analisisActual || null; });
+    var _contratoAnalisis   = (_analisisActual && _analisisActual._fuente_rehidratacion) ? _analisisActual._fuente_rehidratacion : null;
+    var _tieneAnalisisIA    = _hay(_analisisActual) && (_arr(_analisisActual.conclusiones).length > 0 || _arr(_analisisActual.recomendaciones).length > 0);
+    var _tienePlan          = !!(typeof planLocalSalud !== 'undefined' && planLocalSalud && planLocalSalud.planAccion && planLocalSalud.planAccion.completado);
+    var _tieneAgenda        = _totalActuaciones > 0;
+    var _tieneSnaps         = !!(_snapPlan || _snapEval);
+    var _tieneAnalisisIAFB  = !!(_dmActual && _dmActual.analisisIA && _dmActual.analisisIA.contrato === 'payload_analisis_ia_persistible_v1');
+
+    // ── CONSTRUCCIÓN DEL CONTRATO ────────────────────────────────────────────
+
+    var contrato = {
+
+        version:         'contrato_longitudinal_territorial_v1',
+        fechaGeneracion: _fechaGeneracion,
+        municipio:       _municipio,
+
+        ciclos: {
+            detectados: _ciclosDetectados,
+            cicloActivo: _cicloActivo,
+            tipoCiclo:   _tipoCiclo,
+            brecha:      _ciclosDetectados.length === 0
+        },
+
+        actuaciones: {
+            total:                _totalActuaciones,
+            totalBruto:           _nBrutos,
+            duplicadosDetectados: _nDuplicados,
+            deduplicacionAplicada: _deduplicacionAplicada,
+            criterioDeduplicacion: 'id > uid > codigo > codigoActuacion > titulo+fecha+linea+estado',
+            fuente:               _fuenteAgenda,
+            porEstado:            _porEstado,
+            arrastres:            _nArrastres,
+            tasaArrastre:         _tasaArrastre,
+            disponible:           _totalActuaciones > 0
+        },
+
+        prioridades: {
+            decision:        _decision,
+            fusion:          _fusion,
+            seleccionEPVSA:  _arr(_seleccion),
+            disponible:      _hayPrioridades,
+            brecha:          _hayPrioridades ? null : 'sin_decision_ni_seleccion_epvsa'
+        },
+
+        indicadores: {
+            longitudinales: _indicLong,
+            lectura:        _lectEval,
+            disponible:     _hayIndicadores
+        },
+
+        actores: {
+            entidadesColaboradoras: _entidades,
+            ayuntamiento:           _hayAyuntamiento,
+            grupoMotor:             null,   // no tipificado en runtime actual
+            sistemaSanitario:       null,   // no tipificado en runtime actual
+            disponible:             _entidades > 0,
+            brecha:                 'actores_sin_tipologia_sectorial'
+        },
+
+        sectores: {
+            disponible: false,
+            brecha:     'campo_sector_no_implementado_en_fichas_actuacion',
+            nota:       'Pendiente LONGI-fase-1: select de sectores en fichas de actuación'
+        },
+
+        activos: {
+            n:          _nActivosTotal,
+            fuente:     _nActivos > 0 ? 'window.activosComunitarios' : (_activosLS > 0 ? 'diagnosticoVivo.activos' : 'ninguna'),
+            disponible: _nActivosTotal > 0,
+            brecha:     'activos_sin_tipologia_categorica'
+        },
+
+        aprendizajes: {
+            n:          _nAprendizajes,
+            disponible: _nAprendizajes > 0,
+            brecha:     'sin_tipologia_cualitativa'
+        },
+
+        arrastres: {
+            n:                    _nArrastres,
+            nBruto:               _nArrastres,   // arrastres proceden de resumenCiclo, ya consolidados
+            duplicadosDetectados: 0,             // fuente única — no expuesta a duplicación paralela
+            deduplicacionAplicada: _deduplicacionAplicada,
+            tasa:                 _tasaArrastre,
+            disponible:           _totalActuaciones > 0
+        },
+
+        discontinuidades: {
+            detectadas: [],
+            disponible: false,
+            brecha:     'requiere_ciclos_multiples'
+        },
+
+        persistencias: {
+            analisisIA:             _tieneAnalisisIA,
+            analisisIAFirebase:     _tieneAnalisisIAFB,
+            analisisIAContrato:     _contratoAnalisis,
+            planAccion:             _tienePlan,
+            agenda:                 _tieneAgenda,
+            evaluacion:             _hay(_snapEval),
+            snapshots:              _tieneSnaps
+        },
+
+        evaluacion: {
+            resumenCiclo:   _resCiclo,
+            lectura:        _lectEval,
+            diagnosticoVivo: _diagVivo,
+            valido:         !!(_snapEval && _snapEval.validacionSnapshotEvaluacion && _snapEval.validacionSnapshotEvaluacion.valido !== false)
+        },
+
+        snapshots: {
+            planDisponible:       !!_snapPlan,
+            evaluacionDisponible: !!_snapEval,
+            disponible:           !!(_snapPlan || _snapEval)
+        },
+
+        trazabilidad: {
+            version:            'contrato_longitudinal_territorial_v1',
+            fechaGeneracion:    _fechaGeneracion,
+            fuentesConsultadas: _fuentesConsultadas,
+            brechasDocumentadas: _brechas,
+            nBrechas:           _brechas.length,
+            notas:              ['deduplicacion_actuaciones_longi_v1_aplicada']
+        }
+
+    };
+
+    console.log(
+        '[COMPÁS LONGI v1] Contrato longitudinal territorial construido',
+        '| municipio:', _municipio,
+        '| cicloActivo:', _cicloActivo,
+        '| tipoCiclo:', _tipoCiclo,
+        '| actuaciones (neto):', _totalActuaciones,
+        '| actuaciones (bruto):', _nBrutos,
+        '| duplicados eliminados:', _nDuplicados,
+        '| arrastres:', _nArrastres,
+        '| activos:', _nActivosTotal,
+        '| aprendizajes:', _nAprendizajes,
+        '| persistencias:', JSON.stringify(contrato.persistencias),
+        '| brechas:', _brechas.length
+    );
+
+    return contrato;
+}
+
+// Registro en namespace COMPAS
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.construirContratoLongitudinalTerritorial = COMPAS_construirContratoLongitudinalTerritorial;
+
+// Alias de auditoría — accesible desde consola
+window.COMPAS.auditarLongi = function() {
+    return COMPAS_construirContratoLongitudinalTerritorial();
+};
+
+console.log('[COMPÁS LONGI v1] COMPAS_construirContratoLongitudinalTerritorial registrado en window.COMPAS.construirContratoLongitudinalTerritorial');
+
+// ── Fin LONGI Fase 1 · Contrato Longitudinal Territorial ────────────────────
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.1 · LECTURA LONGITUDINAL ESTRUCTURAL
+// ── Versión: lectura_longitudinal_estructural_v1_1
+// ── Propósito: producir una lectura estructural, NO inferencial, NO narrativa,
+//    NO IA, sobre el contrato longitudinal territorial v1.
+//    Clasifica continuidad, densidad operativa, memoria institucional,
+//    brechas longitudinales y preparación multicilo.
+//    Entrada: contrato (opcional) — si no se pasa, lo construye internamente.
+//    Salida: objeto estructurado y versionado. Sin efectos secundarios.
+//    Sin persistencia. Sin tocar UI.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirLecturaLongitudinalEstructural(contrato) {
+
+    // ── Utilidades internas ──────────────────────────────────────────────────
+
+    var _fecha = new Date().toISOString();
+    var _reglas  = [];   // registro de reglas aplicadas (trazabilidad)
+    var _notas   = [];   // notas técnicas sobre casos especiales
+    var _fuentes = [];   // fuentes de datos consultadas
+
+    function _regla(id, descripcion) { _reglas.push({ id: id, descripcion: descripcion }); }
+    function _nota(texto)            { _notas.push(texto); }
+    function _fuente(id)             { _fuentes.push(id); }
+    function _n(v)  { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+    function _hay(v){ return v !== null && v !== undefined && v !== ''; }
+
+    // ── Obtener contrato ─────────────────────────────────────────────────────
+
+    var _contrato = contrato || null;
+    var _contratoDisponible = false;
+    var _contratoVersion    = null;
+
+    if (!_contrato) {
+        try {
+            if (typeof COMPAS_construirContratoLongitudinalTerritorial === 'function') {
+                _contrato = COMPAS_construirContratoLongitudinalTerritorial();
+                _fuente('COMPAS_construirContratoLongitudinalTerritorial (interno)');
+            }
+        } catch(e) {
+            console.warn('[COMPÁS LONGI v1.1] No se pudo obtener contrato:', e);
+        }
+    } else {
+        _fuente('contrato_inyectado_externamente');
+    }
+
+    if (_contrato && _contrato.version) {
+        _contratoDisponible = true;
+        _contratoVersion    = _contrato.version;
+    } else {
+        _nota('Contrato no disponible — lectura producida con datos mínimos');
+    }
+
+    // Accesos seguros al contrato
+    var _municipio      = _contrato && _contrato.municipio       || null;
+    var _ciclos         = _contrato && _contrato.ciclos          || {};
+    var _actuaciones    = _contrato && _contrato.actuaciones     || {};
+    var _arrastres      = _contrato && _contrato.arrastres       || {};
+    var _activos        = _contrato && _contrato.activos         || {};
+    var _aprendizajes   = _contrato && _contrato.aprendizajes    || {};
+    var _persistencias  = _contrato && _contrato.persistencias   || {};
+    var _indicadores    = _contrato && _contrato.indicadores     || {};
+    var _brechasContrato = (_contrato && _contrato.trazabilidad && Array.isArray(_contrato.trazabilidad.brechasDocumentadas))
+        ? _contrato.trazabilidad.brechasDocumentadas : [];
+
+    var _nCiclos          = Array.isArray(_ciclos.detectados) ? _ciclos.detectados.length : 0;
+    var _nActuaciones     = _n(_actuaciones.total);
+    var _nArrastres       = _n(_arrastres.n);
+    var _tasaArrastre     = _n(_arrastres.tasa);
+    var _agendaDisponible = !!_persistencias.agenda;
+
+    // ── BLOQUE 1 · Continuidad longitudinal ─────────────────────────────────
+
+    var _nivelContinuidad;
+    var _descContinuidad;
+
+    if (_nActuaciones === 0) {
+        _nivelContinuidad = 'sin_base';
+        _descContinuidad  = 'Sin actuaciones registradas en runtime — continuidad no evaluable';
+        _regla('cont_01', 'nActuaciones===0 → sin_base');
+
+    } else if (_nCiclos < 2 && _nArrastres === _nActuaciones) {
+        // Atarfe: 50 actuaciones, 50 arrastres, 1 ciclo → posible arrastre técnico inicial
+        _nivelContinuidad = 'incipiente';
+        _descContinuidad  = 'Todas las actuaciones registradas son arrastres en un único ciclo — posible arrastre técnico inicial; continuidad histórica no demostrada';
+        _regla('cont_02', 'nCiclos<2 && arrastres===total → incipiente (arrastre técnico inicial, no continuidad histórica)');
+        _nota('arrastresTotal===actuacionesTotal con un solo ciclo: puede reflejar carga inicial en migración o pendientes de primer ciclo, no continuidad consolidada');
+
+    } else if (_nCiclos < 2) {
+        _nivelContinuidad = 'operativa';
+        _descContinuidad  = 'Agenda activa con actuaciones en un único ciclo detectado — continuidad operativa de primer ciclo';
+        _regla('cont_03', 'nCiclos===1 && arrastres<total → operativa');
+
+    } else {
+        // nCiclos >= 2: mínimo para considerar consolidación, pero solo si hay evidencia real
+        var _ejecucionLectura = _indicadores.lectura && _indicadores.lectura.clasificaciones && _indicadores.lectura.clasificaciones.ejecucion;
+        var _tasaEjec = _ejecucionLectura ? _n(_ejecucionLectura.tasaFinalizacionDentroCiclo) : 0;
+        if (_tasaEjec >= 40) {
+            _nivelContinuidad = 'consolidada';
+            _descContinuidad  = 'Múltiples ciclos detectados con tasa de finalización ≥40% — continuidad longitudinal consolidada';
+            _regla('cont_04', 'nCiclos>=2 && tasaFinalizacionDentroCiclo>=40 → consolidada');
+        } else {
+            _nivelContinuidad = 'operativa';
+            _descContinuidad  = 'Múltiples ciclos detectados pero tasa de finalización <40% — continuidad operativa con alta carga de arrastres';
+            _regla('cont_05', 'nCiclos>=2 && tasaFinalizacionDentroCiclo<40 → operativa');
+        }
+    }
+
+    // Regla de seguridad: "consolidada" prohibida con un solo ciclo
+    if (_nivelContinuidad === 'consolidada' && _nCiclos < 2) {
+        _nivelContinuidad = 'operativa';
+        _descContinuidad  += ' [corregido: consolidada requiere ≥2 ciclos]';
+        _regla('cont_GUARD', 'consolidada con nCiclos<2 → forzado a operativa (invariante de seguridad)');
+    }
+
+    // ── BLOQUE 2 · Densidad operativa ───────────────────────────────────────
+
+    var _nivelDensidad;
+    var _criterioDensidad;
+
+    if (_nActuaciones === 0) {
+        _nivelDensidad    = 'sin_datos';
+        _criterioDensidad = 'Sin actuaciones';
+        _regla('dens_01', 'nActuaciones===0 → sin_datos');
+    } else if (_nActuaciones < 10) {
+        _nivelDensidad    = 'baja';
+        _criterioDensidad = 'Menos de 10 actuaciones registradas';
+        _regla('dens_02', 'nActuaciones<10 → baja');
+    } else if (_nActuaciones < 30) {
+        _nivelDensidad    = 'media';
+        _criterioDensidad = '10–29 actuaciones registradas';
+        _regla('dens_03', '10<=nActuaciones<30 → media');
+    } else {
+        _nivelDensidad    = 'alta';
+        _criterioDensidad = '≥30 actuaciones registradas';
+        _regla('dens_04', 'nActuaciones>=30 → alta');
+    }
+
+    // ── BLOQUE 3 · Memoria institucional ────────────────────────────────────
+
+    var _fuentesMemoria = [];
+    if (_persistencias.analisisIA)         _fuentesMemoria.push('analisis_ia');
+    if (_persistencias.analisisIAFirebase) _fuentesMemoria.push('analisis_ia_firebase');
+    if (_persistencias.planAccion)         _fuentesMemoria.push('plan_accion');
+    if (_persistencias.agenda)             _fuentesMemoria.push('agenda');
+    if (_persistencias.evaluacion)         _fuentesMemoria.push('evaluacion');
+    if (_persistencias.snapshots)          _fuentesMemoria.push('snapshots');
+
+    var _nFuentesMemoria = _fuentesMemoria.length;
+    var _nivelMemoria;
+    var _criterioMemoria;
+
+    if (_nFuentesMemoria === 0) {
+        _nivelMemoria    = 'sin_memoria';
+        _criterioMemoria = 'Ninguna fuente de persistencia activa';
+        _regla('mem_01', 'nFuentes===0 → sin_memoria');
+    } else if (_nFuentesMemoria <= 2) {
+        _nivelMemoria    = 'fragmentaria';
+        _criterioMemoria = '1–2 fuentes de persistencia activas';
+        _regla('mem_02', 'nFuentes<=2 → fragmentaria');
+    } else if (_nFuentesMemoria <= 4) {
+        _nivelMemoria    = 'operativa';
+        _criterioMemoria = '3–4 fuentes de persistencia activas';
+        _regla('mem_03', '3<=nFuentes<=4 → operativa');
+    } else {
+        _nivelMemoria    = 'robusta';
+        _criterioMemoria = '≥5 fuentes de persistencia activas';
+        _regla('mem_04', 'nFuentes>=5 → robusta');
+    }
+
+    // ── BLOQUE 4 · Clasificación de brechas ─────────────────────────────────
+
+    // IDs considerados críticos para el ciclo longitudinal actual
+    var _idsCriticos    = ['municipio_nulo', 'agenda_vacia', 'snapshot_evaluacion_no_disponible', 'snapshot_plan_no_disponible', 'ciclos_sin_base'];
+    // IDs estructurales (deuda técnica conocida, no bloquean el ciclo)
+    var _idsEstructurales = ['actores_sin_tipologia_sectorial', 'sectores_no_implementados', 'activos_sin_tipologia_categorica', 'activos_sin_tipologia', 'aprendizajes_sin_tipologia_cualitativa'];
+    // IDs de fase pendiente (LONGI-fase-1 o futura)
+    var _idsFasePendiente = ['discontinuidades_requieren_multicilo', 'activos_sin_tipologia', 'activos_sin_tipologia_categorica', 'sectores_no_implementados', 'actores_sin_tipologia_sectorial', 'aprendizajes_sin_tipologia_cualitativa'];
+
+    var _brechasCriticas      = [];
+    var _brechasEstructurales = [];
+    var _brechasFasePendiente = [];
+    var _brechasResto         = [];
+
+    _brechasContrato.forEach(function(b) {
+        var id = b && b.id ? b.id : '';
+        if (_idsCriticos.indexOf(id) !== -1) {
+            _brechasCriticas.push(b);
+        } else if (_idsFasePendiente.indexOf(id) !== -1) {
+            _brechasFasePendiente.push(b);
+        } else if (_idsEstructurales.indexOf(id) !== -1) {
+            _brechasEstructurales.push(b);
+        } else {
+            _brechasResto.push(b);
+        }
+    });
+
+    _regla('brechas_01', 'Brechas clasificadas en criticas / estructurales / fasePendiente / resto — ninguna silenciada');
+
+    // ── BLOQUE 5 · Preparación multicilo ────────────────────────────────────
+
+    var _multicilcoDisponible = _nCiclos >= 2;
+    var _criterioPrepMulticiclo;
+
+    if (_nCiclos === 0) {
+        _criterioPrepMulticiclo = 'Sin ciclos detectados en actuaciones';
+        _regla('multi_01', 'nCiclos===0 → disponible:false');
+    } else if (_nCiclos === 1) {
+        _criterioPrepMulticiclo = 'Un único ciclo detectado — se requieren ≥2 para lectura comparativa';
+        _regla('multi_02', 'nCiclos===1 → disponible:false');
+    } else {
+        _criterioPrepMulticiclo = _nCiclos + ' ciclos detectados — comparativa longitudinal habilitada';
+        _regla('multi_03', 'nCiclos>=2 → disponible:true');
+    }
+
+    // ── CONSTRUCCIÓN DE LA SALIDA ────────────────────────────────────────────
+
+    var lectura = {
+
+        version:         'lectura_longitudinal_estructural_v1_1',
+        fechaGeneracion: _fecha,
+        municipio:       _municipio,
+
+        baseContrato: {
+            version:    _contratoVersion,
+            disponible: _contratoDisponible
+        },
+
+        continuidad: {
+            nivel:              _nivelContinuidad,
+            actuacionesTotal:   _nActuaciones,
+            arrastresTotal:     _nArrastres,
+            tasaArrastre:       _tasaArrastre > 0 ? _tasaArrastre : null,
+            descripcionTecnica: _descContinuidad
+        },
+
+        densidadOperativa: {
+            nivel:             _nivelDensidad,
+            actuacionesTotal:  _nActuaciones,
+            ciclosDetectados:  _nCiclos,
+            criterio:          _criterioDensidad
+        },
+
+        memoriaInstitucional: {
+            nivel:          _nivelMemoria,
+            analisisIA:     !!_persistencias.analisisIA,
+            agenda:         !!_persistencias.agenda,
+            evaluacion:     !!_persistencias.evaluacion,
+            snapshots:      !!_persistencias.snapshots,
+            fuentesActivas: _fuentesMemoria,
+            criterio:       _criterioMemoria
+        },
+
+        brechasLongitudinales: {
+            total:          _brechasContrato.length,
+            items:          _brechasContrato,
+            criticas:       _brechasCriticas,
+            estructurales:  _brechasEstructurales,
+            fasePendiente:  _brechasFasePendiente
+        },
+
+        preparacionMulticiclo: {
+            disponible:         _multicilcoDisponible,
+            ciclosDetectados:   _nCiclos,
+            requiereMasCiclos:  !_multicilcoDisponible,
+            criterio:           _criterioPrepMulticiclo
+        },
+
+        lecturaNoInferencial: true,
+
+        trazabilidad: {
+            fuentesUsadas:   _fuentes,
+            reglasAplicadas: _reglas,
+            notas:           _notas
+        }
+    };
+
+    console.log(
+        '[COMPÁS LONGI v1.1] Lectura longitudinal estructural construida',
+        '| municipio:', _municipio,
+        '| continuidad:', _nivelContinuidad,
+        '| densidad:', _nivelDensidad,
+        '| memoria:', _nivelMemoria,
+        '| multicilo:', _multicilcoDisponible,
+        '| brechas:', _brechasContrato.length,
+        '| criticas:', _brechasCriticas.length,
+        '| reglas aplicadas:', _reglas.length
+    );
+
+    return lectura;
+}
+
+// Registro en namespace COMPAS
+window.COMPAS.construirLecturaLongitudinalEstructural = COMPAS_construirLecturaLongitudinalEstructural;
+
+window.COMPAS.auditarLecturaLongi = function() {
+    var lectura = COMPAS_construirLecturaLongitudinalEstructural();
+    console.log('[COMPÁS LONGI v1.1] Lectura longitudinal estructural construida', lectura);
+    return lectura;
+};
+
+console.log('[COMPÁS LONGI v1.1] COMPAS_construirLecturaLongitudinalEstructural registrado en window.COMPAS');
+
+// ── Fin LONGI v1.1 · Lectura Longitudinal Estructural ───────────────────────
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.2 · ESTADO DE CICLO LONGITUDINAL
+// ── Versión: estado_ciclo_longitudinal_v1_2
+// ── Clasificación estructural de actuaciones por decisión de siguiente ciclo.
+// ── No inferencial. No narrativa. No IA. No persistencia automática.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirEstadoCicloLongitudinal(contrato) {
+
+    // ── Utilidades internas ──────────────────────────────────────────────────
+
+    var _fechaGeneracion = new Date().toISOString();
+    var _reglasAplicadas = [];
+    var _advertencias    = [];
+    var _notas           = [];
+
+    function _regla(id) { _reglasAplicadas.push(id); }
+    function _adv(msg)  { _advertencias.push(msg); }
+    function _nota(msg) { _notas.push(msg); }
+    function _safe(fn, fallback) {
+        try { return fn(); } catch(e) {
+            console.warn('[COMPÁS LONGI v1.2]', e);
+            return (fallback !== undefined) ? fallback : null;
+        }
+    }
+    function _arr(v) { return Array.isArray(v) ? v : []; }
+    function _n(v)   { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+    function _norm(v){ return (v == null ? '' : String(v)).toLowerCase().replace(/\s+/g, ' ').trim(); }
+    function _hay(v) { return v !== null && v !== undefined && v !== ''; }
+
+    // ── 1. Obtener o validar contrato LONGI v1 ───────────────────────────────
+
+    var _contrato = null;
+    var _contratoDisponible = false;
+    var _contratoVersion    = null;
+
+    _safe(function() {
+        if (contrato && contrato.version) {
+            _contrato = contrato;
+            _nota('contrato_recibido_como_parametro');
+        } else if (typeof window.COMPAS !== 'undefined' &&
+                   typeof window.COMPAS.construirContratoLongitudinalTerritorial === 'function') {
+            _contrato = window.COMPAS.construirContratoLongitudinalTerritorial();
+            _nota('contrato_obtenido_desde_window.COMPAS.construirContratoLongitudinalTerritorial');
+        } else {
+            _adv('contrato_longi_v1_no_disponible_en_runtime');
+        }
+    });
+
+    if (_contrato && _contrato.version) {
+        _contratoDisponible = true;
+        _contratoVersion    = _contrato.version;
+    }
+
+    // ── 2. Obtener lista de actuaciones ──────────────────────────────────────
+
+    var _listaActuaciones  = [];
+    var _fuenteTipo        = 'no_disponible';
+    var _fuenteTotal       = 0;
+    var _fuenteDisponible  = false;
+
+    // Primero intentar desde contrato (si expone lista cruda)
+    // El contrato v1 no expone lista cruda — caer a planLocalSalud defensivamente
+    var _desdeContrato = false;
+
+    _safe(function() {
+        if (_contrato && Array.isArray(_contrato._listaActuacionesRaw)) {
+            _listaActuaciones = _contrato._listaActuacionesRaw;
+            _fuenteTipo       = 'contrato';
+            _desdeContrato    = true;
+            _nota('lista_desde_contrato._listaActuacionesRaw');
+        }
+    });
+
+    if (!_desdeContrato) {
+        _safe(function() {
+            var _pls = (typeof planLocalSalud !== 'undefined') ? planLocalSalud : null;
+            if (_pls && _pls.agenda && Array.isArray(_pls.agenda.actuaciones)) {
+                _listaActuaciones = _pls.agenda.actuaciones;
+                _fuenteTipo       = 'planLocalSalud.agenda.actuaciones';
+                _nota('lista_desde_planLocalSalud.agenda.actuaciones');
+            } else {
+                _adv('planLocalSalud.agenda.actuaciones_no_disponible');
+            }
+        });
+    }
+
+    _fuenteTotal      = _listaActuaciones.length;
+    _fuenteDisponible = _fuenteTotal > 0;
+
+    if (!_fuenteDisponible) {
+        _adv('lista_actuaciones_vacia_o_no_disponible — clasificacion_sera_vacia');
+    }
+
+    // ── 3. Resumen base ──────────────────────────────────────────────────────
+
+    var _porEstado                  = {};
+    var _porDecisionSiguienteCiclo  = {};
+    var _conFechaReal               = 0;
+    var _conResultadoObservado      = 0;
+    var _conAprendizajes            = 0;
+    var _conIndicador               = 0;
+
+    _listaActuaciones.forEach(function(a) {
+        if (!a) return;
+
+        // Estado
+        var _est = _norm(a.estado || '');
+        if (_est) { _porEstado[_est] = (_porEstado[_est] || 0) + 1; }
+
+        // Decisión siguiente ciclo
+        var _dec = _norm(a.decisionSiguienteCiclo || a.decision_siguiente_ciclo || '');
+        if (!_dec) _dec = 'no_decidido';
+        _porDecisionSiguienteCiclo[_dec] = (_porDecisionSiguienteCiclo[_dec] || 0) + 1;
+
+        // Campos de ejecución documentada
+        if (_hay(a.fechaReal))             _conFechaReal++;
+        if (_hay(a.resultadoObservado))    _conResultadoObservado++;
+        if (_hay(a.aprendizajes) || (Array.isArray(a.aprendizajes) && a.aprendizajes.length > 0)) _conAprendizajes++;
+        if (_hay(a.indicador) || _hay(a.indicadorSeguimiento)) _conIndicador++;
+    });
+
+    var _resumen = {
+        total:                     _fuenteTotal,
+        porEstado:                 _porEstado,
+        porDecisionSiguienteCiclo: _porDecisionSiguienteCiclo,
+        conFechaReal:              _conFechaReal,
+        conResultadoObservado:     _conResultadoObservado,
+        conAprendizajes:           _conAprendizajes,
+        conIndicador:              _conIndicador
+    };
+
+    // ── 4. Clasificación por decisión de siguiente ciclo ─────────────────────
+
+    // Identificador mínimo por actuación clasificada
+    function _id(a) {
+        return {
+            id:                    a.id                    || a.uid            || null,
+            codigoEPVSA:           a.codigoEPVSA           || a.codigo         || null,
+            nombre:                a.titulo                || a.nombre         || null,
+            estado:                a.estado                || null,
+            decisionSiguienteCiclo: a.decisionSiguienteCiclo || a.decision_siguiente_ciclo || null,
+            anio:                  a.anio                  || null
+        };
+    }
+
+    // Estado que indica ausencia de ejecución
+    var _ESTADOS_SIN_EJECUCION = ['pendiente', 'sin_iniciar', '', 'no_iniciada', 'no iniciada', 'sin iniciar'];
+    function _sinEjecucionBase(a) {
+        var _est = _norm(a.estado || '');
+        return _ESTADOS_SIN_EJECUCION.indexOf(_est) !== -1;
+    }
+    function _sinEjecucionDocumentada(a) {
+        return _sinEjecucionBase(a)
+            && !_hay(a.fechaReal)
+            && !_hay(a.resultadoObservado)
+            && !(Array.isArray(a.aprendizajes) ? a.aprendizajes.length > 0 : _hay(a.aprendizajes));
+    }
+
+    var _cls = {
+        continuidad:             [],
+        cierre:                  [],
+        abandono:                [],
+        arrastre:                [],
+        reformulacion:           [],
+        noDecidido:              [],
+        sinEjecucionDocumentada: []
+    };
+
+    _regla('decision_continuar → continuidad');
+    _regla('decision_cerrar|finalizar → cierre');
+    _regla('decision_abandonar → abandono');
+    _regla('decision_reformular → reformulacion');
+    _regla('decision_no_decidido|vacio → noDecidido');
+    _regla('sin_ejecucion_documentada: estado_pendiente + sin_fechaReal + sin_resultadoObservado + sin_aprendizajes');
+    _regla('ciclo_unico: arrastre_historico_no_inferido_como_continuidad_consolidada');
+
+    _listaActuaciones.forEach(function(a) {
+        if (!a) return;
+        var _dec = _norm(a.decisionSiguienteCiclo || a.decision_siguiente_ciclo || '');
+        var _min = _id(a);
+
+        if (_dec === 'continuar') {
+            _cls.continuidad.push(_min);
+        } else if (_dec === 'cerrar' || _dec === 'finalizar') {
+            _cls.cierre.push(_min);
+        } else if (_dec === 'abandonar') {
+            _cls.abandono.push(_min);
+        } else if (_dec === 'reformular') {
+            _cls.reformulacion.push(_min);
+        } else {
+            // no_decidido explícito o vacío
+            _cls.noDecidido.push(_min);
+        }
+
+        // sinEjecucionDocumentada: clasificación adicional, no excluyente
+        if (_sinEjecucionDocumentada(a)) {
+            _cls.sinEjecucionDocumentada.push(_min);
+        }
+    });
+
+    // arrastre: actuaciones pendientes/en ejecución sin decisión explícita de cierre ni abandono
+    // No se infiere de ciclo único — requeriría datos de ciclo anterior. Documentado como brecha.
+    _nota('arrastre_historico_no_clasificable_en_ciclo_unico — requiere_datos_ciclo_anterior');
+
+    // ── 5. Advertencias metodológicas ────────────────────────────────────────
+
+    var _totalNoDecidido = _cls.noDecidido.length;
+    if (_fuenteTotal > 0 && _totalNoDecidido === _fuenteTotal) {
+        _adv('todas_las_actuaciones_tienen_decision_no_decidido — revision_metodologica_recomendada');
+    } else if (_fuenteTotal > 0 && _totalNoDecidido / _fuenteTotal > 0.7) {
+        _adv('mas_del_70pct_de_actuaciones_sin_decision_siguiente_ciclo (' + _totalNoDecidido + '/' + _fuenteTotal + ')');
+    }
+
+    if (_cls.sinEjecucionDocumentada.length > 0 && _cls.sinEjecucionDocumentada.length === _fuenteTotal) {
+        _adv('ninguna_actuacion_tiene_ejecucion_documentada — agenda_sin_evidencia_de_implementacion');
+    }
+
+    // Ciclo único — no inferir arrastre histórico como continuidad consolidada
+    var _nCiclos = _contrato && _contrato.ciclos ? _arr(_contrato.ciclos.detectados).length : 0;
+    if (_nCiclos < 2) {
+        _nota('ciclo_unico_detectado (' + _nCiclos + ') — arrastre_historico_no_inferible — clasificacion_continuidad_basada_solo_en_decision_declarada');
+    }
+
+    // ── 6. Construcción del objeto de estado ─────────────────────────────────
+
+    var estado = {
+
+        version:          'estado_ciclo_longitudinal_v1_2',
+        fechaGeneracion:  _fechaGeneracion,
+        municipio:        (_contrato && _contrato.municipio) || null,
+
+        baseContrato: {
+            version:    _contratoVersion,
+            disponible: _contratoDisponible
+        },
+
+        fuenteActuaciones: {
+            tipo:       _fuenteTipo,
+            total:      _fuenteTotal,
+            disponible: _fuenteDisponible
+        },
+
+        resumen: _resumen,
+
+        clasificacionCiclo: _cls,
+
+        lecturaNoInferencial: true,
+
+        criterios: {
+            continuidad:             'decisionSiguienteCiclo === "continuar"',
+            cierre:                  'decisionSiguienteCiclo === "cerrar" | "finalizar"',
+            abandono:                'decisionSiguienteCiclo === "abandonar"',
+            arrastre:                'no clasificable en ciclo único — requiere datos de ciclo anterior',
+            reformulacion:           'decisionSiguienteCiclo === "reformular"',
+            noDecidido:              'decisionSiguienteCiclo vacío o "no_decidido"',
+            sinEjecucionDocumentada: 'estado pendiente/sin_iniciar + sin fechaReal + sin resultadoObservado + sin aprendizajes'
+        },
+
+        trazabilidad: {
+            reglasAplicadas: _reglasAplicadas,
+            advertencias:    _advertencias,
+            notas:           _notas
+        }
+
+    };
+
+    console.log(
+        '[COMPÁS LONGI v1.2] Estado de ciclo longitudinal construido',
+        '| municipio:', estado.municipio,
+        '| fuenteTipo:', _fuenteTipo,
+        '| total:', _fuenteTotal,
+        '| continuidad:', _cls.continuidad.length,
+        '| cierre:', _cls.cierre.length,
+        '| abandono:', _cls.abandono.length,
+        '| reformulacion:', _cls.reformulacion.length,
+        '| noDecidido:', _cls.noDecidido.length,
+        '| sinEjecucionDoc:', _cls.sinEjecucionDocumentada.length,
+        '| advertencias:', _advertencias.length
+    );
+
+    return estado;
+}
+
+// Registro en namespace COMPAS
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.construirEstadoCicloLongitudinal = COMPAS_construirEstadoCicloLongitudinal;
+
+// Auditor de consola
+window.COMPAS.auditarEstadoCicloLongi = function() {
+    var estado = window.COMPAS.construirEstadoCicloLongitudinal();
+    console.log('[COMPÁS LONGI v1.2] Estado de ciclo longitudinal construido', estado);
+    return estado;
+};
+
+console.log('[COMPÁS LONGI v1.2] COMPAS_construirEstadoCicloLongitudinal registrado en window.COMPAS.construirEstadoCicloLongitudinal');
+
+// ── Fin LONGI v1.2 · Estado de Ciclo Longitudinal ───────────────────────────
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.3 · TRANSICIONES LONGITUDINALES
+// ── Versión: transiciones_longitudinales_v1_3
+// ── Capa no inferencial de transición entre estados de ciclo.
+// ── No IA. No narrativa. No recomendaciones. No persistencia automática.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirTransicionesLongitudinales(estadoCiclo) {
+
+    var _fechaGeneracion = new Date().toISOString();
+    var _reglasAplicadas = [];
+    var _advertencias    = [];
+    var _notas           = [];
+
+    function _regla(id) { _reglasAplicadas.push(id); }
+    function _adv(msg)  { _advertencias.push(msg); }
+    function _nota(msg) { _notas.push(msg); }
+    function _arr(v)    { return Array.isArray(v) ? v : []; }
+    function _pct(n, total) {
+        return total > 0 ? Math.round((n / total) * 1000) / 10 : null;
+    }
+    function _sinDato(v) {
+        return v === null || v === undefined || v === '' ||
+            (Array.isArray(v) && v.length === 0);
+    }
+    function _normalizarActuacion(a) {
+        a = a || {};
+        return {
+            id:                    a.id || null,
+            codigoEPVSA:           a.codigoEPVSA || a.codigo || null,
+            nombre:                a.nombre || a.titulo || null,
+            estado:                a.estado || null,
+            decisionSiguienteCiclo: a.decisionSiguienteCiclo || a.decision_siguiente_ciclo || null,
+            anio:                  a.anio || null
+        };
+    }
+
+    var _estado = estadoCiclo || null;
+    if (!_estado && window.COMPAS &&
+        typeof window.COMPAS.construirEstadoCicloLongitudinal === 'function') {
+        _estado = window.COMPAS.construirEstadoCicloLongitudinal();
+        _nota('estado_ciclo_obtenido_desde_window.COMPAS.construirEstadoCicloLongitudinal');
+    } else if (_estado) {
+        _nota('estado_ciclo_recibido_como_parametro');
+    }
+
+    if (!_estado || !_estado.version) {
+        _adv('estado_ciclo_longitudinal_no_disponible');
+    }
+
+    var _cls = (_estado && _estado.clasificacionCiclo) || {};
+    var _continuidad = _arr(_cls.continuidad).map(_normalizarActuacion);
+    var _cierre = _arr(_cls.cierre).map(_normalizarActuacion);
+    var _abandono = _arr(_cls.abandono).map(_normalizarActuacion);
+    var _reformulacion = _arr(_cls.reformulacion).map(_normalizarActuacion);
+    var _noDecidido = _arr(_cls.noDecidido).map(_normalizarActuacion);
+    var _sinEjecucion = _arr(_cls.sinEjecucionDocumentada).map(_normalizarActuacion);
+
+    _regla('LONGI_v1_2.continuidad → transiciones.persistentes');
+    _regla('LONGI_v1_2.cierre → transiciones.cerradas');
+    _regla('LONGI_v1_2.abandono → transiciones.abandonadas');
+    _regla('LONGI_v1_2.reformulacion → transiciones.reformuladas');
+    _regla('LONGI_v1_2.noDecidido → transiciones.pendientesDecision');
+    _regla('LONGI_v1_2.sinEjecucionDocumentada → transiciones.sinEvidenciaEjecucion');
+    _regla('volatilidadAlta: noDecidido + sin fechaReal + sin resultadoObservado + sin aprendizajes');
+
+    var _volatilidadAlta = _arr(_cls.noDecidido).filter(function(a) {
+        return _sinDato(a.fechaReal) &&
+               _sinDato(a.resultadoObservado) &&
+               _sinDato(a.aprendizajes);
+    }).map(_normalizarActuacion);
+
+    var _total = (_estado && _estado.resumen && typeof _estado.resumen.total === 'number')
+        ? _estado.resumen.total
+        : (_continuidad.length + _cierre.length + _abandono.length + _reformulacion.length + _noDecidido.length);
+
+    var _pctNoDecidido = _pct(_noDecidido.length, _total);
+    var _pctSinEjecucion = _pct(_sinEjecucion.length, _total);
+    var _mezclaEstados = [_continuidad, _cierre, _abandono, _reformulacion, _noDecidido]
+        .filter(function(arr) { return arr.length > 0; }).length > 1;
+    var _notasEstado = (_estado && _estado.trazabilidad && _arr(_estado.trazabilidad.notas)) || [];
+    var _cicloUnico = _notasEstado.some(function(n) {
+        return String(n).indexOf('ciclo_unico') !== -1;
+    });
+    var _evidenciaMulticiclo = !_cicloUnico && _estado &&
+        _estado.baseContrato && _estado.baseContrato.disponible === true;
+
+    var _nivel = 'sin_base';
+    var _criterio = 'sin actuaciones disponibles';
+    if (_total === 0) {
+        _nivel = 'sin_base';
+        _criterio = 'totalActuaciones === 0';
+    } else if ((_pctNoDecidido !== null && _pctNoDecidido > 70) ||
+               (_pctSinEjecucion !== null && _pctSinEjecucion > 70)) {
+        _nivel = 'fragil';
+        _criterio = 'porcentajeNoDecidido > 70 o porcentajeSinEjecucion > 70';
+    } else if (_continuidad.length > 0 && _mezclaEstados) {
+        _nivel = 'intermedia';
+        _criterio = 'existen actuaciones persistentes y mezcla de estados';
+    } else {
+        _nivel = 'intermedia';
+        _criterio = 'base con actuaciones, sin condiciones suficientes para estabilidad plena';
+    }
+
+    if (_continuidad.length > 0 &&
+        (_cierre.length + _abandono.length + _reformulacion.length) > 0 &&
+        (_pctNoDecidido !== null && _pctNoDecidido < 30) &&
+        (_pctSinEjecucion !== null && _pctSinEjecucion < 30) &&
+        _evidenciaMulticiclo) {
+        _nivel = 'estable';
+        _criterio = 'persistentes + decisiones explícitas + baja indefinición + baja ausencia de ejecución + evidencia multiciclo';
+    }
+
+    if (_nivel === 'estable' && !_evidenciaMulticiclo) {
+        _nivel = 'intermedia';
+        _criterio = 'estabilidad plena degradada por ausencia de evidencia multiciclo';
+        _nota('con_un_unico_ciclo_no_puede_declararse_estable_plena');
+    }
+    if (_cicloUnico) {
+        _nota('ciclo_unico_detectado — estabilidad_plena_no_autorizada_en_LONGI_v1_3');
+    }
+
+    var transiciones = {
+        persistentes:           _continuidad,
+        cerradas:               _cierre,
+        abandonadas:            _abandono,
+        reformuladas:           _reformulacion,
+        pendientesDecision:     _noDecidido,
+        sinEvidenciaEjecucion:  _sinEjecucion,
+        volatilidadAlta:        _volatilidadAlta
+    };
+
+    var salida = {
+        version: 'transiciones_longitudinales_v1_3',
+        fechaGeneracion: _fechaGeneracion,
+        municipio: (_estado && _estado.municipio) || null,
+
+        baseEstadoCiclo: {
+            version: (_estado && _estado.version) || null,
+            disponible: !!(_estado && _estado.version)
+        },
+
+        resumen: {
+            totalActuaciones: _total,
+            continuidad: _continuidad.length,
+            cierre: _cierre.length,
+            abandono: _abandono.length,
+            reformulacion: _reformulacion.length,
+            noDecidido: _noDecidido.length,
+            sinEjecucionDocumentada: _sinEjecucion.length
+        },
+
+        transiciones: transiciones,
+
+        estabilidadSistema: {
+            nivel: _nivel,
+            criterio: _criterio,
+            porcentajeNoDecidido: _pctNoDecidido,
+            porcentajeSinEjecucion: _pctSinEjecucion
+        },
+
+        lecturaNoInferencial: true,
+
+        trazabilidad: {
+            reglasAplicadas: _reglasAplicadas,
+            advertencias: _advertencias,
+            notas: _notas
+        }
+    };
+
+    console.log('[COMPÁS LONGI v1.3] Transiciones longitudinales construidas', salida);
+    return salida;
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.construirTransicionesLongitudinales = COMPAS_construirTransicionesLongitudinales;
+
+window.COMPAS.auditarTransicionesLongi = function() {
+    const t = window.COMPAS.construirTransicionesLongitudinales();
+    console.log('[COMPÁS LONGI v1.3] Transiciones longitudinales construidas', t);
+    return t;
+};
+
+console.log('[COMPÁS LONGI v1.3] COMPAS_construirTransicionesLongitudinales registrado en window.COMPAS.construirTransicionesLongitudinales');
+
+// ── Fin LONGI v1.3 · Transiciones Longitudinales ─────────────────────────────
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.4 · CIERRE EVALUATIVO ANUAL LONGITUDINAL
+// ── Versión: cierre_evaluativo_longitudinal_v1_4
+// ── Cierre técnico no inferencial entre estado de ciclo y transiciones.
+// ── No IA. No narrativa. No causalidad. No recomendaciones. No persistencia.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirCierreEvaluativoAnualLongitudinal(estadoCiclo, transiciones) {
+
+    var _fechaISO = new Date().toISOString();
+    var _reglas = [];
+    var _advertencias = [];
+    var _notas = [];
+
+    function _regla(id) { _reglas.push(id); }
+    function _adv(msg)  { _advertencias.push(msg); }
+    function _nota(msg) { _notas.push(msg); }
+    function _n(v) { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+    function _pct(n, total) { return total > 0 ? Math.round((n / total) * 1000) / 10 : null; }
+
+    var _estado = estadoCiclo || null;
+    if (!_estado && window.COMPAS &&
+        typeof window.COMPAS.construirEstadoCicloLongitudinal === 'function') {
+        _estado = window.COMPAS.construirEstadoCicloLongitudinal();
+        _nota('estado_ciclo_obtenido_desde_window.COMPAS.construirEstadoCicloLongitudinal');
+    } else if (_estado) {
+        _nota('estado_ciclo_recibido_como_parametro');
+    }
+
+    var _trans = transiciones || null;
+    if (!_trans && window.COMPAS &&
+        typeof window.COMPAS.construirTransicionesLongitudinales === 'function') {
+        _trans = window.COMPAS.construirTransicionesLongitudinales(_estado);
+        _nota('transiciones_obtenidas_desde_window.COMPAS.construirTransicionesLongitudinales');
+    } else if (_trans) {
+        _nota('transiciones_recibidas_como_parametro');
+    }
+
+    if (!_estado || !_estado.version) _adv('estado_ciclo_longitudinal_no_disponible');
+    if (!_trans || !_trans.version) _adv('transiciones_longitudinales_no_disponibles');
+
+    var _resT = (_trans && _trans.resumen) || {};
+    var _total = _n(_resT.totalActuaciones);
+    var _continuidad = _n(_resT.continuidad);
+    var _cierre = _n(_resT.cierre);
+    var _abandono = _n(_resT.abandono);
+    var _reformulacion = _n(_resT.reformulacion);
+    var _noDecidido = _n(_resT.noDecidido);
+    var _sinEjecucion = _n(_resT.sinEjecucionDocumentada);
+    var _decisionesExplicitas = _continuidad + _cierre + _abandono + _reformulacion;
+    var _pctNoDecidido = _pct(_noDecidido, _total);
+    var _pctSinEjecucion = _pct(_sinEjecucion, _total);
+    var _pctDecisionesExplicitas = _pct(_decisionesExplicitas, _total);
+
+    _regla('no_decidido_alto → ciclo_no_cerrable');
+    _regla('sin_ejecucion_documentada → brecha_de_cierre');
+    _regla('decisiones_explicitas + baja_indefinicion → cierre_parcial_o_cerrable');
+    _regla('ciclo_unico → no_declarar_consolidacion_longitudinal');
+
+    var brechas = [];
+    var cautelas = [];
+
+    if (_total === 0) {
+        brechas.push('sin_actuaciones_para_cierre_evaluativo');
+        cautelas.push('no_existe_base_operativa_para_cierre_anual');
+    }
+    if (_noDecidido > 0) {
+        brechas.push('actuaciones_sin_decision_siguiente_ciclo');
+    }
+    if (_pctNoDecidido !== null && _pctNoDecidido > 70) {
+        brechas.push('porcentaje_no_decidido_alto');
+    }
+    if (_sinEjecucion > 0) {
+        brechas.push('actuaciones_sin_ejecucion_documentada');
+    }
+    if (_pctSinEjecucion !== null && _pctSinEjecucion > 70) {
+        brechas.push('porcentaje_sin_ejecucion_documentada_alto');
+    }
+    if (_decisionesExplicitas === 0 && _total > 0) {
+        brechas.push('sin_decisiones_explicitas_de_cierre_o_continuidad');
+    }
+
+    var _notasEstado = (_estado && _estado.trazabilidad && Array.isArray(_estado.trazabilidad.notas))
+        ? _estado.trazabilidad.notas : [];
+    var _notasTrans = (_trans && _trans.trazabilidad && Array.isArray(_trans.trazabilidad.notas))
+        ? _trans.trazabilidad.notas : [];
+    var _cicloUnico = _notasEstado.concat(_notasTrans).some(function(n) {
+        return String(n).indexOf('ciclo_unico') !== -1;
+    });
+    if (_cicloUnico) {
+        cautelas.push('un_unico_ciclo_no_permite_declarar_consolidacion_longitudinal');
+        _nota('existe_memoria_operativa_pero_no_cierre_longitudinal_suficiente');
+    }
+
+    var _nivelCierre = 'no_cerrable';
+    var _criterioCierre = 'sin condiciones suficientes para cierre evaluativo anual';
+    var _puedeCerrar = false;
+
+    if (_total === 0) {
+        _nivelCierre = 'no_cerrable';
+        _criterioCierre = 'totalActuaciones === 0';
+    } else if ((_pctNoDecidido !== null && _pctNoDecidido > 70) ||
+               (_pctSinEjecucion !== null && _pctSinEjecucion > 70) ||
+               _decisionesExplicitas === 0) {
+        _nivelCierre = 'no_cerrable';
+        _criterioCierre = 'alto no_decidido, alta ausencia de ejecución documentada o ausencia de decisiones explícitas';
+    } else if (_decisionesExplicitas > 0 && (_pctNoDecidido === null || _pctNoDecidido < 50)) {
+        _nivelCierre = 'parcial';
+        _criterioCierre = 'existen decisiones explícitas, pero el cierre no alcanza suficiencia plena';
+        _puedeCerrar = true;
+    }
+    if (_decisionesExplicitas > 0 &&
+        (_pctNoDecidido !== null && _pctNoDecidido < 20) &&
+        (_pctSinEjecucion !== null && _pctSinEjecucion < 30) &&
+        !_cicloUnico) {
+        _nivelCierre = 'cerrable';
+        _criterioCierre = 'decisiones explícitas suficientes + baja indefinición + baja ausencia de ejecución documentada';
+        _puedeCerrar = true;
+    }
+
+    var _madurezNivel = 'incipiente';
+    var _madurezCriterio = 'sin base operativa o sin decisiones suficientes';
+    if (_total > 0 && _decisionesExplicitas === 0) {
+        _madurezNivel = _pctNoDecidido !== null && _pctNoDecidido > 70 ? 'operativa_fragil' : 'incipiente';
+        _madurezCriterio = 'existe memoria operativa, pero no decisiones explícitas de cierre/continuidad';
+    } else if (_total > 0 && _decisionesExplicitas > 0 && (_pctSinEjecucion === null || _pctSinEjecucion <= 70)) {
+        _madurezNivel = 'operativa_documentada';
+        _madurezCriterio = 'existen actuaciones y decisiones explícitas con documentación operativa parcial';
+    }
+    if (_nivelCierre === 'cerrable' && !_cicloUnico) {
+        _madurezNivel = 'consolidada';
+        _madurezCriterio = 'cierre anual técnicamente cerrable con evidencia suficiente y sin restricción de ciclo único';
+    }
+    if (_madurezNivel === 'consolidada' && _cicloUnico) {
+        _madurezNivel = 'operativa_documentada';
+        _madurezCriterio = 'consolidación degradada por ciclo único';
+        cautelas.push('consolidacion_degradada_por_ciclo_unico');
+    }
+
+    var salida = {
+        version: 'cierre_evaluativo_longitudinal_v1_4',
+        lecturaNoInferencial: true,
+        noCausal: true,
+        noRecomendador: true,
+        fechaISO: _fechaISO,
+        fuenteEstadoCiclo: (_estado && _estado.version) || null,
+        fuenteTransiciones: (_trans && _trans.version) || null,
+
+        resumenCiclo: {
+            totalActuaciones: _total,
+            continuidad: _continuidad,
+            cierre: _cierre,
+            abandono: _abandono,
+            reformulacion: _reformulacion,
+            noDecidido: _noDecidido,
+            sinEjecucionDocumentada: _sinEjecucion
+        },
+
+        condicionCierre: {
+            puedeCerrarCiclo: _puedeCerrar,
+            nivelCierre: _nivelCierre,
+            criterio: _criterioCierre
+        },
+
+        madurezEvaluativa: {
+            nivel: _madurezNivel,
+            criterio: _madurezCriterio
+        },
+
+        brechasCierre: brechas,
+        cautelas: cautelas,
+
+        trazabilidad: {
+            reglasAplicadas: _reglas,
+            advertencias: _advertencias,
+            notas: _notas,
+            metricas: {
+                porcentajeNoDecidido: _pctNoDecidido,
+                porcentajeSinEjecucion: _pctSinEjecucion,
+                porcentajeDecisionesExplicitas: _pctDecisionesExplicitas
+            }
+        }
+    };
+
+    console.log('[COMPÁS LONGI v1.4] Cierre evaluativo anual longitudinal construido', salida);
+    return salida;
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.construirCierreEvaluativoAnualLongitudinal = COMPAS_construirCierreEvaluativoAnualLongitudinal;
+
+window.COMPAS.auditarCierreEvaluativoLongi = function() {
+    var cierre = window.COMPAS.construirCierreEvaluativoAnualLongitudinal();
+    console.log('[COMPÁS LONGI v1.4] Cierre evaluativo anual longitudinal construido', cierre);
+    return cierre;
+};
+
+console.log('[COMPÁS LONGI v1.4] COMPAS_construirCierreEvaluativoAnualLongitudinal registrado en window.COMPAS.construirCierreEvaluativoAnualLongitudinal');
+
+// ── Fin LONGI v1.4 · Cierre Evaluativo Anual Longitudinal ────────────────────
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.5 · MATRIZ DE DECISIÓN PARA CICLO SIGUIENTE
+// ── Versión: matriz_decision_ciclo_siguiente_v1_5
+// ── Matriz técnica no inferencial. No decide por el usuario.
+// ── No IA. No causalidad. No recomendaciones. No persistencia. No UI.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirMatrizDecisionCicloSiguiente(estadoCiclo, cierreEvaluativo) {
+
+    var _fechaISO = new Date().toISOString();
+    var _reglas = [];
+    var _advertencias = [];
+    var _notas = [];
+
+    function _regla(id) { _reglas.push(id); }
+    function _adv(msg)  { _advertencias.push(msg); }
+    function _nota(msg) { _notas.push(msg); }
+    function _arr(v)    { return Array.isArray(v) ? v : []; }
+    function _norm(v)   { return v == null ? '' : String(v).trim(); }
+
+    var _estado = estadoCiclo || null;
+    if (!_estado && window.COMPAS &&
+        typeof window.COMPAS.construirEstadoCicloLongitudinal === 'function') {
+        _estado = window.COMPAS.construirEstadoCicloLongitudinal();
+        _nota('estado_ciclo_obtenido_desde_window.COMPAS.construirEstadoCicloLongitudinal');
+    } else if (_estado) {
+        _nota('estado_ciclo_recibido_como_parametro');
+    }
+
+    var _cierre = cierreEvaluativo || null;
+    if (!_cierre && window.COMPAS &&
+        typeof window.COMPAS.construirCierreEvaluativoAnualLongitudinal === 'function') {
+        _cierre = window.COMPAS.construirCierreEvaluativoAnualLongitudinal(_estado);
+        _nota('cierre_evaluativo_obtenido_desde_window.COMPAS.construirCierreEvaluativoAnualLongitudinal');
+    } else if (_cierre) {
+        _nota('cierre_evaluativo_recibido_como_parametro');
+    }
+
+    if (!_estado || !_estado.version) _adv('estado_ciclo_longitudinal_no_disponible');
+    if (!_cierre || !_cierre.version) _adv('cierre_evaluativo_longitudinal_no_disponible');
+
+    var _listaActuaciones = [];
+    var _fuente = 'no_disponible';
+
+    try {
+        var _pls = (typeof planLocalSalud !== 'undefined') ? planLocalSalud : null;
+        if (_pls && _pls.agenda && Array.isArray(_pls.agenda.actuaciones)) {
+            _listaActuaciones = _pls.agenda.actuaciones.slice();
+            _fuente = 'planLocalSalud.agenda.actuaciones';
+            _nota('matriz_generada_desde_planLocalSalud.agenda.actuaciones');
+        }
+    } catch(e) {
+        _adv('no_se_pudo_leer_planLocalSalud.agenda.actuaciones');
+    }
+
+    if (!_listaActuaciones.length && _estado && _estado.fuenteActuaciones && _estado.fuenteActuaciones.total > 0) {
+        _adv('estado_ciclo_declara_actuaciones_pero_no_existe_lista_runtime_para_matriz');
+    }
+    if (!_listaActuaciones.length) {
+        _adv('sin_actuaciones_para_matriz_decision');
+    }
+
+    _regla('todas_las_actuaciones → decisionSiguienteCiclo: pendiente');
+    _regla('requiereDecisionHumana: true en todas las filas');
+    _regla('no_modificar_agenda_original');
+    _regla('no_recomendar_continuar_cerrar_reformular_abandonar');
+
+    function _linea(a) {
+        return a.linea || a.lineaEstrategica || a.codigoEPVSA || a.codigo || null;
+    }
+    function _objetivo(a) {
+        return a.objetivo || a.objetivoEstrategico || a.objetivoOperativo || a.descripcion || null;
+    }
+    function _fila(a, idx) {
+        a = a || {};
+        return {
+            id: a.id || a.uid || a.codigoActuacion || a.codigo || ('actuacion_' + (idx + 1)),
+            titulo: a.titulo || a.nombre || ('Actuación ' + (idx + 1)),
+            linea: _linea(a),
+            objetivo: _objetivo(a),
+            estadoCicloActual: a.estado || null,
+            decisionSiguienteCiclo: 'pendiente',
+            requiereDecisionHumana: true,
+            fuente: _fuente,
+            trazabilidad: {
+                indiceAgenda: idx,
+                decisionOriginalNoModificada: a.decisionSiguienteCiclo || a.decision_siguiente_ciclo || null,
+                generadaPor: 'COMPAS_construirMatrizDecisionCicloSiguiente',
+                regla: 'decision_pendiente_por_defecto_sin_inferencia'
+            }
+        };
+    }
+
+    var _matriz = _listaActuaciones.map(_fila);
+    var _total = _matriz.length;
+    var _pendientes = _matriz.filter(function(f) {
+        return f.decisionSiguienteCiclo === 'pendiente';
+    }).length;
+
+    var _brechas = [];
+    var _cautelas = [];
+
+    if (_total === 0) _brechas.push('sin_actuaciones_para_decidir');
+    if (_pendientes === _total && _total > 0) _brechas.push('todas_las_actuaciones_pendientes_de_decision_humana');
+    if (_cierre && _cierre.condicionCierre && _cierre.condicionCierre.nivelCierre === 'no_cerrable') {
+        _brechas.push('ciclo_no_cerrable_segun_LONGI_v1_4');
+    }
+    if (_cierre && Array.isArray(_cierre.brechasCierre)) {
+        _cierre.brechasCierre.forEach(function(b) {
+            if (_brechas.indexOf(b) === -1) _brechas.push(b);
+        });
+    }
+
+    _cautelas.push('matriz_no_decide_por_el_usuario');
+    _cautelas.push('matriz_no_modifica_planLocalSalud.agenda.actuaciones');
+    if (_cierre && Array.isArray(_cierre.cautelas)) {
+        _cierre.cautelas.forEach(function(c) {
+            if (_cautelas.indexOf(c) === -1) _cautelas.push(c);
+        });
+    }
+
+    var salida = {
+        version: 'matriz_decision_ciclo_siguiente_v1_5',
+        lecturaNoInferencial: true,
+        noCausal: true,
+        noRecomendador: true,
+        fechaISO: _fechaISO,
+
+        resumen: {
+            totalActuaciones: _total,
+            continuar: 0,
+            cerrar: 0,
+            reformular: 0,
+            abandonar: 0,
+            pendienteDecision: _pendientes
+        },
+
+        opcionesDecision: ['continuar', 'cerrar', 'reformular', 'abandonar', 'pendiente'],
+        matriz: _matriz,
+        brechasDecision: _brechas,
+        cautelas: _cautelas,
+
+        trazabilidad: {
+            fuenteEstadoCiclo: (_estado && _estado.version) || null,
+            fuenteCierreEvaluativo: (_cierre && _cierre.version) || null,
+            fuenteActuaciones: _fuente,
+            reglasAplicadas: _reglas,
+            advertencias: _advertencias,
+            notas: _notas
+        }
+    };
+
+    console.log('[COMPÁS LONGI v1.5] Matriz de decisión ciclo siguiente construida', salida);
+    return salida;
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.construirMatrizDecisionCicloSiguiente = COMPAS_construirMatrizDecisionCicloSiguiente;
+
+window.COMPAS.auditarMatrizDecisionLongi = function() {
+    var matriz = window.COMPAS.construirMatrizDecisionCicloSiguiente();
+    console.log('[COMPÁS LONGI v1.5] Matriz de decisión ciclo siguiente construida', matriz);
+    return matriz;
+};
+
+console.log('[COMPÁS LONGI v1.5] COMPAS_construirMatrizDecisionCicloSiguiente registrado en window.COMPAS.construirMatrizDecisionCicloSiguiente');
+
+// ── Fin LONGI v1.5 · Matriz de Decisión para Ciclo Siguiente ─────────────────
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.6 · VALIDACIÓN DE COHERENCIA LONGITUDINAL
+// ── Versión: coherencia_longitudinal_v1_6
+// ── Verificador estructural entre capas LONGI. No corrige, no decide.
+// ── No IA. No causalidad. No recomendaciones. No persistencia. No UI.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_validarCoherenciaLongitudinal(contrato, lectura, estado, transiciones, cierre, matriz) {
+
+    var _fechaISO = new Date().toISOString();
+    var _contradicciones = [];
+    var _brechas = [];
+    var _cautelas = [];
+    var _reglas = [];
+    var _advertencias = [];
+    var _notas = [];
+
+    function _regla(id) { _reglas.push(id); }
+    function _adv(msg)  { _advertencias.push(msg); }
+    function _nota(msg) { _notas.push(msg); }
+    function _add(lista, msg) { if (lista.indexOf(msg) === -1) lista.push(msg); }
+    function _arr(v) { return Array.isArray(v) ? v : []; }
+    function _n(v) { return (typeof v === 'number' && isFinite(v)) ? v : null; }
+    function _len(v) { return Array.isArray(v) ? v.length : null; }
+
+    var _contrato = contrato || null;
+    if (!_contrato && window.COMPAS &&
+        typeof window.COMPAS.construirContratoLongitudinalTerritorial === 'function') {
+        _contrato = window.COMPAS.construirContratoLongitudinalTerritorial();
+        _nota('contrato_obtenido_desde_window.COMPAS.construirContratoLongitudinalTerritorial');
+    } else if (_contrato) {
+        _nota('contrato_recibido_como_parametro');
+    }
+
+    var _lectura = lectura || null;
+    if (!_lectura && window.COMPAS &&
+        typeof window.COMPAS.construirLecturaLongitudinalEstructural === 'function') {
+        _lectura = window.COMPAS.construirLecturaLongitudinalEstructural(_contrato);
+        _nota('lectura_obtenida_desde_window.COMPAS.construirLecturaLongitudinalEstructural');
+    } else if (_lectura) {
+        _nota('lectura_recibida_como_parametro');
+    }
+
+    var _estado = estado || null;
+    if (!_estado && window.COMPAS &&
+        typeof window.COMPAS.construirEstadoCicloLongitudinal === 'function') {
+        _estado = window.COMPAS.construirEstadoCicloLongitudinal(_contrato);
+        _nota('estado_obtenido_desde_window.COMPAS.construirEstadoCicloLongitudinal');
+    } else if (_estado) {
+        _nota('estado_recibido_como_parametro');
+    }
+
+    var _transiciones = transiciones || null;
+    if (!_transiciones && window.COMPAS &&
+        typeof window.COMPAS.construirTransicionesLongitudinales === 'function') {
+        _transiciones = window.COMPAS.construirTransicionesLongitudinales(_estado);
+        _nota('transiciones_obtenidas_desde_window.COMPAS.construirTransicionesLongitudinales');
+    } else if (_transiciones) {
+        _nota('transiciones_recibidas_como_parametro');
+    }
+
+    var _cierre = cierre || null;
+    if (!_cierre && window.COMPAS &&
+        typeof window.COMPAS.construirCierreEvaluativoAnualLongitudinal === 'function') {
+        _cierre = window.COMPAS.construirCierreEvaluativoAnualLongitudinal(_estado, _transiciones);
+        _nota('cierre_obtenido_desde_window.COMPAS.construirCierreEvaluativoAnualLongitudinal');
+    } else if (_cierre) {
+        _nota('cierre_recibido_como_parametro');
+    }
+
+    var _matriz = matriz || null;
+    if (!_matriz && window.COMPAS &&
+        typeof window.COMPAS.construirMatrizDecisionCicloSiguiente === 'function') {
+        _matriz = window.COMPAS.construirMatrizDecisionCicloSiguiente(_estado, _cierre);
+        _nota('matriz_obtenida_desde_window.COMPAS.construirMatrizDecisionCicloSiguiente');
+    } else if (_matriz) {
+        _nota('matriz_recibida_como_parametro');
+    }
+
+    if (!_contrato || !_contrato.version) _adv('contrato_longitudinal_no_disponible');
+    if (!_lectura || !_lectura.version) _adv('lectura_longitudinal_no_disponible');
+    if (!_estado || !_estado.version) _adv('estado_ciclo_no_disponible');
+    if (!_transiciones || !_transiciones.version) _adv('transiciones_longitudinales_no_disponibles');
+    if (!_cierre || !_cierre.version) _adv('cierre_evaluativo_no_disponible');
+    if (!_matriz || !_matriz.version) _adv('matriz_decision_no_disponible');
+
+    _regla('comparar_totales_entre_capas_LONGI');
+    _regla('comparar_clasificacion_estado_vs_transiciones');
+    _regla('matriz_debe_tener_una_fila_por_actuacion');
+    _regla('cierre_cerrable_incompatible_con_indefinicion_alta');
+    _regla('consolidacion_longitudinal_requiere_evidencia_multiciclo');
+    _regla('solo_detectar_no_corregir');
+
+    var _totales = {
+        contrato: _n(_contrato && _contrato.actuaciones && _contrato.actuaciones.total),
+        lecturaContinuidad: _n(_lectura && _lectura.continuidad && _lectura.continuidad.actuacionesTotal),
+        lecturaDensidad: _n(_lectura && _lectura.densidadOperativa && _lectura.densidadOperativa.actuacionesTotal),
+        estado: _n(_estado && _estado.resumen && _estado.resumen.total),
+        transiciones: _n(_transiciones && _transiciones.resumen && _transiciones.resumen.totalActuaciones),
+        cierre: _n(_cierre && _cierre.resumenCiclo && _cierre.resumenCiclo.totalActuaciones),
+        matrizResumen: _n(_matriz && _matriz.resumen && _matriz.resumen.totalActuaciones),
+        matrizFilas: _len(_matriz && _matriz.matriz)
+    };
+
+    var _totalesDisponibles = Object.keys(_totales).filter(function(k) { return _totales[k] !== null; });
+    var _totalBase = _totalesDisponibles.length ? _totales[_totalesDisponibles[0]] : null;
+    var _totalActuacionesCoincide = _totalesDisponibles.length > 0 && _totalesDisponibles.every(function(k) {
+        return _totales[k] === _totalBase;
+    });
+    if (!_totalActuacionesCoincide) {
+        _add(_contradicciones, 'total_actuaciones_no_coincide_entre_capas_LONGI');
+    }
+    if (_totalBase === null) {
+        _add(_brechas, 'sin_total_actuaciones_comparable');
+    }
+
+    var _cls = (_estado && _estado.clasificacionCiclo) || {};
+    var _resTrans = (_transiciones && _transiciones.resumen) || {};
+    var _trans = (_transiciones && _transiciones.transiciones) || {};
+
+    var _estadoConteos = {
+        continuidad: _len(_cls.continuidad),
+        cierre: _len(_cls.cierre),
+        abandono: _len(_cls.abandono),
+        reformulacion: _len(_cls.reformulacion),
+        noDecidido: _len(_cls.noDecidido),
+        sinEjecucionDocumentada: _len(_cls.sinEjecucionDocumentada)
+    };
+    var _transConteos = {
+        continuidad: _n(_resTrans.continuidad),
+        cierre: _n(_resTrans.cierre),
+        abandono: _n(_resTrans.abandono),
+        reformulacion: _n(_resTrans.reformulacion),
+        noDecidido: _n(_resTrans.noDecidido),
+        sinEjecucionDocumentada: _n(_resTrans.sinEjecucionDocumentada)
+    };
+    var _transListas = {
+        continuidad: _len(_trans.persistentes),
+        cierre: _len(_trans.cerradas),
+        abandono: _len(_trans.abandonadas),
+        reformulacion: _len(_trans.reformuladas),
+        noDecidido: _len(_trans.pendientesDecision),
+        sinEjecucionDocumentada: _len(_trans.sinEvidenciaEjecucion)
+    };
+
+    var _clavesEstado = Object.keys(_estadoConteos);
+    var _estadosCoinciden = _clavesEstado.every(function(k) {
+        return _estadoConteos[k] === null || _transConteos[k] === null || _estadoConteos[k] === _transConteos[k];
+    });
+    var _transicionesCoinciden = _clavesEstado.every(function(k) {
+        return _transConteos[k] === null || _transListas[k] === null || _transConteos[k] === _transListas[k];
+    });
+    if (!_estadosCoinciden) _add(_contradicciones, 'estado_ciclo_y_resumen_transiciones_no_coinciden');
+    if (!_transicionesCoinciden) _add(_contradicciones, 'resumen_transiciones_y_listas_transiciones_no_coinciden');
+
+    var _matrizFilas = _totales.matrizFilas;
+    var _matrizResumenTotal = _totales.matrizResumen;
+    var _matrizPendiente = _n(_matriz && _matriz.resumen && _matriz.resumen.pendienteDecision);
+    var _matrizTodasPendientes = !!(_matriz && Array.isArray(_matriz.matriz)) && _matriz.matriz.every(function(f) {
+        return f && f.decisionSiguienteCiclo === 'pendiente' && f.requiereDecisionHumana === true;
+    });
+    var _matrizCoincide = (_matrizFilas !== null && _totalBase !== null && _matrizFilas === _totalBase) &&
+        (_matrizResumenTotal === null || _matrizResumenTotal === _matrizFilas) &&
+        (_matrizPendiente === null || _matrizPendiente === _matrizFilas) &&
+        _matrizTodasPendientes;
+    if (!_matrizCoincide) {
+        _add(_contradicciones, 'matriz_decision_no_coincide_con_actuaciones_o_no_es_pendiente_completa');
+    }
+
+    var _noDecidido = _n(_resTrans.noDecidido);
+    var _pctNoDecidido = (_totalBase && _noDecidido !== null) ? Math.round((_noDecidido / _totalBase) * 1000) / 10 : null;
+    var _nivelCierre = _cierre && _cierre.condicionCierre && _cierre.condicionCierre.nivelCierre;
+    var _puedeCerrar = _cierre && _cierre.condicionCierre && _cierre.condicionCierre.puedeCerrarCiclo === true;
+    var _madurezNivel = _cierre && _cierre.madurezEvaluativa && _cierre.madurezEvaluativa.nivel;
+    var _cierreCompatible = true;
+    if ((_puedeCerrar || _nivelCierre === 'cerrable') && _pctNoDecidido !== null && _pctNoDecidido > 70) {
+        _cierreCompatible = false;
+        _add(_contradicciones, 'cierre_cerrable_con_mas_del_70pct_no_decidido');
+    }
+    if ((_puedeCerrar || _nivelCierre === 'cerrable') && _matrizPendiente !== null && _matrizPendiente === _matrizFilas && _matrizFilas > 0) {
+        _cierreCompatible = false;
+        _add(_contradicciones, 'cierre_cerrable_con_matriz_totalmente_pendiente');
+    }
+
+    var _ciclosDetectados = _arr(_contrato && _contrato.ciclos && _contrato.ciclos.detectados);
+    var _cicloUnico = _ciclosDetectados.length < 2;
+    var _nivelContinuidad = _lectura && _lectura.continuidad && _lectura.continuidad.nivel;
+    var _nivelEstabilidad = _transiciones && _transiciones.estabilidadSistema && _transiciones.estabilidadSistema.nivel;
+    var _continuidadCompatible = true;
+    if (_cicloUnico && _nivelContinuidad === 'consolidada') {
+        _continuidadCompatible = false;
+        _add(_contradicciones, 'lectura_estructural_declara_consolidada_con_unico_ciclo');
+    }
+    if (_cicloUnico && _madurezNivel === 'consolidada') {
+        _continuidadCompatible = false;
+        _add(_contradicciones, 'cierre_declara_madurez_consolidada_con_unico_ciclo');
+    }
+    if (_cicloUnico && _nivelEstabilidad === 'estable') {
+        _continuidadCompatible = false;
+        _add(_contradicciones, 'transiciones_declaran_estabilidad_estable_con_unico_ciclo');
+    }
+    if (_cicloUnico) {
+        _add(_cautelas, 'un_unico_ciclo_no_permita_declarar_consolidacion_longitudinal');
+    }
+    if (_pctNoDecidido !== null && _pctNoDecidido > 70) {
+        _add(_brechas, 'porcentaje_no_decidido_alto');
+    }
+    if (_matrizPendiente !== null && _matrizFilas !== null && _matrizPendiente === _matrizFilas && _matrizFilas > 0) {
+        _add(_brechas, 'matriz_totalmente_pendiente_de_decision_humana');
+    }
+    if (_cierre && Array.isArray(_cierre.brechasCierre)) {
+        _cierre.brechasCierre.forEach(function(b) { _add(_brechas, b); });
+    }
+    if (_matriz && Array.isArray(_matriz.brechasDecision)) {
+        _matriz.brechasDecision.forEach(function(b) { _add(_brechas, b); });
+    }
+
+    var _verificaciones = {
+        totalActuacionesCoincide: _totalActuacionesCoincide,
+        estadosCoinciden: _estadosCoinciden,
+        transicionesCoinciden: _transicionesCoinciden,
+        matrizCoincide: _matrizCoincide,
+        cierreCompatible: _cierreCompatible,
+        continuidadCompatible: _continuidadCompatible
+    };
+
+    var _todasVerificaciones = Object.keys(_verificaciones).every(function(k) { return _verificaciones[k] === true; });
+    var _nivel = 'alta';
+    var _criterio = 'capas LONGI coherentes y sin brechas relevantes';
+    if (_contradicciones.length > 0) {
+        _nivel = 'inconsistente';
+        _criterio = 'existen contradicciones estructurales entre capas LONGI';
+    } else if (!_todasVerificaciones) {
+        _nivel = 'inconsistente';
+        _criterio = 'alguna verificacion estructural no se cumple';
+    } else if (_brechas.length >= 4 || (_pctNoDecidido !== null && _pctNoDecidido > 70)) {
+        _nivel = 'fragil';
+        _criterio = 'coherencia estructural sin contradicciones, pero con brechas longitudinales altas';
+    } else if (_brechas.length > 0 || _cautelas.length > 0) {
+        _nivel = 'media';
+        _criterio = 'coherencia estructural suficiente con cautelas documentadas';
+    }
+
+    var salida = {
+        version: 'coherencia_longitudinal_v1_6',
+        lecturaNoInferencial: true,
+        noCausal: true,
+        noRecomendador: true,
+        fechaISO: _fechaISO,
+
+        consistenciaGlobal: {
+            valida: _contradicciones.length === 0 && _todasVerificaciones,
+            nivel: _nivel,
+            criterio: _criterio
+        },
+
+        verificaciones: _verificaciones,
+
+        contradicciones: _contradicciones,
+        brechas: _brechas,
+        cautelas: _cautelas,
+
+        trazabilidad: {
+            fuentes: {
+                contrato: (_contrato && _contrato.version) || null,
+                lectura: (_lectura && _lectura.version) || null,
+                estado: (_estado && _estado.version) || null,
+                transiciones: (_transiciones && _transiciones.version) || null,
+                cierre: (_cierre && _cierre.version) || null,
+                matriz: (_matriz && _matriz.version) || null
+            },
+            totales: _totales,
+            estadoConteos: _estadoConteos,
+            transicionesConteos: _transConteos,
+            transicionesListas: _transListas,
+            cicloUnico: _cicloUnico,
+            porcentajeNoDecidido: _pctNoDecidido,
+            reglasAplicadas: _reglas,
+            advertencias: _advertencias,
+            notas: _notas
+        }
+    };
+
+    console.log('[COMPÁS LONGI v1.6] Coherencia longitudinal validada', salida);
+    return salida;
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.validarCoherenciaLongitudinal = COMPAS_validarCoherenciaLongitudinal;
+
+window.COMPAS.auditarCoherenciaLongi = function() {
+    var coherencia = window.COMPAS.validarCoherenciaLongitudinal();
+    console.log('[COMPÁS LONGI v1.6] Coherencia longitudinal validada', coherencia);
+    return coherencia;
+};
+
+console.log('[COMPÁS LONGI v1.6] COMPAS_validarCoherenciaLongitudinal registrado en window.COMPAS.validarCoherenciaLongitudinal');
+
+// ── Fin LONGI v1.6 · Validación de Coherencia Longitudinal ───────────────────
+
+
 
 // ── Dashboard principal de evaluación ────────────────────────────────
 
