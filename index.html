@@ -74780,6 +74780,238 @@ console.log('[COMPÁS LONGI v1.6] COMPAS_validarCoherenciaLongitudinal registrad
 // ── Fin LONGI v1.6 · Validación de Coherencia Longitudinal ───────────────────
 
 
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.7 · CONTRATO ESTRUCTURAL MULTICICLO LONGITUDINAL
+// ── Versión: contrato_multiciclo_longitudinal_v1_7
+// ── Preparación conceptual de payload multiciclo. No guarda, no versiona.
+// ── No IA. No causalidad. No recomendaciones. No persistencia. No UI.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirContratoMulticicloLongitudinal(coherencia, matrizDecision, cierreEvaluativo) {
+
+    var _fechaISO = new Date().toISOString();
+    var _brechas = [];
+    var _cautelas = [];
+    var _reglas = [];
+    var _advertencias = [];
+    var _notas = [];
+
+    function _regla(id) { _reglas.push(id); }
+    function _adv(msg)  { _advertencias.push(msg); }
+    function _nota(msg) { _notas.push(msg); }
+    function _add(lista, msg) { if (lista.indexOf(msg) === -1) lista.push(msg); }
+    function _n(v) { return (typeof v === 'number' && isFinite(v)) ? v : null; }
+    function _pct(n, total) { return total > 0 && n !== null ? Math.round((n / total) * 1000) / 10 : null; }
+
+    var _coherencia = coherencia || null;
+    if (!_coherencia && window.COMPAS &&
+        typeof window.COMPAS.validarCoherenciaLongitudinal === 'function') {
+        _coherencia = window.COMPAS.validarCoherenciaLongitudinal();
+        _nota('coherencia_obtenida_desde_window.COMPAS.validarCoherenciaLongitudinal');
+    } else if (_coherencia) {
+        _nota('coherencia_recibida_como_parametro');
+    }
+
+    var _matriz = matrizDecision || null;
+    if (!_matriz && window.COMPAS &&
+        typeof window.COMPAS.construirMatrizDecisionCicloSiguiente === 'function') {
+        _matriz = window.COMPAS.construirMatrizDecisionCicloSiguiente();
+        _nota('matriz_obtenida_desde_window.COMPAS.construirMatrizDecisionCicloSiguiente');
+    } else if (_matriz) {
+        _nota('matriz_recibida_como_parametro');
+    }
+
+    var _cierre = cierreEvaluativo || null;
+    if (!_cierre && window.COMPAS &&
+        typeof window.COMPAS.construirCierreEvaluativoAnualLongitudinal === 'function') {
+        _cierre = window.COMPAS.construirCierreEvaluativoAnualLongitudinal();
+        _nota('cierre_obtenido_desde_window.COMPAS.construirCierreEvaluativoAnualLongitudinal');
+    } else if (_cierre) {
+        _nota('cierre_recibido_como_parametro');
+    }
+
+    if (!_coherencia || !_coherencia.version) _adv('coherencia_longitudinal_no_disponible');
+    if (!_matriz || !_matriz.version) _adv('matriz_decision_no_disponible');
+    if (!_cierre || !_cierre.version) _adv('cierre_evaluativo_no_disponible');
+
+    _regla('no_persistir_ni_llamar_Firebase');
+    _regla('preparadoParaPersistir_false_si_hay_decisiones_pendientes_relevantes');
+    _regla('coherencia_valida_fragil → preparacion_fragil');
+    _regla('cierre_no_cerrable → no_preparado_o_preparacion_fragil');
+    _regla('payloadPreparado_solo_propuesto_no_persistible');
+    _regla('no_modificar_matriz_ni_agenda_original');
+
+    var _totales = (_coherencia && _coherencia.trazabilidad && _coherencia.trazabilidad.totales) || {};
+    var _resMatriz = (_matriz && _matriz.resumen) || {};
+    var _condCierre = (_cierre && _cierre.condicionCierre) || {};
+    var _madurez = (_cierre && _cierre.madurezEvaluativa) || {};
+    var _consistencia = (_coherencia && _coherencia.consistenciaGlobal) || {};
+
+    var _total = _n(_resMatriz.totalActuaciones);
+    if (_total === null) _total = _n(_totales.matrizFilas);
+    if (_total === null) _total = _n(_totales.cierre);
+    if (_total === null) _total = 0;
+
+    var _pendiente = _n(_resMatriz.pendienteDecision);
+    if (_pendiente === null && _matriz && Array.isArray(_matriz.matriz)) {
+        _pendiente = _matriz.matriz.filter(function(f) {
+            return f && f.decisionSiguienteCiclo === 'pendiente';
+        }).length;
+    }
+    if (_pendiente === null) _pendiente = 0;
+
+    var _pctPendiente = _pct(_pendiente, _total);
+    var _coherenciaValida = _consistencia.valida === true;
+    var _nivelCoherencia = _consistencia.nivel || 'sin_validacion';
+    var _nivelCierre = _condCierre.nivelCierre || null;
+    var _puedeCerrar = _condCierre.puedeCerrarCiclo === true;
+    var _nivelMadurez = _madurez.nivel || null;
+
+    var _municipio = null;
+    try {
+        _municipio = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
+    } catch(e) {
+        _municipio = null;
+    }
+    if (!_municipio && typeof datosMunicipioActual !== 'undefined' && datosMunicipioActual) {
+        _municipio = datosMunicipioActual.id || datosMunicipioActual.codigo || datosMunicipioActual.nombre || datosMunicipioActual.municipio || null;
+    }
+
+    if (_total === 0) _add(_brechas, 'sin_actuaciones_para_preparacion_multiciclo');
+    if (_pendiente > 0) _add(_brechas, 'decisiones_siguiente_ciclo_pendientes');
+    if (_pctPendiente !== null && _pctPendiente > 70) _add(_brechas, 'porcentaje_decisiones_pendientes_alto');
+    if (!_coherenciaValida) _add(_brechas, 'coherencia_longitudinal_no_valida');
+    if (_nivelCoherencia === 'fragil') _add(_brechas, 'coherencia_valida_pero_fragil');
+    if (_nivelCierre === 'no_cerrable' || !_puedeCerrar) _add(_brechas, 'ciclo_no_cerrable_para_persistencia_multiciclo');
+    if (_nivelMadurez === 'operativa_fragil' || _nivelMadurez === 'incipiente') _add(_brechas, 'madurez_evaluativa_insuficiente_para_cierre_multiciclo');
+    if (!_municipio) _add(_brechas, 'municipio_no_identificado');
+
+    if (_coherencia && Array.isArray(_coherencia.contradicciones) && _coherencia.contradicciones.length) {
+        _coherencia.contradicciones.forEach(function(c) { _add(_brechas, 'contradiccion_coherencia:' + c); });
+    }
+
+    _add(_cautelas, 'contrato_preparatorio_sin_persistencia_automatica');
+    _add(_cautelas, 'no_crea_snapshot_real');
+    _add(_cautelas, 'requiere_decision_humana_antes_de_cierre_multiciclo');
+    _add(_cautelas, 'preparacion_conceptual_no_equivale_a_ciclo_operacionalmente_cerrado');
+
+    var _preparado = false;
+    var _nivel = 'no_preparado';
+    var _criterio = 'sin base suficiente para preparar persistencia multiciclo';
+
+    if (_total === 0 || !_coherenciaValida) {
+        _preparado = false;
+        _nivel = 'no_preparado';
+        _criterio = 'faltan actuaciones o validacion de coherencia longitudinal';
+    } else if (_pendiente > 0 || _nivelCierre === 'no_cerrable' || _nivelCoherencia === 'fragil') {
+        _preparado = false;
+        _nivel = 'preparacion_fragil';
+        _criterio = 'sistema conceptualmente articulado, pero no operacionalmente cerrado para persistencia multiciclo';
+    } else if (_nivelCierre === 'parcial' || _nivelMadurez === 'operativa_documentada') {
+        _preparado = true;
+        _nivel = 'preparado_parcial';
+        _criterio = 'coherencia suficiente con cierre parcial o documentacion operativa';
+    } else if (_nivelCierre === 'cerrable' && _nivelCoherencia !== 'fragil' && _pendiente === 0) {
+        _preparado = true;
+        _nivel = 'preparado';
+        _criterio = 'ciclo coherente, cerrable y sin decisiones pendientes';
+    }
+
+    var _payloadPreparado = {
+        version: 'payload_multiciclo_longitudinal_propuesto_v1_7',
+        fechaISO: _fechaISO,
+        municipio: _municipio,
+        totalActuaciones: _total,
+        pendienteDecision: _pendiente,
+        porcentajePendienteDecision: _pctPendiente,
+        nivelCierre: _nivelCierre,
+        madurezEvaluativa: _nivelMadurez,
+        coherenciaGlobal: _nivelCoherencia,
+        fuentes: {
+            coherencia: (_coherencia && _coherencia.version) || null,
+            matrizDecision: (_matriz && _matriz.version) || null,
+            cierreEvaluativo: (_cierre && _cierre.version) || null
+        },
+        requierePersistenciaExplicitaFutura: true
+    };
+
+    var salida = {
+        version: 'contrato_multiciclo_longitudinal_v1_7',
+        lecturaNoInferencial: true,
+        noCausal: true,
+        noRecomendador: true,
+        sinPersistenciaAutomatica: true,
+        fechaISO: _fechaISO,
+
+        estadoPreparacion: {
+            preparadoParaPersistir: _preparado,
+            nivel: _nivel,
+            criterio: _criterio
+        },
+
+        cicloActual: {
+            municipio: _municipio,
+            totalActuaciones: _total,
+            pendienteDecision: _pendiente,
+            nivelCierre: _nivelCierre,
+            madurezEvaluativa: _nivelMadurez,
+            coherenciaGlobal: _nivelCoherencia
+        },
+
+        requisitosPersistenciaMulticiclo: {
+            requiereIdentificadorCiclo: true,
+            requiereFechaCorte: true,
+            requiereDecisionHumana: true,
+            requiereValidacionCoherencia: true,
+            requiereVersionadoSnapshot: true
+        },
+
+        bloquePersistiblePropuesto: {
+            persistible: false,
+            motivo: _preparado
+                ? 'payload_preparado_conceptualmente_pero_no_conectado_a_persistencia_en_LONGI_v1_7'
+                : 'ciclo_no_preparado_para_persistencia_multiciclo_explicita',
+            payloadPreparado: _payloadPreparado
+        },
+
+        brechasPreparacion: _brechas,
+        cautelas: _cautelas,
+
+        trazabilidad: {
+            fuentes: {
+                coherencia: (_coherencia && _coherencia.version) || null,
+                matrizDecision: (_matriz && _matriz.version) || null,
+                cierreEvaluativo: (_cierre && _cierre.version) || null
+            },
+            metricas: {
+                porcentajePendienteDecision: _pctPendiente,
+                coherenciaValida: _coherenciaValida,
+                puedeCerrarCiclo: _puedeCerrar
+            },
+            reglasAplicadas: _reglas,
+            advertencias: _advertencias,
+            notas: _notas
+        }
+    };
+
+    console.log('[COMPÁS LONGI v1.7] Contrato multiciclo longitudinal construido', salida);
+    return salida;
+}
+
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.construirContratoMulticicloLongitudinal = COMPAS_construirContratoMulticicloLongitudinal;
+
+window.COMPAS.auditarContratoMulticicloLongi = function() {
+    var contrato = window.COMPAS.construirContratoMulticicloLongitudinal();
+    console.log('[COMPÁS LONGI v1.7] Contrato multiciclo longitudinal construido', contrato);
+    return contrato;
+};
+
+console.log('[COMPÁS LONGI v1.7] COMPAS_construirContratoMulticicloLongitudinal registrado en window.COMPAS.construirContratoMulticicloLongitudinal');
+
+// ── Fin LONGI v1.7 · Contrato Estructural Multiciclo Longitudinal ────────────
+
+
 
 // ── Dashboard principal de evaluación ────────────────────────────────
 
