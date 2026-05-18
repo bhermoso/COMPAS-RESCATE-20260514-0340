@@ -84195,23 +84195,51 @@ function renderizarResultadoTerritorialV2(r) {
         var AT2_COLS = ['#0074c8','#00acd9','#94d40b','#ffb61b','#ff6600','#dc143c'];
         var AT2_TEXT = ['#0074c8','#006080','#5a8200','#8a5a00','#cc4400','#a01030'];
         var htmlRec  = '<div style="font-size:0.68rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:#94d40b; padding-bottom:0.35rem; border-bottom:1px solid #e2e8f0; margin-bottom:0.75rem;">Recomendaciones estratégicas</div>';
-        var recArr   = (r && r.recomendaciones) ? r.recomendaciones : [];
-        if (recArr.length) {
-            recArr.forEach(function(rec, i) {
-                var col = AT2_COLS[i % AT2_COLS.length];
-                var ct  = AT2_TEXT[i % AT2_TEXT.length];
+        var rcBloque07 = baseSci && baseSci._contratoBloque07 === 'sintesis_institucional_bloque07_v1';
+        function _at2RenderRecItem(rec, i, col, ct) {
                 var ori = rec.orientacion || rec.titulo || '';
                 var act = rec.activo || rec.activo_capacidad || '';
                 var lin = rec.linea_accion_municipal || rec.linea_accion || '';
+                var just = rec.justificacion || '';
                 var leg = (!act && !lin && rec.texto) ? rec.texto : '';
                 var body= (ori  ? '<div style="font-size:0.82rem; font-weight:700; color:' + ct + '; margin-bottom:0.35rem;">' + ori + '</div>' : '')
                         + (act  ? '<div style="font-size:0.75rem; color:#64748b; margin-bottom:0.2rem;"><strong style="color:#475569;">Activo relacionado:</strong> ' + act + '</div>' : '')
                         + (lin  ? '<div style="font-size:0.75rem; color:#64748b; margin-bottom:0.2rem;"><strong style="color:#475569;">Línea municipal:</strong> ' + lin + '</div>' : '')
+                        + (just ? '<div style="font-size:0.73rem; color:#64748b; margin-bottom:0.2rem;"><strong style="color:#475569;">Justificación:</strong> ' + just + '</div>' : '')
                         + (leg  ? '<div style="font-size:0.78rem; color:#475569; line-height:1.5;">' + leg + '</div>' : '');
-                htmlRec += at2_itemDoc(body, col);
-            });
+                return at2_itemDoc(body, col);
+        }
+        function _at2RenderGrupoRec(titulo, arr, accent, secundario) {
+            if (!Array.isArray(arr) || !arr.length) return '';
+            var col = accent || '#0074c8';
+            var ct = secundario ? '#64748b' : col;
+            return '<div style="margin-bottom:1rem;">'
+                + '<div style="font-size:0.66rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:' + ct + '; margin:0.4rem 0 0.55rem;">' + titulo + '</div>'
+                + arr.map(function(rec, i) {
+                    return _at2RenderRecItem(rec, i, secundario ? '#cbd5e1' : col, secundario ? '#475569' : ct);
+                }).join('')
+                + '</div>';
+        }
+        var htmlBloque07 = '';
+        if (rcBloque07) {
+            htmlBloque07 += _at2RenderGrupoRec('Recomendaciones institucionales', baseSci.recomendacionesInstitucionales, '#0074c8', false);
+            htmlBloque07 += _at2RenderGrupoRec('Recomendaciones exploratorias', baseSci.recomendacionesExploratorias, '#00acd9', false);
+            htmlBloque07 += _at2RenderGrupoRec('Recomendaciones estructurales RELAS', baseSci.recomendacionesEstructuralesRELAS, '#94d40b', false);
+            htmlBloque07 += _at2RenderGrupoRec('Seguimiento no prioritario / vigilancia contextual', baseSci.vigilanciasNoPrioritarias, '#94a3b8', true);
+        }
+        if (htmlBloque07) {
+            htmlRec += htmlBloque07;
         } else {
-            htmlRec += '<div style="font-size:0.78rem; color:#94a3b8; font-style:italic;">Sin recomendaciones disponibles.</div>';
+            var recArr   = (r && r.recomendaciones) ? r.recomendaciones : [];
+            if (recArr.length) {
+                recArr.forEach(function(rec, i) {
+                    var col = AT2_COLS[i % AT2_COLS.length];
+                    var ct  = AT2_TEXT[i % AT2_TEXT.length];
+                    htmlRec += _at2RenderRecItem(rec, i, col, ct);
+                });
+            } else {
+                htmlRec += '<div style="font-size:0.78rem; color:#94a3b8; font-style:italic;">Sin recomendaciones disponibles.</div>';
+            }
         }
         elRec.innerHTML = htmlRec;
     }
