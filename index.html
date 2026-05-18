@@ -75012,6 +75012,412 @@ console.log('[COMPÁS LONGI v1.7] COMPAS_construirContratoMulticicloLongitudinal
 // ── Fin LONGI v1.7 · Contrato Estructural Multiciclo Longitudinal ────────────
 
 
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.8 · REQUISITOS DE CIERRE HUMANO LONGITUDINAL
+// ── Versión: requisitos_cierre_humano_longitudinal_v1_8
+// ── Capa no inferencial que determina qué requisitos mínimos faltan para
+//    que el ciclo pueda pasar de "preparación frágil" a "preparado parcial"
+//    o "preparado". No decide. No recomienda. No persiste.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirRequisitosCierreHumanoLongitudinal(multiciclo, matrizDecision, cierreEvaluativo, coherencia) {
+
+    // ── Utilidades internas ──────────────────────────────────────────────────
+
+    var _fechaISO     = new Date().toISOString();
+    var _bloqueos     = [];
+    var _brechas      = [];
+    var _cautelas     = [];
+    var _reglas       = [];
+    var _notas        = [];
+
+    function _bloqueo(id, detalle) { _bloqueos.push({ id: id, detalle: detalle }); }
+    function _brecha(id, detalle)  { _brechas.push({ id: id, detalle: detalle }); }
+    function _cautela(id, detalle) { _cautelas.push({ id: id, detalle: detalle }); }
+    function _regla(id)            { _reglas.push(id); }
+    function _nota(msg)            { _notas.push(msg); }
+    function _safe(fn, fallback) {
+        try { return fn(); } catch(e) {
+            console.warn('[COMPÁS LONGI v1.8]', e);
+            return (fallback !== undefined) ? fallback : null;
+        }
+    }
+    function _arr(v) { return Array.isArray(v) ? v : []; }
+    function _n(v)   { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+    function _norm(v){ return (v == null ? '' : String(v)).toLowerCase().replace(/\s+/g, ' ').trim(); }
+    function _hay(v) { return v !== null && v !== undefined && v !== ''; }
+
+    _regla('decisiones_pendientes_bloquean_cierre');
+    _regla('cierre_no_cerrable_es_bloqueo');
+    _regla('coherencia_fragil_es_cautela_no_bloqueo');
+    _regla('contrato_multiciclo_preparacion_fragil_es_brecha');
+    _regla('no_se_infieren_decisiones_no_existentes');
+    _regla('no_se_persiste_nada');
+    _regla('no_se_modifica_agenda_ni_matriz');
+
+    // ── 1. Obtener entradas defensivamente ──────────────────────────────────
+
+    // multiciclo
+    var _multi = null;
+    _safe(function() {
+        if (multiciclo && multiciclo.version) {
+            _multi = multiciclo;
+            _nota('multiciclo_recibido_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.construirContratoMulticicloLongitudinal === 'function') {
+            _multi = window.COMPAS.construirContratoMulticicloLongitudinal();
+            _nota('multiciclo_obtenido_desde_window.COMPAS.construirContratoMulticicloLongitudinal');
+        } else {
+            _nota('multiciclo_no_disponible_en_runtime');
+        }
+    });
+
+    // matrizDecision
+    var _matriz = null;
+    _safe(function() {
+        if (matrizDecision && matrizDecision.version) {
+            _matriz = matrizDecision;
+            _nota('matrizDecision_recibida_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.construirMatrizDecisionCicloSiguiente === 'function') {
+            _matriz = window.COMPAS.construirMatrizDecisionCicloSiguiente();
+            _nota('matrizDecision_obtenida_desde_window.COMPAS.construirMatrizDecisionCicloSiguiente');
+        } else {
+            _nota('matrizDecision_no_disponible_en_runtime');
+        }
+    });
+
+    // cierreEvaluativo
+    var _cierre = null;
+    _safe(function() {
+        if (cierreEvaluativo && cierreEvaluativo.version) {
+            _cierre = cierreEvaluativo;
+            _nota('cierreEvaluativo_recibido_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.construirCierreEvaluativoLongitudinal === 'function') {
+            _cierre = window.COMPAS.construirCierreEvaluativoLongitudinal();
+            _nota('cierreEvaluativo_obtenido_desde_window.COMPAS.construirCierreEvaluativoLongitudinal');
+        } else {
+            _nota('cierreEvaluativo_no_disponible_en_runtime');
+        }
+    });
+
+    // coherencia
+    var _coh = null;
+    _safe(function() {
+        if (coherencia && coherencia.version) {
+            _coh = coherencia;
+            _nota('coherencia_recibida_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.validarCoherenciaLongitudinal === 'function') {
+            _coh = window.COMPAS.validarCoherenciaLongitudinal();
+            _nota('coherencia_obtenida_desde_window.COMPAS.validarCoherenciaLongitudinal');
+        } else {
+            _nota('coherencia_no_disponible_en_runtime');
+        }
+    });
+
+    // ── 2. Lectura de campos clave ───────────────────────────────────────────
+
+    // Actuaciones y decisiones pendientes
+    var _totalActuaciones   = 0;
+    var _decisionesPendientes = 0;
+
+    _safe(function() {
+        // Intentar desde matriz de decisión (fuente más directa)
+        if (_matriz && _matriz.resumen) {
+            _totalActuaciones     = _n(_matriz.resumen.total || _matriz.resumen.totalActuaciones);
+            _decisionesPendientes = _n(_matriz.resumen.pendienteDecision || _matriz.resumen.pendientes || _matriz.resumen.sinDecision || _matriz.resumen.noDecidido);
+        }
+        // Recuperación independiente de _decisionesPendientes:
+        // si _totalActuaciones > 0 pero _decisionesPendientes quedó en 0 (gate de ||
+        // absorbe 0 como falsy o _matriz.resumen no expone el campo), recuperar
+        // contando directamente desde _matriz.matriz o desde v1.2.
+        if (_totalActuaciones > 0 && _decisionesPendientes === 0) {
+            // Fuente 1: filas de la propia _matriz con decisionSiguienteCiclo === 'pendiente'
+            if (_matriz && Array.isArray(_matriz.matriz)) {
+                var _nPend = _matriz.matriz.filter(function(f) {
+                    return f && f.decisionSiguienteCiclo === 'pendiente';
+                }).length;
+                if (_nPend > 0) {
+                    _decisionesPendientes = _nPend;
+                    _nota('decisionesPendientes_recuperado_desde_matriz.matriz (pendiente)');
+                }
+            }
+            // Fuente 2: v1.2 noDecidido (si Fuente 1 no recuperó)
+            if (_decisionesPendientes === 0 && window.COMPAS && typeof window.COMPAS.construirEstadoCicloLongitudinal === 'function') {
+                _safe(function() {
+                    var _est2 = window.COMPAS.construirEstadoCicloLongitudinal();
+                    if (_est2 && _est2.clasificacionCiclo) {
+                        var _nd = _arr(_est2.clasificacionCiclo.noDecidido).length;
+                        if (_nd > 0) {
+                            _decisionesPendientes = _nd;
+                            _nota('decisionesPendientes_recuperado_desde_v1_2.noDecidido');
+                        }
+                    }
+                });
+            }
+        }
+
+        // Si no disponible, intentar desde estado de ciclo
+        if (_totalActuaciones === 0 && window.COMPAS && typeof window.COMPAS.construirEstadoCicloLongitudinal === 'function') {
+            var _estado = window.COMPAS.construirEstadoCicloLongitudinal();
+            if (_estado && _estado.fuenteActuaciones) {
+                _totalActuaciones = _n(_estado.fuenteActuaciones.total);
+            }
+            if (_estado && _estado.clasificacionCiclo) {
+                _decisionesPendientes = _n(_arr(_estado.clasificacionCiclo.noDecidido).length);
+            }
+            _nota('actuaciones_y_pendientes_desde_estado_ciclo_longi_v1_2');
+        }
+        // Fallback: planLocalSalud
+        if (_totalActuaciones === 0) {
+            var _pls = (typeof planLocalSalud !== 'undefined') ? planLocalSalud : null;
+            if (_pls && _pls.agenda && Array.isArray(_pls.agenda.actuaciones)) {
+                _totalActuaciones = _pls.agenda.actuaciones.length;
+                // Contar no decididos
+                _pls.agenda.actuaciones.forEach(function(a) {
+                    var _dec = _norm(a && (a.decisionSiguienteCiclo || a.decision_siguiente_ciclo) || '');
+                    if (!_dec || _dec === 'no_decidido') _decisionesPendientes++;
+                });
+                _nota('actuaciones_y_pendientes_desde_planLocalSalud.agenda.actuaciones (fallback)');
+            }
+        }
+    });
+
+    // Coherencia longitudinal
+    var _nivelCoherencia = _norm((_coh && (_coh.nivelCoherencia || _coh.nivel || _coh.resultado)) || '');
+    var _coherenciaValida = _nivelCoherencia === 'valida' || _nivelCoherencia === 'valida_fragil' || _nivelCoherencia.indexOf('valida') !== -1;
+    var _coherenciaFragil = _nivelCoherencia.indexOf('fragil') !== -1 || _nivelCoherencia.indexOf('frágil') !== -1;
+    if (!_hay(_nivelCoherencia)) {
+        _nivelCoherencia = 'no_disponible';
+        _nota('coherencia_nivel_no_determinable');
+    }
+
+    // Cierre evaluativo
+    var _nivelCierre = _norm((_cierre && (_cierre.nivelCierre || _cierre.nivel || _cierre.resultado)) || '');
+    if (!_hay(_nivelCierre)) {
+        _nivelCierre = 'no_disponible';
+        _nota('cierre_nivel_no_determinable');
+    }
+    var _cierreNoCerrable = _nivelCierre === 'no_cerrable' || _nivelCierre.indexOf('no_cerrable') !== -1;
+
+    // Contrato multiciclo
+    var _nivelPreparacion = _norm((_multi && (_multi.nivelPreparacion || _multi.nivel || _multi.preparacion)) || '');
+    if (!_hay(_nivelPreparacion)) {
+        _nivelPreparacion = 'no_disponible';
+        _nota('multiciclo_nivel_preparacion_no_determinable');
+    }
+    var _multiFragil = _nivelPreparacion === 'preparacion_fragil' || _nivelPreparacion.indexOf('fragil') !== -1 || _nivelPreparacion.indexOf('frágil') !== -1;
+
+    // ── 3. Evaluación de requisitos mínimos ─────────────────────────────────
+
+    var _cumpleDecisiones    = _decisionesPendientes === 0 && _totalActuaciones > 0;
+    var _cumpleCoherencia    = _coherenciaValida;
+    var _cumpleCierre        = _hay(_nivelCierre) && !_cierreNoCerrable && _nivelCierre !== 'no_disponible';
+    var _cumpleMulticiclo    = _hay(_nivelPreparacion) && !_multiFragil && _nivelPreparacion !== 'no_disponible';
+
+    var _requisitosMinimos = {
+        decisionesActuaciones: {
+            requerido:            true,
+            totalActuaciones:     _totalActuaciones,
+            decisionesPendientes: _decisionesPendientes,
+            cumple:               _cumpleDecisiones
+        },
+        coherenciaLongitudinal: {
+            requerido: true,
+            nivel:     _nivelCoherencia,
+            cumple:    _cumpleCoherencia
+        },
+        cierreEvaluativo: {
+            requerido:   true,
+            nivelCierre: _nivelCierre,
+            cumple:      _cumpleCierre
+        },
+        contratoMulticiclo: {
+            requerido:        true,
+            nivelPreparacion: _nivelPreparacion,
+            cumple:           _cumpleMulticiclo
+        }
+    };
+
+    // ── 4. Bloqueos, brechas y cautelas ─────────────────────────────────────
+
+    if (_decisionesPendientes > 0) {
+        _bloqueo('decisiones_actuaciones_pendientes',
+            'Hay ' + _decisionesPendientes + ' de ' + _totalActuaciones + ' actuaciones sin decisión de siguiente ciclo. El cierre no es posible hasta que se decidan todas.');
+    }
+    if (_cierreNoCerrable) {
+        _bloqueo('cierre_evaluativo_no_cerrable',
+            'El cierre evaluativo tiene nivel "' + _nivelCierre + '". Se requiere al menos nivel "preparado_parcial" para cerrar el ciclo.');
+    }
+    if (!_hay(_nivelCierre) || _nivelCierre === 'no_disponible') {
+        _bloqueo('cierre_evaluativo_no_disponible',
+            'No se pudo determinar el nivel de cierre evaluativo — LONGI v1.4 no disponible o sin datos.');
+    }
+    if (_multiFragil) {
+        _brecha('contrato_multiciclo_preparacion_fragil',
+            'El contrato multiciclo está en nivel "' + _nivelPreparacion + '". Se requiere al menos "preparado_parcial" para considerarlo apto para continuidad.');
+    }
+    if (!_hay(_nivelPreparacion) || _nivelPreparacion === 'no_disponible') {
+        _brecha('contrato_multiciclo_no_disponible',
+            'No se pudo determinar el nivel de preparación multiciclo — LONGI v1.7 no disponible o sin datos.');
+    }
+    if (_coherenciaFragil) {
+        _cautela('coherencia_longitudinal_fragil',
+            'La coherencia longitudinal es válida pero frágil (nivel: "' + _nivelCoherencia + '"). No bloquea el cierre parcial, pero indica riesgo de inconsistencia entre ciclos.');
+    }
+    if (!_hay(_nivelCoherencia) || _nivelCoherencia === 'no_disponible') {
+        _cautela('coherencia_longitudinal_no_disponible',
+            'No se pudo determinar el nivel de coherencia longitudinal — LONGI v1.6 no disponible o sin datos.');
+    }
+    if (_totalActuaciones === 0) {
+        _bloqueo('sin_actuaciones_en_runtime',
+            'No hay actuaciones disponibles en runtime. El cierre no es evaluable.');
+    }
+
+    // ── 5. Checklist humano ──────────────────────────────────────────────────
+
+    function _itemChecklist(id, etiqueta, requerido, cumple, bloqueante, detalle) {
+        return {
+            id:        id,
+            etiqueta:  etiqueta,
+            requerido: requerido,
+            estado:    cumple ? 'cumplido' : (bloqueante ? 'bloqueante' : 'pendiente'),
+            detalle:   detalle
+        };
+    }
+
+    var _checklist = [
+        _itemChecklist(
+            'decisiones_actuaciones',
+            'Todas las actuaciones tienen decisión de siguiente ciclo',
+            true,
+            _cumpleDecisiones,
+            true,
+            _decisionesPendientes > 0
+                ? _decisionesPendientes + ' actuaciones sin decisión de ' + _totalActuaciones + ' totales'
+                : 'Todas las actuaciones tienen decisión declarada'
+        ),
+        _itemChecklist(
+            'cierre_evaluativo',
+            'Cierre evaluativo en nivel suficiente (no "no_cerrable")',
+            true,
+            _cumpleCierre,
+            true,
+            'Nivel actual: "' + _nivelCierre + '"'
+        ),
+        _itemChecklist(
+            'coherencia_longitudinal',
+            'Coherencia longitudinal válida',
+            true,
+            _cumpleCoherencia,
+            false,
+            'Nivel actual: "' + _nivelCoherencia + '"' + (_coherenciaFragil ? ' (frágil — cautela activa)' : '')
+        ),
+        _itemChecklist(
+            'contrato_multiciclo',
+            'Contrato multiciclo en nivel suficiente (no "preparacion_fragil")',
+            true,
+            _cumpleMulticiclo,
+            false,
+            'Nivel actual: "' + _nivelPreparacion + '"'
+        )
+    ];
+
+    // ── 6. Estado de cierre humano ───────────────────────────────────────────
+
+    var _puedeCerrarHumanamente = false;
+    var _nivelEstado            = 'no_cerrable';
+    var _criterioEstado         = '';
+
+    var _hayBloqueoDecisiones = _decisionesPendientes > 0 || _totalActuaciones === 0;
+    var _hayBloqueoEvaluativo = _cierreNoCerrable || !_hay(_nivelCierre) || _nivelCierre === 'no_disponible';
+
+    if (_hayBloqueoDecisiones && _hayBloqueoEvaluativo) {
+        _nivelEstado    = 'no_cerrable';
+        _criterioEstado = 'Decisiones de actuaciones pendientes (' + _decisionesPendientes + ') y cierre evaluativo no cerrable ("' + _nivelCierre + '")';
+    } else if (_hayBloqueoDecisiones) {
+        _nivelEstado    = 'pendiente_decision';
+        _criterioEstado = 'Hay ' + _decisionesPendientes + ' actuaciones sin decisión de siguiente ciclo';
+    } else if (_hayBloqueoEvaluativo) {
+        _nivelEstado    = 'no_cerrable';
+        _criterioEstado = 'Cierre evaluativo en nivel no cerrable: "' + _nivelCierre + '"';
+    } else if (_cumpleDecisiones && _cumpleCierre && !_cumpleCoherencia && !_cumpleMulticiclo) {
+        _nivelEstado    = 'preparado_parcial';
+        _criterioEstado = 'Decisiones y cierre cumplidos; coherencia y multiciclo aún no';
+        _puedeCerrarHumanamente = true;
+    } else if (_cumpleDecisiones && _cumpleCierre && (_cumpleCoherencia || _cumpleMulticiclo)) {
+        _nivelEstado    = 'preparado_parcial';
+        _criterioEstado = 'Requisitos mínimos cumplidos parcialmente';
+        _puedeCerrarHumanamente = true;
+    } else if (_cumpleDecisiones && _cumpleCierre && _cumpleCoherencia && _cumpleMulticiclo) {
+        _nivelEstado    = 'preparado';
+        _criterioEstado = 'Todos los requisitos mínimos cumplidos';
+        _puedeCerrarHumanamente = true;
+    } else {
+        _nivelEstado    = 'no_cerrable';
+        _criterioEstado = 'No se cumplen los requisitos mínimos de cierre';
+    }
+
+    // ── 7. Construcción del contrato ─────────────────────────────────────────
+
+    var salida = {
+
+        version:                    'requisitos_cierre_humano_longitudinal_v1_8',
+        lecturaNoInferencial:       true,
+        noCausal:                   true,
+        noRecomendador:             true,
+        sinPersistenciaAutomatica:  true,
+        fechaISO:                   _fechaISO,
+
+        estadoCierreHumano: {
+            puedeCerrarHumanamente: _puedeCerrarHumanamente,
+            nivel:                  _nivelEstado,
+            criterio:               _criterioEstado
+        },
+
+        requisitosMinimos: _requisitosMinimos,
+
+        checklistHumano: _checklist,
+
+        bloqueos:  _bloqueos,
+        brechas:   _brechas,
+        cautelas:  _cautelas,
+
+        trazabilidad: {
+            reglasAplicadas:  _reglas,
+            notas:            _notas,
+            advertencias:     []
+        }
+
+    };
+
+    console.log(
+        '[COMPÁS LONGI v1.8] Requisitos cierre humano construidos',
+        '| nivel:', _nivelEstado,
+        '| puedeCerrar:', _puedeCerrarHumanamente,
+        '| decisionesPendientes:', _decisionesPendientes + '/' + _totalActuaciones,
+        '| bloqueos:', _bloqueos.length,
+        '| brechas:', _brechas.length,
+        '| cautelas:', _cautelas.length
+    );
+
+    return salida;
+}
+
+// Registro en namespace COMPAS
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.construirRequisitosCierreHumanoLongitudinal = COMPAS_construirRequisitosCierreHumanoLongitudinal;
+
+// Auditor de consola
+window.COMPAS.auditarRequisitosCierreHumanoLongi = function() {
+    var estado = window.COMPAS.construirRequisitosCierreHumanoLongitudinal();
+    console.log('[COMPÁS LONGI v1.8] Requisitos de cierre humano longitudinal construidos', estado);
+    return estado;
+};
+
+console.log('[COMPÁS LONGI v1.8] COMPAS_construirRequisitosCierreHumanoLongitudinal registrado en window.COMPAS.construirRequisitosCierreHumanoLongitudinal');
+
+// ── Fin LONGI v1.8 · Requisitos de Cierre Humano Longitudinal ────────────────
+
+
 
 // ── Dashboard principal de evaluación ────────────────────────────────
 
