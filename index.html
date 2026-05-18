@@ -2493,7 +2493,11 @@
 
                 text-transform: uppercase;
 
-                color: #2c3e50;
+                background: linear-gradient(90deg,#0074c8 0%,#00acd9 20%,#94d40b 40%,#ffb61b 60%,#ff6600 80%,#dc143c 100%);
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: transparent;
 
                 display: block;
 
@@ -8030,7 +8034,7 @@
 
         <div style="border-bottom:3px solid; border-image:linear-gradient(90deg,#0074c8,#00acd9,#94d40b,#ffb61b,#dc143c) 1; padding:1.25rem 2rem; display:flex; justify-content:space-between; align-items:center;">
 
-            <h2 style="margin:0; font-size:1.15rem; font-weight:700; color:#1e293b; letter-spacing:.02em;">Qué es COMPÁS</h2>
+            <h2 style="margin:0; font-size:1.15rem; font-weight:700; color:#1e293b; letter-spacing:.02em;">Qué es <span style="background:linear-gradient(90deg,#0074c8 0%,#00acd9 20%,#94d40b 40%,#ffb61b 60%,#ff6600 80%,#dc143c 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">COMPÁS</span></h2>
 
             <button onclick="cerrarMetodologia()" style="background:none; border:1px solid #e2e8f0; color:#64748b; width:30px; height:30px; border-radius:4px; cursor:pointer; font-size:1rem; line-height:1;">✕</button>
 
@@ -8038,22 +8042,24 @@
 
         <div id="compas-texto-modal-metodologia" data-compas-text-key="modal_metodologia" style="padding:2rem 2rem 1.5rem; color:#334155; font-size:.88rem; line-height:1.7;">
 
-            <p style="margin-top:0;"><strong style="color:#0074c8;">COMPÁS</strong> es una infraestructura pública de inteligencia territorial para la Acción Local en Salud. No es un software sanitario ni un cuadro de mando clínico: es un entorno de convergencia epistemológica que integra evidencia científica, conocimiento situado, participación deliberativa y gobernanza intersectorial en un ciclo longitudinal de planificación local.</p>
+            <p style="margin-top:0;"><strong style="background:linear-gradient(90deg,#0074c8 0%,#00acd9 20%,#94d40b 40%,#ffb61b 60%,#ff6600 80%,#dc143c 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">COMPÁS</strong> es una infraestructura pública de inteligencia territorial para la Acción Local en Salud. No es un software sanitario ni un cuadro de mando clínico: es un entorno de convergencia epistemológica que integra evidencia científica, conocimiento situado, participación deliberativa y gobernanza intersectorial en un ciclo longitudinal de planificación local.</p>
 
             <p>Su premisa es que la salud de una comunidad es un fenómeno social, comunitario y territorial: está determinada por condiciones materiales de vida, relaciones de poder, desigualdades estructurales, activos colectivos y decisiones políticas. El sistema sanitario es un actor estratégico y un aliado relevante en ese proceso, pero no su director absoluto ni su único protagonista. La Acción Local en Salud requiere intersectorialidad real, gobernanza compartida y construcción colectiva de agenda.</p>
 
             <p>COMPÁS produce interpretación territorial, no automatización de decisiones. Diferencia señales observadas, inferencias razonables, hipótesis prudentes, brechas de información y conocimiento no disponible. La síntesis analítica está subordinada al criterio técnico, municipal y comunitario: ningún resultado del sistema tiene valor normativo sin validación local.</p>
+
+            <p>El sistema se alinea con RELAS, la EPVSA 2024-2030 y la Estrategia de Salud Comunitaria de Andalucía 2026-2030 (ESCA). La ESCA aporta el marco específico de salud comunitaria: define la salud desde la interacción de factores personales, familiares, sociales, culturales, ambientales, políticos y comunitarios, y articula los roles de Atención Primaria, Salud Pública, ayuntamientos, ciudadanía y red local en una relación de reciprocidad, no de jerarquía sanitaria.</p>
 
             <h3 style="font-size:.9rem; font-weight:700; color:#1e293b; margin:1.5rem 0 .6rem; padding-bottom:.35rem; border-bottom:2px solid #e2e8f0;">Arquitectura del ciclo territorial</h3>
 
             <p>COMPÁS organiza el proceso local de salud en cinco fases que forman un ciclo continuo de aprendizaje acumulativo:</p>
 
             <ol style="padding-left:1.25rem; margin:.6rem 0 1rem;">
-                <li style="margin-bottom:.5rem;"><strong style="color:#0074c8;">Analizar.</strong> Reconstrucción del perfil territorial desde una perspectiva de determinantes sociales y desigualdades en salud: informes epidemiológicos, indicadores socioeconómicos, escalas diagnósticas (IBSE, SF-12, Duke, CAGE, PREDIMED), estudios complementarios y fuentes municipales. La lectura integra modelos salutogénicos y activos comunitarios, no solo déficits.</li>
+                <li style="margin-bottom:.5rem;"><strong style="color:#0074c8;">Analizar.</strong> Reconstrucción del perfil territorial desde una perspectiva de determinantes sociales y desigualdades en salud: informes epidemiológicos, indicadores socioeconómicos, escalas diagnósticas (IBSE, SF-12, Duke, CAGE, PREDIMED), estudios complementarios y fuentes municipales. La lectura integra modelos salutogénicos y activos comunitarios conforme al enfoque biopsicosocial y de equidad de la ESCA, no solo déficits y patologías.</li>
                 <li style="margin-bottom:.5rem;"><strong style="color:#00acd9;">Priorizar.</strong> Convergencia entre evidencia técnica, experiencia comunitaria y prioridades estratégicas EPVSA, mediante procesos deliberativos con la ciudadanía y la red local. No sustituye la deliberación: la organiza, la documenta y la hace trazable metodológicamente.</li>
                 <li style="margin-bottom:.5rem;"><strong style="color:#6ea80a;">Planificar.</strong> Traducción del diagnóstico territorial y las prioridades comunitarias en un Plan Local de Salud operativo, intersectorial y compatible con RELAS y EPVSA 2024-2030. Cada línea del plan incluye las fuentes que la fundamentan y los actores corresponsables.</li>
                 <li style="margin-bottom:.5rem;"><strong style="color:#b45309;">Ejecutar.</strong> Organización territorial de actuaciones: agenda anual, responsables institucionales y comunitarios, cronograma, coordinación intersectorial y trazabilidad de implementación. La ejecución es parte del ciclo de aprendizaje, no solo cumplimiento de tareas.</li>
-                <li style="margin-bottom:.5rem;"><strong style="color:#dc143c;">Evaluar.</strong> Lectura longitudinal y acumulativa del proceso, los resultados y los arrastres: qué funcionó, qué no se pudo ejecutar, qué condiciones cambiaron, qué aprendizajes alimentan el siguiente ciclo. La evaluación construye memoria territorial e inteligencia institucional.</li>
+                <li style="margin-bottom:.5rem;"><strong style="color:#dc143c;">Evaluar.</strong> Lectura longitudinal y acumulativa del proceso, los resultados y los arrastres: qué funcionó, qué no se pudo ejecutar, qué condiciones cambiaron, qué aprendizajes alimentan el siguiente ciclo. La evaluación construye memoria territorial e inteligencia institucional. La ESCA aporta un marco de indicadores de contexto, impacto, resultado y realización aplicables al ciclo local de salud comunitaria.</li>
             </ol>
 
             <h3 style="font-size:.9rem; font-weight:700; color:#1e293b; margin:1.5rem 0 .6rem; padding-bottom:.35rem; border-bottom:2px solid #e2e8f0;">Quién sostiene el proceso</h3>
@@ -8062,7 +8068,7 @@
                 <li style="margin-bottom:.35rem;"><strong>El ayuntamiento</strong>, responsable político de la planificación local y de la aprobación institucional del plan.</li>
                 <li style="margin-bottom:.35rem;"><strong>El grupo motor local</strong>, órgano técnico-participativo que coordina el proceso y articula actores.</li>
                 <li style="margin-bottom:.35rem;"><strong>La red local de acción en salud (RELAS)</strong>, conjunto de actores comunitarios, sanitarios, sociales y educativos que participan en el diagnóstico, la priorización y la acción.</li>
-                <li style="margin-bottom:.35rem;"><strong>El sistema sanitario</strong>, como actor estratégico y aliado relevante, aportando evidencia epidemiológica, capacidad técnica y articulación con la política de salud pública autonómica.</li>
+                <li style="margin-bottom:.35rem;"><strong>El sistema sanitario</strong>, como actor estratégico y aliado relevante, aportando evidencia epidemiológica, capacidad técnica y articulación con la política de salud pública autonómica. La ESCA refuerza explícitamente la coordinación entre Atención Primaria y Comunitaria, Salud Pública, ayuntamientos y red local como condición para la salud comunitaria efectiva.</li>
             </ul>
 
             <h3 style="font-size:.9rem; font-weight:700; color:#1e293b; margin:1.5rem 0 .6rem; padding-bottom:.35rem; border-bottom:2px solid #e2e8f0;">Lo que COMPÁS no sustituye</h3>
@@ -8083,7 +8089,8 @@
                 <li style="margin-bottom:.3rem;">Ley de Autonomía Local de Andalucía (LAULA, 5/2010) — competencia municipal en salud pública.</li>
                 <li style="margin-bottom:.3rem;">Ley de Salud Pública de Andalucía (16/2011) — planes locales de salud.</li>
                 <li style="margin-bottom:.3rem;">Estrategia de Promoción de una Vida Saludable en Andalucía (EPVSA 2024-2030).</li>
-                <li style="margin-bottom:.3rem;">IV Plan Andaluz de Salud — salud comunitaria, gobernanza local e intersectorialidad.</li>
+                <li style="margin-bottom:.3rem;">Estrategia de Salud Comunitaria de Andalucía 2026-2030 (ESCA) — Orden de 16 de diciembre de 2025, BOJA 23 de enero de 2026. Marco de salud comunitaria, activos para la salud, orientación comunitaria, equidad, participación activa, coordinación intersectorial, registro, evaluación e investigación.</li>
+                <li style="margin-bottom:.3rem;">Planificación territorial en salud comunitaria — gobernanza local, intersectorialidad y aprendizaje acumulativo como condiciones de sostenibilidad del ciclo RELAS-EPVSA-ESCA.</li>
                 <li style="margin-bottom:.3rem;">Marco de Determinantes Sociales de la Salud (OMS / Comisión Marmot) — enfoque ecosocial y de equidad.</li>
             </ul>
 
