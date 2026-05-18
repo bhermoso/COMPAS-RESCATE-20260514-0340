@@ -11738,8 +11738,15 @@ function generarTablaIndicadores(indicadores) {
 
     };
 
-    // Conectar con IBSE local comparable
-    const ibseComparableEAS = (typeof window.COMPAS_calcularIBSELocalComparableEAS === 'function')
+    // Conectar con IBSE local comparable — solo si hay datos IBSE reales en memoria
+    const _hayIBSELocal = !!(window.datosIBSE && (
+        window.datosIBSE.n ||
+        window.datosIBSE.n_valido ||
+        window.datosIBSE.total ||
+        window.datosIBSE.indicadores ||
+        window.datosIBSE.items
+    ));
+    const ibseComparableEAS = (_hayIBSELocal && typeof window.COMPAS_calcularIBSELocalComparableEAS === 'function')
         ? window.COMPAS_calcularIBSELocalComparableEAS()
         : null;
 
@@ -75416,6 +75423,875 @@ window.COMPAS.auditarRequisitosCierreHumanoLongi = function() {
 console.log('[COMPÁS LONGI v1.8] COMPAS_construirRequisitosCierreHumanoLongitudinal registrado en window.COMPAS.construirRequisitosCierreHumanoLongitudinal');
 
 // ── Fin LONGI v1.8 · Requisitos de Cierre Humano Longitudinal ────────────────
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.9 · ELEGIBILIDAD DE PERSISTENCIA MULTICICLO LONGITUDINAL
+// ── Versión: elegibilidad_persistencia_multiciclo_longitudinal_v1_9
+// ── Determina si el ciclo es elegible para persistencia multiciclo real.
+// ── No persiste. No Firebase. No snapshots. No UI. No inferencia.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirElegibilidadPersistenciaMulticicloLongitudinal(requisitosCierreHumano, contratoMulticiclo, coherencia) {
+
+    // ── Utilidades internas ──────────────────────────────────────────────────
+
+    var _fechaISO  = new Date().toISOString();
+    var _bloqueos  = [];
+    var _condiciones = [];
+    var _cautelas  = [];
+    var _reglas    = [];
+    var _notas     = [];
+
+    function _bloqueo(id, detalle)    { _bloqueos.push({ id: id, detalle: detalle }); }
+    function _condicion(id, detalle)  { _condiciones.push({ id: id, detalle: detalle }); }
+    function _cautela(id, detalle)    { _cautelas.push({ id: id, detalle: detalle }); }
+    function _regla(id)               { _reglas.push(id); }
+    function _nota(msg)               { _notas.push(msg); }
+    function _safe(fn, fallback) {
+        try { return fn(); } catch(e) {
+            console.warn('[COMPÁS LONGI v1.9]', e);
+            return (fallback !== undefined) ? fallback : null;
+        }
+    }
+    function _arr(v) { return Array.isArray(v) ? v : []; }
+    function _n(v)   { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+    function _norm(v){ return (v == null ? '' : String(v)).toLowerCase().replace(/\s+/g, ' ').trim(); }
+    function _hay(v) { return v !== null && v !== undefined && v !== ''; }
+
+    _regla('puedeCerrarHumanamente_false → no_elegible');
+    _regla('decisionesPendientes_gt_0 → no_elegible');
+    _regla('cierre_nivel_no_cerrable_o_pendiente_decision → no_elegible');
+    _regla('coherencia_fragil → cautela_no_bloqueo_absoluto');
+    _regla('multiciclo_preparacion_fragil → no_elegible_o_elegible_condicional_segun_bloqueos');
+    _regla('no_persistir_nada');
+    _regla('no_llamar_firebase');
+
+    // ── 1. Obtener entradas defensivamente ──────────────────────────────────
+
+    // requisitosCierreHumano (v1.8)
+    var _req = null;
+    _safe(function() {
+        if (requisitosCierreHumano && requisitosCierreHumano.version) {
+            _req = requisitosCierreHumano;
+            _nota('requisitosCierreHumano_recibido_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.construirRequisitosCierreHumanoLongitudinal === 'function') {
+            _req = window.COMPAS.construirRequisitosCierreHumanoLongitudinal();
+            _nota('requisitosCierreHumano_obtenido_desde_window.COMPAS.construirRequisitosCierreHumanoLongitudinal');
+        } else {
+            _nota('requisitosCierreHumano_no_disponible_en_runtime');
+        }
+    });
+
+    // contratoMulticiclo (v1.7)
+    var _multi = null;
+    _safe(function() {
+        if (contratoMulticiclo && contratoMulticiclo.version) {
+            _multi = contratoMulticiclo;
+            _nota('contratoMulticiclo_recibido_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.construirContratoMulticicloLongitudinal === 'function') {
+            _multi = window.COMPAS.construirContratoMulticicloLongitudinal();
+            _nota('contratoMulticiclo_obtenido_desde_window.COMPAS.construirContratoMulticicloLongitudinal');
+        } else {
+            _nota('contratoMulticiclo_no_disponible_en_runtime');
+        }
+    });
+
+    // coherencia (v1.6)
+    var _coh = null;
+    _safe(function() {
+        if (coherencia && coherencia.version) {
+            _coh = coherencia;
+            _nota('coherencia_recibida_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.validarCoherenciaLongitudinal === 'function') {
+            _coh = window.COMPAS.validarCoherenciaLongitudinal();
+            _nota('coherencia_obtenida_desde_window.COMPAS.validarCoherenciaLongitudinal');
+        } else {
+            _nota('coherencia_no_disponible_en_runtime');
+        }
+    });
+
+    // ── 2. Lectura de campos clave ───────────────────────────────────────────
+
+    // Desde v1.8
+    var _puedeCerrarHumanamente = !!(_req && _req.estadoCierreHumano && _req.estadoCierreHumano.puedeCerrarHumanamente);
+    var _nivelCierreHumano      = _norm((_req && _req.estadoCierreHumano && _req.estadoCierreHumano.nivel) || '');
+    var _decisionesPendientes   = 0;
+    _safe(function() {
+        if (_req && _req.requisitosMinimos && _req.requisitosMinimos.decisionesActuaciones) {
+            _decisionesPendientes = _n(_req.requisitosMinimos.decisionesActuaciones.decisionesPendientes);
+        }
+    });
+    if (!_hay(_nivelCierreHumano)) {
+        _nivelCierreHumano = 'no_disponible';
+        _nota('nivel_cierre_humano_no_determinable');
+    }
+
+    // Desde v1.7
+    var _nivelPreparacion = _norm((_multi && (_multi.nivelPreparacion || _multi.nivel || _multi.preparacion)) || '');
+    if (!_hay(_nivelPreparacion)) {
+        _nivelPreparacion = 'no_disponible';
+        _nota('nivel_preparacion_multiciclo_no_determinable');
+    }
+    var _multiFragil = _nivelPreparacion.indexOf('fragil') !== -1 || _nivelPreparacion.indexOf('frágil') !== -1;
+
+    // Desde v1.6
+    var _nivelCoherencia = _norm((_coh && (_coh.nivelCoherencia || _coh.nivel || _coh.resultado)) || '');
+    if (!_hay(_nivelCoherencia)) {
+        _nivelCoherencia = 'no_disponible';
+        _nota('nivel_coherencia_no_determinable');
+    }
+    var _coherenciaFragil  = _nivelCoherencia.indexOf('fragil') !== -1 || _nivelCoherencia.indexOf('frágil') !== -1;
+    var _coherenciaValida  = _nivelCoherencia.indexOf('valida') !== -1 || _nivelCoherencia === 'valida';
+
+    // ── 3. Evaluación de requisitos ──────────────────────────────────────────
+
+    var _cumpleCierreHumano     = _puedeCerrarHumanamente;
+    var _cumpleDecisiones       = _decisionesPendientes === 0;
+    var _cumpleCoherencia       = _coherenciaValida;
+    var _cumpleMulticiclo       = _hay(_nivelPreparacion) && !_multiFragil && _nivelPreparacion !== 'no_disponible';
+
+    var _requisitos = {
+        cierreHumano: {
+            cumple: _cumpleCierreHumano,
+            nivel:  _nivelCierreHumano
+        },
+        decisionesCompletas: {
+            cumple:    _cumpleDecisiones,
+            pendientes: _decisionesPendientes
+        },
+        coherenciaLongitudinal: {
+            cumple: _cumpleCoherencia,
+            nivel:  _nivelCoherencia
+        },
+        contratoMulticiclo: {
+            cumple: _cumpleMulticiclo,
+            nivel:  _nivelPreparacion
+        }
+    };
+
+    // ── 4. Bloqueos, condiciones previas y cautelas ──────────────────────────
+
+    // Bloqueos duros
+    if (!_puedeCerrarHumanamente) {
+        _bloqueo('cierre_humano_no_autorizado',
+            'requisitosCierreHumano.puedeCerrarHumanamente === false. Nivel: "' + _nivelCierreHumano + '". La persistencia multiciclo requiere cierre humano previo.');
+    }
+    if (_decisionesPendientes > 0) {
+        _bloqueo('decisiones_actuaciones_pendientes',
+            _decisionesPendientes + ' actuaciones sin decisión de siguiente ciclo. La persistencia multiciclo requiere que todas las actuaciones tengan decisión declarada.');
+    }
+    if (_nivelCierreHumano === 'no_cerrable' || _nivelCierreHumano === 'pendiente_decision') {
+        _bloqueo('nivel_cierre_humano_bloqueante',
+            'El nivel de cierre humano es "' + _nivelCierreHumano + '". Se requiere al menos "preparado_parcial" para ser elegible.');
+    }
+    if (!_hay(_req)) {
+        _bloqueo('requisitos_cierre_humano_no_disponibles',
+            'No se pudo obtener el contrato de requisitos de cierre humano (LONGI v1.8). La elegibilidad no puede evaluarse.');
+    }
+
+    // Condiciones previas (no bloqueos duros pero impiden elegibilidad completa)
+    if (_multiFragil) {
+        _condicion('contrato_multiciclo_preparacion_fragil',
+            'El contrato multiciclo está en nivel "' + _nivelPreparacion + '". Debe alcanzar al menos "preparado_parcial" antes de la persistencia.');
+    }
+    if (!_hay(_nivelPreparacion) || _nivelPreparacion === 'no_disponible') {
+        _condicion('contrato_multiciclo_no_disponible',
+            'No se pudo determinar el nivel de preparación multiciclo (LONGI v1.7). Requerido antes de la persistencia.');
+    }
+    if (!_cumpleCoherencia && _nivelCoherencia !== 'no_disponible') {
+        _condicion('coherencia_longitudinal_no_valida',
+            'Coherencia longitudinal en nivel "' + _nivelCoherencia + '". Se recomienda coherencia válida antes de persistir.');
+    }
+
+    // Cautelas (no bloquean, pero deben quedar documentadas)
+    if (_coherenciaFragil) {
+        _cautela('coherencia_longitudinal_fragil',
+            'Coherencia válida pero frágil (nivel: "' + _nivelCoherencia + '"). Riesgo de inconsistencia entre ciclos tras la persistencia.');
+    }
+    if (!_hay(_nivelCoherencia) || _nivelCoherencia === 'no_disponible') {
+        _cautela('coherencia_no_determinable',
+            'No se pudo determinar el nivel de coherencia (LONGI v1.6). Verificar antes de persistir.');
+    }
+
+    // ── 5. Cálculo de nivel de elegibilidad ──────────────────────────────────
+
+    var _esElegible   = false;
+    var _nivel        = 'no_elegible';
+    var _criterio     = '';
+
+    var _hayBloqueo   = _bloqueos.length > 0;
+
+    if (_hayBloqueo) {
+        _esElegible = false;
+        _nivel      = 'no_elegible';
+        _criterio   = 'Hay ' + _bloqueos.length + ' bloqueo(s) activo(s): ' + _bloqueos.map(function(b) { return b.id; }).join(', ');
+    } else if (_condiciones.length > 0) {
+        // Sin bloqueos duros pero hay condiciones previas pendientes
+        if (_cumpleDecisiones && _cumpleCierreHumano && !_cumpleMulticiclo) {
+            _esElegible = false;
+            _nivel      = 'elegible_condicional';
+            _criterio   = 'Sin bloqueos duros pero contrato multiciclo no alcanza nivel mínimo. Condiciones previas: ' + _condiciones.map(function(c) { return c.id; }).join(', ');
+        } else {
+            _esElegible = false;
+            _nivel      = 'elegible_condicional';
+            _criterio   = 'Sin bloqueos duros. Condiciones previas pendientes: ' + _condiciones.map(function(c) { return c.id; }).join(', ');
+        }
+    } else if (_cumpleCierreHumano && _cumpleDecisiones && _cumpleCoherencia && _cumpleMulticiclo) {
+        _esElegible = true;
+        _nivel      = 'elegible';
+        _criterio   = 'Todos los requisitos de elegibilidad cumplidos';
+    } else if (_cumpleCierreHumano && _cumpleDecisiones) {
+        _esElegible = true;
+        _nivel      = 'elegible_parcial';
+        _criterio   = 'Cierre humano y decisiones completas. Coherencia o contrato multiciclo aún no óptimos';
+    } else {
+        _esElegible = false;
+        _nivel      = 'no_elegible';
+        _criterio   = 'No se cumplen los requisitos mínimos de elegibilidad';
+    }
+
+    // ── 6. Construcción del contrato ─────────────────────────────────────────
+
+    var salida = {
+
+        version:                   'elegibilidad_persistencia_multiciclo_longitudinal_v1_9',
+        lecturaNoInferencial:      true,
+        noCausal:                  true,
+        noRecomendador:            true,
+        sinPersistenciaAutomatica: true,
+        fechaISO:                  _fechaISO,
+
+        elegibilidad: {
+            esElegible: _esElegible,
+            nivel:      _nivel,
+            criterio:   _criterio
+        },
+
+        requisitos: _requisitos,
+
+        bloqueosPersistencia: _bloqueos,
+        condicionesPrevias:   _condiciones,
+        cautelas:             _cautelas,
+
+        trazabilidad: {
+            reglasAplicadas: _reglas,
+            notas:           _notas
+        }
+
+    };
+
+    console.log(
+        '[COMPÁS LONGI v1.9] Elegibilidad persistencia multiciclo construida',
+        '| nivel:', _nivel,
+        '| esElegible:', _esElegible,
+        '| bloqueos:', _bloqueos.length,
+        '| condiciones:', _condiciones.length,
+        '| cautelas:', _cautelas.length,
+        '| decisionesPendientes:', _decisionesPendientes,
+        '| cierreHumano:', _nivelCierreHumano
+    );
+
+    return salida;
+}
+
+// Registro en namespace COMPAS
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.construirElegibilidadPersistenciaMulticicloLongitudinal = COMPAS_construirElegibilidadPersistenciaMulticicloLongitudinal;
+
+// Auditor de consola
+window.COMPAS.auditarElegibilidadPersistenciaLongi = function() {
+    var elegibilidad = window.COMPAS.construirElegibilidadPersistenciaMulticicloLongitudinal();
+    console.log('[COMPÁS LONGI v1.9] Elegibilidad de persistencia multiciclo longitudinal construida', elegibilidad);
+    return elegibilidad;
+};
+
+console.log('[COMPÁS LONGI v1.9] COMPAS_construirElegibilidadPersistenciaMulticicloLongitudinal registrado en window.COMPAS.construirElegibilidadPersistenciaMulticicloLongitudinal');
+
+// ── Fin LONGI v1.9 · Elegibilidad de Persistencia Multiciclo Longitudinal ────
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.10 · GOBERNANZA LONGITUDINAL HUMANA
+// ── Versión: gobernanza_longitudinal_humana_v1_10
+// ── Identifica qué actuaciones requieren decisión, qué tipo de decisión falta,
+//    y qué impacto tiene cada ausencia sobre el cierre y la persistencia.
+// ── Sin UI. Sin persistencia. Sin Firebase. Sin inferencia. Sin snapshots.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirGobernanzaLongitudinalHumana(estadoCiclo, matrizDecision, requisitosCierre, elegibilidadPersistencia) {
+
+    // ── Utilidades internas ──────────────────────────────────────────────────
+
+    var _fechaISO   = new Date().toISOString();
+    var _bloqueos   = [];
+    var _riesgos    = [];
+    var _notas      = [];
+    var _reglas     = [];
+
+    function _bloqueo(id, detalle, origen) { _bloqueos.push({ id: id, detalle: detalle, origen: origen || null }); }
+    function _riesgo(id, detalle, tipo)    { _riesgos.push({ id: id, detalle: detalle, tipo: tipo || 'riesgo_metodologico' }); }
+    function _nota(msg)                    { _notas.push(msg); }
+    function _regla(id)                    { _reglas.push(id); }
+    function _safe(fn, fallback) {
+        try { return fn(); } catch(e) {
+            console.warn('[COMPÁS LONGI v1.10]', e);
+            return (fallback !== undefined) ? fallback : null;
+        }
+    }
+    function _arr(v) { return Array.isArray(v) ? v : []; }
+    function _n(v)   { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+    function _norm(v){ return (v == null ? '' : String(v)).toLowerCase().replace(/\s+/g, ' ').trim(); }
+    function _hay(v) { return v !== null && v !== undefined && v !== ''; }
+
+    _regla('actuacion_pendiente → impacto: bloquea_cierre + bloquea_persistencia');
+    _regla('50pct_pendientes → riesgo_coherencia');
+    _regla('100pct_pendientes → bloqueo_estructural');
+    _regla('no_persistir');
+    _regla('no_firebase');
+    _regla('no_ui');
+    _regla('no_dom');
+    _regla('no_snapshots');
+
+    // ── 1. Obtener entradas defensivamente ──────────────────────────────────
+
+    // estadoCiclo (v1.2)
+    var _estado = null;
+    _safe(function() {
+        if (estadoCiclo && estadoCiclo.version) {
+            _estado = estadoCiclo;
+            _nota('estadoCiclo_recibido_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.construirEstadoCicloLongitudinal === 'function') {
+            _estado = window.COMPAS.construirEstadoCicloLongitudinal();
+            _nota('estadoCiclo_obtenido_desde_window.COMPAS.construirEstadoCicloLongitudinal');
+        } else {
+            _nota('estadoCiclo_no_disponible');
+        }
+    });
+
+    // matrizDecision (v1.5)
+    var _matriz = null;
+    _safe(function() {
+        if (matrizDecision && matrizDecision.version) {
+            _matriz = matrizDecision;
+            _nota('matrizDecision_recibida_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.construirMatrizDecisionCicloSiguiente === 'function') {
+            _matriz = window.COMPAS.construirMatrizDecisionCicloSiguiente();
+            _nota('matrizDecision_obtenida_desde_window.COMPAS.construirMatrizDecisionCicloSiguiente');
+        } else {
+            _nota('matrizDecision_no_disponible');
+        }
+    });
+
+    // requisitosCierre (v1.8)
+    var _req = null;
+    _safe(function() {
+        if (requisitosCierre && requisitosCierre.version) {
+            _req = requisitosCierre;
+            _nota('requisitosCierre_recibido_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.construirRequisitosCierreHumanoLongitudinal === 'function') {
+            _req = window.COMPAS.construirRequisitosCierreHumanoLongitudinal();
+            _nota('requisitosCierre_obtenido_desde_window.COMPAS.construirRequisitosCierreHumanoLongitudinal');
+        } else {
+            _nota('requisitosCierre_no_disponible');
+        }
+    });
+
+    // elegibilidadPersistencia (v1.9)
+    var _eleg = null;
+    _safe(function() {
+        if (elegibilidadPersistencia && elegibilidadPersistencia.version) {
+            _eleg = elegibilidadPersistencia;
+            _nota('elegibilidadPersistencia_recibida_como_parametro');
+        } else if (window.COMPAS && typeof window.COMPAS.construirElegibilidadPersistenciaMulticicloLongitudinal === 'function') {
+            _eleg = window.COMPAS.construirElegibilidadPersistenciaMulticicloLongitudinal();
+            _nota('elegibilidadPersistencia_obtenida_desde_window.COMPAS.construirElegibilidadPersistenciaMulticicloLongitudinal');
+        } else {
+            _nota('elegibilidadPersistencia_no_disponible');
+        }
+    });
+
+    // ── 2. Construir lista de actuaciones pendientes de decisión ────────────
+
+    var _listaFilas = [];
+    _safe(function() {
+        // Fuente primaria: matriz v1.5 (filas con decisionSiguienteCiclo === 'pendiente')
+        if (_matriz && Array.isArray(_matriz.matriz)) {
+            _listaFilas = _matriz.matriz.filter(function(f) {
+                return f && _norm(f.decisionSiguienteCiclo) === 'pendiente';
+            });
+            _nota('lista_desde_matriz_v1_5 (' + _listaFilas.length + ' pendientes)');
+        }
+    });
+
+    // Fallback: planLocalSalud si matriz no disponible
+    if (_listaFilas.length === 0) {
+        _safe(function() {
+            var _pls = (typeof planLocalSalud !== 'undefined') ? planLocalSalud : null;
+            if (_pls && _pls.agenda && Array.isArray(_pls.agenda.actuaciones)) {
+                _listaFilas = _pls.agenda.actuaciones.filter(function(a) {
+                    var _dec = _norm((a && (a.decisionSiguienteCiclo || a.decision_siguiente_ciclo)) || '');
+                    return !_dec || _dec === 'no_decidido' || _dec === 'pendiente';
+                });
+                _nota('lista_desde_planLocalSalud.agenda.actuaciones (fallback, ' + _listaFilas.length + ' pendientes)');
+            }
+        });
+    }
+
+    // ── 3. Clasificar impacto por actuación ─────────────────────────────────
+
+    // Impacto fijo para actuaciones con decision pendiente
+    var _IMPACTO_PENDIENTE = ['bloquea_cierre', 'bloquea_persistencia'];
+
+    var _actuacionesPendientes = _listaFilas.map(function(f) {
+        f = f || {};
+        return {
+            id:                    f.id    || null,
+            codigoEPVSA:           f.linea || f.codigoEPVSA || null,
+            titulo:                f.titulo || f.nombre || null,
+            estadoCicloActual:     f.estadoCicloActual || f.estado || null,
+            decisionSiguienteCiclo: f.decisionSiguienteCiclo || 'pendiente',
+            anio:                  f.anio  || null,
+            impacto:               _IMPACTO_PENDIENTE,
+            tipoBrecha:            'bloqueo_estructural',
+            requiereDecisionHumana: true
+        };
+    });
+
+    // ── 4. Totales de resumen ────────────────────────────────────────────────
+
+    var _totalActuaciones = 0;
+    _safe(function() {
+        if (_matriz && _matriz.resumen) {
+            _totalActuaciones = _n(_matriz.resumen.totalActuaciones || _matriz.resumen.total);
+        }
+        if (_totalActuaciones === 0 && _estado && _estado.fuenteActuaciones) {
+            _totalActuaciones = _n(_estado.fuenteActuaciones.total);
+        }
+        if (_totalActuaciones === 0) {
+            var _pls = (typeof planLocalSalud !== 'undefined') ? planLocalSalud : null;
+            if (_pls && _pls.agenda && Array.isArray(_pls.agenda.actuaciones)) {
+                _totalActuaciones = _pls.agenda.actuaciones.length;
+            }
+        }
+    });
+
+    var _nPendientes              = _actuacionesPendientes.length;
+    var _nBloqueantes             = _nPendientes; // toda pendiente bloquea
+    var _nConRiesgo               = 0;            // ninguna pendiente tiene solo riesgo sin bloqueo
+    var _nPreparadasParaCerrar    = Math.max(0, _totalActuaciones - _nPendientes);
+
+    var _resumenGobernanza = {
+        totalActuaciones:              _totalActuaciones,
+        decisionesPendientes:          _nPendientes,
+        actuacionesBloqueantes:        _nBloqueantes,
+        actuacionesConRiesgo:          _nConRiesgo,
+        actuacionesPreparadasParaCerrar: _nPreparadasParaCerrar
+    };
+
+    // ── 5. Bloqueos de gobernanza ────────────────────────────────────────────
+
+    if (_nPendientes === _totalActuaciones && _totalActuaciones > 0) {
+        _bloqueo('todas_las_actuaciones_sin_decision',
+            'Las ' + _nPendientes + ' actuaciones del ciclo están pendientes de decisión humana. Gobernanza completamente bloqueada.',
+            'bloqueo_estructural');
+    } else if (_nPendientes > 0) {
+        _bloqueo('actuaciones_sin_decision',
+            _nPendientes + ' de ' + _totalActuaciones + ' actuaciones sin decisión de siguiente ciclo.',
+            'bloqueo_estructural');
+    }
+    if (_nPendientes > 0) {
+        _bloqueo('bloqueo_cierre_por_decisiones',
+            'El cierre del ciclo está bloqueado hasta que todas las actuaciones tengan decisión declarada.',
+            'bloqueo_cierre');
+        _bloqueo('bloqueo_persistencia_por_decisiones',
+            'La persistencia multiciclo está bloqueada por decisiones pendientes.',
+            'bloqueo_persistencia');
+    }
+    if (!_hay(_matriz)) {
+        _bloqueo('matriz_decision_no_disponible',
+            'No se pudo obtener la matriz de decisión (LONGI v1.5). La gobernanza no puede evaluarse con precisión.',
+            'bloqueo_datos');
+    }
+
+    // Propagar bloqueos de v1.8 y v1.9
+    _safe(function() {
+        if (_req && _arr(_req.bloqueos).length > 0) {
+            _req.bloqueos.forEach(function(b) {
+                _bloqueo('v1_8:' + b.id, b.detalle, 'propagado_desde_v1_8');
+            });
+        }
+        if (_eleg && _arr(_eleg.bloqueosPersistencia).length > 0) {
+            _eleg.bloqueosPersistencia.forEach(function(b) {
+                _bloqueo('v1_9:' + b.id, b.detalle, 'propagado_desde_v1_9');
+            });
+        }
+    });
+
+    // ── 6. Riesgos de gobernanza ─────────────────────────────────────────────
+
+    if (_totalActuaciones > 0 && _nPendientes / _totalActuaciones >= 0.5) {
+        _riesgo('riesgo_coherencia_por_alta_proporcion_pendientes',
+            Math.round((_nPendientes / _totalActuaciones) * 100) + '% de actuaciones sin decisión — riesgo de incoherencia longitudinal si se cierra parcialmente.',
+            'riesgo_coherencia');
+    }
+    if (_totalActuaciones > 0 && _nPendientes === _totalActuaciones) {
+        _riesgo('riesgo_multiciclo_sin_base_de_decision',
+            'Sin ninguna decisión declarada, el contrato multiciclo no puede construirse con datos reales.',
+            'riesgo_multiciclo');
+    }
+
+    // ── 7. Criterios mínimos para cierre y persistencia ──────────────────────
+
+    var _criteriosMinimosCierre = [
+        { id: 'todas_las_decisiones_declaradas',   requerido: true, cumple: _nPendientes === 0,
+          detalle: _nPendientes + ' actuaciones aún sin decisión' },
+        { id: 'cierre_evaluativo_no_bloqueante',   requerido: true,
+          cumple: !!(_req && _req.estadoCierreHumano && _req.estadoCierreHumano.puedeCerrarHumanamente),
+          detalle: _req ? 'Nivel: "' + (_req.estadoCierreHumano && _req.estadoCierreHumano.nivel || 'desconocido') + '"' : 'v1.8 no disponible' }
+    ];
+
+    var _criteriosMinimosPersistencia = [
+        { id: 'elegibilidad_persistencia_alcanzada', requerido: true,
+          cumple: !!(_eleg && _eleg.elegibilidad && _eleg.elegibilidad.esElegible),
+          detalle: _eleg ? 'Nivel: "' + (_eleg.elegibilidad && _eleg.elegibilidad.nivel || 'desconocido') + '"' : 'v1.9 no disponible' },
+        { id: 'todas_las_decisiones_declaradas',     requerido: true, cumple: _nPendientes === 0,
+          detalle: _nPendientes + ' actuaciones pendientes' },
+        { id: 'cierre_humano_autorizado',            requerido: true,
+          cumple: !!(_req && _req.estadoCierreHumano && _req.estadoCierreHumano.puedeCerrarHumanamente),
+          detalle: _req ? 'puedeCerrarHumanamente: ' + !!(_req.estadoCierreHumano && _req.estadoCierreHumano.puedeCerrarHumanamente) : 'v1.8 no disponible' }
+    ];
+
+    // ── 8. Nivel de gobernanza ───────────────────────────────────────────────
+
+    var _puedeGobernarse = false;
+    var _nivelGobernanza = 'bloqueada';
+    var _criterioGob     = '';
+
+    if (_nPendientes === _totalActuaciones && _totalActuaciones > 0) {
+        _nivelGobernanza = 'bloqueada';
+        _criterioGob     = '100% de actuaciones sin decisión — gobernanza completamente bloqueada';
+    } else if (_nPendientes > 0 && _totalActuaciones > 0) {
+        var _pct = Math.round((_nPendientes / _totalActuaciones) * 100);
+        if (_pct >= 50) {
+            _nivelGobernanza = 'fragil';
+            _criterioGob     = _pct + '% de actuaciones sin decisión — gobernanza frágil';
+        } else {
+            _nivelGobernanza = 'parcial';
+            _criterioGob     = _pct + '% de actuaciones sin decisión — gobernanza parcial';
+            _puedeGobernarse = true;
+        }
+    } else if (_nPendientes === 0 && _totalActuaciones > 0) {
+        _nivelGobernanza = 'operativa';
+        _criterioGob     = 'Todas las actuaciones tienen decisión declarada';
+        _puedeGobernarse = true;
+    } else {
+        _nivelGobernanza = 'bloqueada';
+        _criterioGob     = 'Sin actuaciones en runtime — gobernanza no evaluable';
+    }
+
+    // ── 9. Construcción del contrato ─────────────────────────────────────────
+
+    var salida = {
+
+        version:                  'gobernanza_longitudinal_humana_v1_10',
+        lecturaNoInferencial:     true,
+        noCausal:                 true,
+        noRecomendador:           true,
+        sinPersistenciaAutomatica: true,
+        sinUIAutomatica:          true,
+        fechaISO:                 _fechaISO,
+
+        resumenGobernanza: _resumenGobernanza,
+
+        gobernanza: {
+            nivel:            _nivelGobernanza,
+            puedeGobernarse:  _puedeGobernarse,
+            criterio:         _criterioGob
+        },
+
+        actuacionesPendientes:       _actuacionesPendientes,
+
+        bloqueosGobernanza:          _bloqueos,
+
+        riesgosGobernanza:           _riesgos,
+
+        criteriosMinimosCierre:      _criteriosMinimosCierre,
+
+        criteriosMinimosPersistencia: _criteriosMinimosPersistencia,
+
+        trazabilidad: {
+            reglasAplicadas: _reglas,
+            notas:           _notas
+        }
+
+    };
+
+    console.log(
+        '[COMPÁS LONGI v1.10] Gobernanza longitudinal humana construida',
+        '| nivel:', _nivelGobernanza,
+        '| puedeGobernarse:', _puedeGobernarse,
+        '| total:', _totalActuaciones,
+        '| pendientes:', _nPendientes,
+        '| bloqueantes:', _nBloqueantes,
+        '| bloqueos:', _bloqueos.length,
+        '| riesgos:', _riesgos.length
+    );
+
+    return salida;
+}
+
+// Registro en namespace COMPAS
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.construirGobernanzaLongitudinalHumana = COMPAS_construirGobernanzaLongitudinalHumana;
+
+// Auditor de consola
+window.COMPAS.auditarGobernanzaLongi = function() {
+    var gobernanza = window.COMPAS.construirGobernanzaLongitudinalHumana();
+    console.log('[COMPÁS LONGI v1.10] Gobernanza longitudinal humana construida', gobernanza);
+    return gobernanza;
+};
+
+console.log('[COMPÁS LONGI v1.10] COMPAS_construirGobernanzaLongitudinalHumana registrado en window.COMPAS.construirGobernanzaLongitudinalHumana');
+
+// ── Fin LONGI v1.10 · Gobernanza Longitudinal Humana ─────────────────────────
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPÁS · LONGI v1.11 · CONTEXTO LONGITUDINAL RUNTIME
+// ── Versión: contexto_longitudinal_runtime_v1_11
+// ── Orquesta una sola cadena LONGI v1.0→v1.10 pasando resultados explícitos
+//    entre capas. Sin persistencia. Sin Firebase. Sin UI. Sin snapshots.
+//    Reduce recomputación interna: cada capa se ejecuta una sola vez.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function COMPAS_construirContextoLongitudinalRuntime() {
+
+    var _t0      = Date.now();
+    var _fechaISO = new Date().toISOString();
+    var _notas   = [];
+    var _errores = [];
+
+    function _nota(msg)   { _notas.push(msg); }
+    function _error(msg)  { _errores.push(msg); console.warn('[COMPÁS LONGI v1.11]', msg); }
+    function _safe(nombre, fn) {
+        try {
+            var r = fn();
+            _nota(nombre + ': OK');
+            return r;
+        } catch(e) {
+            _error(nombre + ': ERROR — ' + (e && e.message ? e.message : String(e)));
+            return null;
+        }
+    }
+    function _n(v)   { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+    function _norm(v){ return (v == null ? '' : String(v)).toLowerCase().replace(/\s+/g, ' ').trim(); }
+    function _arr(v) { return Array.isArray(v) ? v : []; }
+
+    var _C = window.COMPAS || {};
+
+    // ── Capa 1: Contrato longitudinal (v1.0) ─────────────────────────────────
+    var _contrato = _safe('v1.0_contrato', function() {
+        return typeof _C.construirContratoLongitudinalTerritorial === 'function'
+            ? _C.construirContratoLongitudinalTerritorial() : null;
+    });
+
+    // ── Capa 2: Lectura longitudinal estructural (v1.1) ───────────────────────
+    var _lectura = _safe('v1.1_lectura', function() {
+        return typeof _C.construirLecturaLongitudinalEstructural === 'function'
+            ? _C.construirLecturaLongitudinalEstructural(_contrato) : null;
+    });
+
+    // ── Capa 3: Estado de ciclo (v1.2) ────────────────────────────────────────
+    var _estado = _safe('v1.2_estado', function() {
+        return typeof _C.construirEstadoCicloLongitudinal === 'function'
+            ? _C.construirEstadoCicloLongitudinal(_contrato) : null;
+    });
+
+    // ── Capa 4: Transiciones (v1.3) ───────────────────────────────────────────
+    var _transiciones = _safe('v1.3_transiciones', function() {
+        return typeof _C.construirTransicionesLongitudinales === 'function'
+            ? _C.construirTransicionesLongitudinales(_estado) : null;
+    });
+
+    // ── Capa 5: Cierre evaluativo (v1.4) ─────────────────────────────────────
+    var _cierre = _safe('v1.4_cierre', function() {
+        return typeof _C.construirCierreEvaluativoAnualLongitudinal === 'function'
+            ? _C.construirCierreEvaluativoAnualLongitudinal(_estado) : null;
+    });
+
+    // ── Capa 6: Matriz de decisión (v1.5) ────────────────────────────────────
+    var _matriz = _safe('v1.5_matriz', function() {
+        return typeof _C.construirMatrizDecisionCicloSiguiente === 'function'
+            ? _C.construirMatrizDecisionCicloSiguiente(_estado, _cierre) : null;
+    });
+
+    // ── Capa 7: Coherencia longitudinal (v1.6) ───────────────────────────────
+    var _coherencia = _safe('v1.6_coherencia', function() {
+        return typeof _C.validarCoherenciaLongitudinal === 'function'
+            ? _C.validarCoherenciaLongitudinal(_contrato, _lectura, _estado, _transiciones, _cierre, _matriz) : null;
+    });
+
+    // ── Capa 8: Contrato multiciclo (v1.7) ───────────────────────────────────
+    var _multiciclo = _safe('v1.7_multiciclo', function() {
+        return typeof _C.construirContratoMulticicloLongitudinal === 'function'
+            ? _C.construirContratoMulticicloLongitudinal(_coherencia, _matriz, _cierre) : null;
+    });
+
+    // ── Capa 9: Requisitos cierre humano (v1.8) ──────────────────────────────
+    var _requisitosCierre = _safe('v1.8_requisitos_cierre', function() {
+        return typeof _C.construirRequisitosCierreHumanoLongitudinal === 'function'
+            ? _C.construirRequisitosCierreHumanoLongitudinal(_multiciclo, _matriz, _cierre, _coherencia) : null;
+    });
+
+    // ── Capa 10: Elegibilidad persistencia (v1.9) ────────────────────────────
+    var _elegibilidad = _safe('v1.9_elegibilidad', function() {
+        return typeof _C.construirElegibilidadPersistenciaMulticicloLongitudinal === 'function'
+            ? _C.construirElegibilidadPersistenciaMulticicloLongitudinal(_requisitosCierre, _multiciclo, _coherencia) : null;
+    });
+
+    // ── Capa 11: Gobernanza longitudinal humana (v1.10) ──────────────────────
+    var _gobernanza = _safe('v1.10_gobernanza', function() {
+        return typeof _C.construirGobernanzaLongitudinalHumana === 'function'
+            ? _C.construirGobernanzaLongitudinalHumana(_estado, _matriz, _requisitosCierre, _elegibilidad) : null;
+    });
+
+    // ── Resumen runtime ──────────────────────────────────────────────────────
+
+    var _municipio         = (_contrato && _contrato.municipio) || null;
+    var _totalActuaciones  = _n(_contrato && _contrato.actuaciones && _contrato.actuaciones.total);
+    if (!_totalActuaciones && _estado && _estado.fuenteActuaciones) {
+        _totalActuaciones = _n(_estado.fuenteActuaciones.total);
+    }
+
+    var _decisionesPendientes = 0;
+    if (_requisitosCierre && _requisitosCierre.requisitosMinimos && _requisitosCierre.requisitosMinimos.decisionesActuaciones) {
+        _decisionesPendientes = _n(_requisitosCierre.requisitosMinimos.decisionesActuaciones.decisionesPendientes);
+    }
+    if (!_decisionesPendientes && _gobernanza && _gobernanza.resumenGobernanza) {
+        _decisionesPendientes = _n(_gobernanza.resumenGobernanza.decisionesPendientes);
+    }
+
+    var _nivelCierreHumano       = _norm((_requisitosCierre && _requisitosCierre.estadoCierreHumano && _requisitosCierre.estadoCierreHumano.nivel) || 'no_disponible');
+    var _nivelElegibilidad        = _norm((_elegibilidad && _elegibilidad.elegibilidad && _elegibilidad.elegibilidad.nivel) || 'no_disponible');
+    var _nivelGobernanza          = _norm((_gobernanza && _gobernanza.gobernanza && _gobernanza.gobernanza.nivel) || 'no_disponible');
+    var _nivelCoherencia          = _norm((_coherencia && (_coherencia.nivelCoherencia || _coherencia.nivel || _coherencia.resultado)) || 'no_disponible');
+    var _preparadoPersistencia    = !!(_elegibilidad && _elegibilidad.elegibilidad && _elegibilidad.elegibilidad.esElegible);
+
+    var _resumenRuntime = {
+        municipio:               _municipio,
+        totalActuaciones:        _totalActuaciones,
+        decisionesPendientes:    _decisionesPendientes,
+        cierreHumano:            _nivelCierreHumano,
+        elegibilidadPersistencia: _nivelElegibilidad,
+        gobernanza:              _nivelGobernanza,
+        coherencia:              _nivelCoherencia,
+        preparadoPersistencia:   _preparadoPersistencia
+    };
+
+    // ── Integridad de capas ──────────────────────────────────────────────────
+
+    var _CAPAS_ESPERADAS = [
+        { nombre: 'contrato',              valor: _contrato },
+        { nombre: 'lectura',               valor: _lectura },
+        { nombre: 'estado',                valor: _estado },
+        { nombre: 'transiciones',          valor: _transiciones },
+        { nombre: 'cierre',                valor: _cierre },
+        { nombre: 'matriz',                valor: _matriz },
+        { nombre: 'coherencia',            valor: _coherencia },
+        { nombre: 'multiciclo',            valor: _multiciclo },
+        { nombre: 'requisitosCierre',      valor: _requisitosCierre },
+        { nombre: 'elegibilidadPersistencia', valor: _elegibilidad },
+        { nombre: 'gobernanza',            valor: _gobernanza }
+    ];
+
+    var _faltantes = _CAPAS_ESPERADAS.filter(function(c) { return !c.valor; }).map(function(c) { return c.nombre; });
+    var _nDisponibles = _CAPAS_ESPERADAS.length - _faltantes.length;
+
+    var _integridad = {
+        completo:         _faltantes.length === 0,
+        capasDisponibles: _nDisponibles,
+        capasEsperadas:   _CAPAS_ESPERADAS.length,
+        faltantes:        _faltantes
+    };
+
+    // ── Rendimiento ──────────────────────────────────────────────────────────
+
+    var _duracionMs = Date.now() - _t0;
+
+    var _rendimiento = {
+        duracionMs:              _duracionMs,
+        recomputacionesEvitadas: true,
+        criterio:                'Cada capa ejecutada una sola vez. Resultados pasados explícitamente a capas dependientes. Sin llamadas cruzadas entre capas inferiores.'
+    };
+
+    // ── Construcción del contrato ────────────────────────────────────────────
+
+    var salida = {
+
+        version:                   'contexto_longitudinal_runtime_v1_11',
+        lecturaNoInferencial:      true,
+        noCausal:                  true,
+        noRecomendador:            true,
+        sinPersistenciaAutomatica: true,
+        fechaISO:                  _fechaISO,
+
+        capas: {
+            contrato:               _contrato,
+            lectura:                _lectura,
+            estado:                 _estado,
+            transiciones:           _transiciones,
+            cierre:                 _cierre,
+            matriz:                 _matriz,
+            coherencia:             _coherencia,
+            multiciclo:             _multiciclo,
+            requisitosCierre:       _requisitosCierre,
+            elegibilidadPersistencia: _elegibilidad,
+            gobernanza:             _gobernanza
+        },
+
+        resumenRuntime: _resumenRuntime,
+
+        integridad: _integridad,
+
+        rendimiento: _rendimiento,
+
+        trazabilidad: {
+            notas:   _notas,
+            errores: _errores
+        }
+
+    };
+
+    console.log(
+        '[COMPÁS LONGI v1.11] Contexto longitudinal runtime construido',
+        '| municipio:', _municipio,
+        '| capas:', _nDisponibles + '/' + _CAPAS_ESPERADAS.length,
+        '| faltantes:', _faltantes.length ? _faltantes.join(',') : 'ninguna',
+        '| total:', _totalActuaciones,
+        '| pendientes:', _decisionesPendientes,
+        '| gobernanza:', _nivelGobernanza,
+        '| elegibilidad:', _nivelElegibilidad,
+        '| duracionMs:', _duracionMs
+    );
+
+    return salida;
+}
+
+// Registro en namespace COMPAS
+window.COMPAS = window.COMPAS || {};
+window.COMPAS.construirContextoLongitudinalRuntime = COMPAS_construirContextoLongitudinalRuntime;
+
+// Auditor de consola
+window.COMPAS.auditarContextoLongi = function() {
+    var ctx = window.COMPAS.construirContextoLongitudinalRuntime();
+    console.log('[COMPÁS LONGI v1.11] Contexto longitudinal runtime construido', ctx);
+    return ctx;
+};
+
+console.log('[COMPÁS LONGI v1.11] COMPAS_construirContextoLongitudinalRuntime registrado en window.COMPAS.construirContextoLongitudinalRuntime');
+
+// ── Fin LONGI v1.11 · Contexto Longitudinal Runtime ──────────────────────────
 
 
 
