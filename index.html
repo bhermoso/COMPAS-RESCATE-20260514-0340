@@ -87058,6 +87058,439 @@ window.COMPAS_construirCicloLongitudinalMunicipal = function(opciones) {
 
 console.log('[COMPÁS] cicloLongitudinalMunicipalV1: COMPAS_construirCicloLongitudinalMunicipal() registrado ✓');
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// LECTURA CICLO LONGITUDINAL MUNICIPAL V1
+// Lector estructural de solo lectura del contrato ciclo_longitudinal_municipal_v1.
+// No crea UI. No renderiza. No escribe DOM. No persiste. No llama motores IA.
+// No modifica estado global. No infiere contenidos narrativos. No resuelve tensiones.
+//
+// Sin LONGI activo. Sin propuestaEPVSA. Sin nFuentes. Sin confianza. Sin Firebase.
+// Sin new Date(). Sin motores. Sin inferencia. Sin escritura de estado.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window.COMPAS_leerCicloLongitudinalMunicipal = function(ciclo, opciones) {
+    opciones = opciones || {};
+
+    // ── 0. VACÍO TIPADO ─────────────────────────────────────────────────────
+    var _vacio = {
+        disponible: false,
+        _version: 'lectura_ciclo_longitudinal_municipal_v1',
+        _sinEfectos: true,
+        _soloLectura: true,
+        _noInferenciaAutomatica: true,
+        _requiereInterpretacionHumana: true,
+        resumenEstructural: {},
+        continuidad: {},
+        discontinuidades: {},
+        trazabilidad: {},
+        riesgosMetodologicos: [],
+        lecturaOperativa: { clasificacion: 'sin_base' },
+        siguienteCiclo: {},
+        cautelas: []
+    };
+
+    // ── 1. OBTENER CONTRATO ──────────────────────────────────────────────────
+    var _ciclo = null;
+    if (ciclo && typeof ciclo === 'object' &&
+            ciclo._version === 'ciclo_longitudinal_municipal_v1') {
+        _ciclo = ciclo;
+    } else {
+        try {
+            if (typeof COMPAS_construirCicloLongitudinalMunicipal === 'function') {
+                _ciclo = COMPAS_construirCicloLongitudinalMunicipal(opciones);
+            }
+        } catch(e) { _ciclo = null; }
+    }
+
+    if (!_ciclo) return _vacio;
+
+    // ── 2. EXTRACTORES DEFENSIVOS ────────────────────────────────────────────
+    var _s  = function(obj, key, def) {
+        try { var v = obj[key]; return (v !== undefined && v !== null) ? v : def; }
+        catch(e) { return def; }
+    };
+    var _a  = function(obj, key) {
+        try { var v = obj[key]; return Array.isArray(v) ? v : []; }
+        catch(e) { return []; }
+    };
+    var _n  = function(obj, key, def) {
+        try { var v = obj[key]; var n = Number(v);
+              return isNaN(n) ? (def !== undefined ? def : 0) : n; }
+        catch(e) { return def !== undefined ? def : 0; }
+    };
+    var _b  = function(obj, key) {
+        try { return !!obj[key]; } catch(e) { return false; }
+    };
+
+    // ── 3. ACCESO A SECCIONES ────────────────────────────────────────────────
+    var _id   = _s(_ciclo, 'identidad',            {});
+    var _art  = _s(_ciclo, 'artefactos',           {});
+    var _eval = _s(_ciclo, 'evaluacionAcumulada',  {});
+    var _gen  = _s(_ciclo, 'genealogiaDecisiones', {});
+    var _rel  = _s(_ciclo, 'relacionCiclos',       {});
+    var _mem  = _s(_ciclo, 'memoriaNarrativa',     {});
+    var _tray = _s(_ciclo, 'trayectoriaMunicipal', {});
+    var _cons = _s(_ciclo, 'relacionConsecutiva',  {});
+    var _comp = _s(_ciclo, '_completitud',         {});
+    var _lims = _a(_ciclo, 'limitaciones');
+    var _caut = _a(_ciclo, 'cautelasMetodologicas');
+
+    // Campos de identidad
+    var _municipio   = _s(_id, 'municipio',   '');
+    var _anio        = _n(_id, 'anio',        null);
+    var _faseCiclo   = _s(_id, 'faseCiclo',   'no_determinada');
+    var _estadoCiclo = _s(_id, 'estadoCiclo', 'no_determinado');
+    var _cicloId     = _s(_id, 'cicloId',     '');
+
+    // Campos de evaluación acumulada
+    var _tasaArrastre      = _s(_eval, 'tasaArrastre',        null);
+    var _actCompletadas    = _n(_eval, 'actuacionesCompletadas', 0);
+    var _actPendientes     = _n(_eval, 'actuacionesPendientes',  0);
+    var _totalActs         = _n(_eval, 'totalActuaciones',        0);
+    var _epvsaSelec        = _a(_eval, 'epvsaSeleccionadas');
+    var _aprendizajes      = _a(_eval, 'aprendizajes');
+    var _persistencias     = _a(_eval, 'persistencias');
+    var _discontinuidades  = _a(_eval, 'discontinuidades');
+    var _indicadoresLong   = _a(_eval, 'indicadoresLongitudinales');
+
+    // Campos de genealogía
+    var _decisiones    = _a(_gen,  'decisiones');
+    var _nDecisiones   = _n(_gen,  'totalDecisiones', 0);
+
+    // Campos de relación de ciclos
+    var _cicloAntDet   = _b(_rel,  'cicloAnteriorDetectado');
+    var _anioAnt       = _s(_rel,  'anioAnterior',    null);
+    var _ciclosDet     = _n(_rel,  'ciclosDetectados', 1);
+    var _brecha        = _s(_rel,  'brechaInteranual', 'sin_datos');
+    var _continuidades = _a(_rel,  'continuidades');
+    var _incorporaciones = _a(_rel,'incorporaciones');
+    var _discCiclos    = _a(_rel,  'discontinuidades');
+
+    // Campos de artefactos
+    var _artDiag = _s(_art, 'diagnostico',     { disponible: false });
+    var _artPlan = _s(_art, 'plan',            { disponible: false });
+    var _artEval = _s(_art, 'evaluacion',      { disponible: false });
+    var _artCorpus = _s(_art, 'corpus',        { disponible: false });
+    var _artHerm = _s(_art, 'hermeneutica',    { disponible: false });
+    var _artMapa = _s(_art, 'mapaConocimiento',{ disponible: false });
+    var _artInforme = _s(_art, 'informeMetodologico', { disponible: false });
+
+    // Campos de relación consecutiva
+    var _fases         = _s(_cons, 'fases',           {});
+    var _nFasesCom     = _n(_cons, 'fasesCompletadas', 0);
+    var _pctCiclo      = _n(_cons, 'porcentajeCiclo',  0);
+    var _transicion    = _s(_cons, 'transicionSiguienteCiclo', {});
+    var _elemTransf    = _a(_transicion, 'elementosTransferibles');
+    var _transPrep     = _b(_transicion, 'preparado');
+
+    // Trayectoria
+    var _epvsaAcum     = _a(_tray, 'epvsaAcumuladas');
+    var _rangoTemporal = _s(_tray, 'rangoTemporal',   null);
+    var _tendencia     = _s(_tray, 'tendenciaArrastre', 'sin_datos');
+
+    // Completitud
+    var _pctCompletitud = _n(_comp, 'porcentaje', 0);
+    var _secCompletas   = _n(_comp, 'seccionesCompletas', 0);
+
+    // ── 4. A — RESUMEN ESTRUCTURAL ───────────────────────────────────────────
+    var _artefactosPresentes = [];
+    var _artefactosAusentes  = [];
+    var _artMap = {
+        diagnostico:        _b(_artDiag,   'disponible'),
+        plan:               _b(_artPlan,   'disponible'),
+        evaluacion:         _b(_artEval,   'disponible'),
+        corpus:             _b(_artCorpus, 'disponible'),
+        hermeneutica:       _b(_artHerm,   'disponible'),
+        mapaConocimiento:   _b(_artMapa,   'disponible'),
+        informeMetodologico: _b(_artInforme, 'disponible')
+    };
+    Object.keys(_artMap).forEach(function(k) {
+        if (_artMap[k]) _artefactosPresentes.push(k);
+        else            _artefactosAusentes.push(k);
+    });
+
+    var s_resumenEstructural = {
+        municipio:           _municipio,
+        anio:                _anio,
+        cicloId:             _cicloId,
+        faseCiclo:           _faseCiclo,
+        estadoCiclo:         _estadoCiclo,
+        disponible:          _b(_ciclo, 'disponible'),
+        parcialUsable:       _b(_ciclo, '_parcialEsUsable'),
+        completitudPorcentaje: _pctCompletitud,
+        seccionesCompletas:  _secCompletas,
+        totalSecciones:      _n(_comp, 'totalSecciones', 8),
+        artefactosPresentes: _artefactosPresentes,
+        artefactosAusentes:  _artefactosAusentes,
+        totalActuaciones:    _totalActs,
+        epvsaSeleccionadas:  _epvsaSelec.length
+    };
+
+    // ── 5. B — CONTINUIDAD ───────────────────────────────────────────────────
+    var _arrastresDetectados = null;
+    try {
+        // arrastre inferido desde tasaArrastre y actuaciones pendientes
+        if (_tasaArrastre !== null) _arrastresDetectados = _actPendientes;
+    } catch(e) {}
+
+    // Agenda: solo lectura pasiva del contrato — no acceder a estado global
+    var _agendaEnContrato = false;
+    try {
+        _agendaEnContrato = _b(_cons, 'fasesCompletadas') && _nFasesCom >= 2;
+    } catch(e) {}
+
+    var s_continuidad = {
+        arrastresDetectados:       _arrastresDetectados,
+        tasaArrastre:              _tasaArrastre,
+        actuacionesPendientes:     _actPendientes,
+        actuacionesCompletadas:    _actCompletadas,
+        persistenciasActivas:      _persistencias,
+        totalPersistencias:        _persistencias.length,
+        epvsaSeleccionadas:        _epvsaSelec,
+        epvsaAcumuladas:           _epvsaAcum,
+        indicadoresLongitudinales: _indicadoresLong,
+        continuidades:             _continuidades,
+        incorporaciones:           _incorporaciones,
+        cicloAnteriorDetectado:    _cicloAntDet,
+        anioAnterior:              _anioAnt,
+        brechaInteranual:          _brecha,
+        _notaMetodologica:         'continuidad_inferida_no_validada'
+    };
+
+    // ── 6. C — DISCONTINUIDADES ──────────────────────────────────────────────
+    var _brechasDetectadas = [];
+    if (!_b(_artDiag,  'disponible')) _brechasDetectadas.push('diagnostico_ausente');
+    if (!_b(_artPlan,  'disponible')) _brechasDetectadas.push('plan_ausente');
+    if (!_b(_artEval,  'disponible')) _brechasDetectadas.push('evaluacion_ausente');
+    if (_aprendizajes.length === 0)   _brechasDetectadas.push('aprendizajes_no_documentados');
+    if (!_b(_mem, '_requiereAnotacionHumana') ||
+        (_s(_mem, 'contextoPolitico', '') === '' &&
+         _s(_mem, 'contextoPoblacional', '') === '')) {
+        _brechasDetectadas.push('memoria_narrativa_humana_ausente');
+    }
+    if (_tasaArrastre !== null && _tasaArrastre > 0.5) {
+        _brechasDetectadas.push('tasa_arrastre_elevada');
+    }
+
+    var s_discontinuidades = {
+        brechasDetectadas:          _brechasDetectadas,
+        totalBrechas:               _brechasDetectadas.length,
+        artefactosAusentes:         _artefactosAusentes,
+        discontinuidadesCiclos:     _discCiclos,
+        discontinuidadesEvaluacion: _discontinuidades,
+        memoriaNarrativaAusente:    _s(_mem, 'contextoPolitico', '') === '',
+        aprendizajesAusentes:       _aprendizajes.length === 0,
+        planAusente:                !_b(_artPlan, 'disponible'),
+        _notaMetodologica:          'ausencia_de_artefacto_no_equivale_a_fracaso_de_ciclo'
+    };
+
+    // ── 7. D — TRAZABILIDAD ──────────────────────────────────────────────────
+    var _seccionesLeidas = [
+        'identidad', 'artefactos', 'evaluacionAcumulada',
+        'genealogiaDecisiones', 'relacionCiclos', 'memoriaNarrativa',
+        'trayectoriaMunicipal', 'relacionConsecutiva', '_completitud',
+        'limitaciones', 'cautelasMetodologicas'
+    ];
+
+    var _camposNoDisponibles = [];
+    if (!_municipio)              _camposNoDisponibles.push('identidad.municipio');
+    if (_anio === null)           _camposNoDisponibles.push('identidad.anio');
+    if (_tasaArrastre === null)   _camposNoDisponibles.push('evaluacionAcumulada.tasaArrastre');
+    if (!_cicloAntDet)            _camposNoDisponibles.push('relacionCiclos.cicloAnterior');
+    if (_epvsaSelec.length === 0) _camposNoDisponibles.push('evaluacionAcumulada.epvsaSeleccionadas');
+    if (_indicadoresLong.length === 0) _camposNoDisponibles.push('evaluacionAcumulada.indicadoresLongitudinales');
+
+    var s_trazabilidad = {
+        fuenteInterna:      'ciclo_longitudinal_municipal_v1',
+        version:            _s(_ciclo, '_version', ''),
+        seccionesLeidas:    _seccionesLeidas,
+        camposNoDisponibles: _camposNoDisponibles,
+        limitacionesHeredadas: _lims,
+        cautelasHeredadas:  _caut,
+        genealogiaDecisiones: _nDecisiones,
+        _notaMetodologica:  'lectura_solo_de_campos_existentes_sin_creacion_de_datos'
+    };
+
+    // ── 8. E — RIESGOS METODOLÓGICOS ────────────────────────────────────────
+    var _riesgos = [];
+
+    if (!_municipio || _anio === null) {
+        _riesgos.push({
+            codigo: 'RM-01',
+            descripcion: 'Contrato parcial: municipio o año no detectado en identidad del ciclo',
+            severidad: 'alta',
+            accion: 'cargar municipio y datos antes de leer ciclo'
+        });
+    }
+    if (_tasaArrastre !== null && _tasaArrastre > 0.5) {
+        _riesgos.push({
+            codigo: 'RM-02',
+            descripcion: 'Tasa de arrastre elevada: riesgo de confundir arrastre con impacto',
+            severidad: 'media',
+            accion: 'revisar actuaciones pendientes antes de abrir nuevo ciclo'
+        });
+    }
+    if (_s(_mem, 'contextoPolitico', '') === '') {
+        _riesgos.push({
+            codigo: 'RM-03',
+            descripcion: 'Memoria narrativa humana ausente: contexto no documentado',
+            severidad: 'media',
+            accion: 'completar memoria narrativa con investigador en territorio'
+        });
+    }
+    if (!_b(_artEval, 'disponible')) {
+        _riesgos.push({
+            codigo: 'RM-04',
+            descripcion: 'Evaluación sin cierre humano: snapshot de evaluación no disponible',
+            severidad: 'media',
+            accion: 'completar evaluación antes de cerrar ciclo'
+        });
+    }
+    if (!_b(_artPlan, 'disponible')) {
+        _riesgos.push({
+            codigo: 'RM-05',
+            descripcion: 'Plan no disponible: actuaciones no registradas en contrato',
+            severidad: 'alta',
+            accion: 'verificar existencia de plan en estado actual'
+        });
+    }
+    if (!_cicloAntDet) {
+        _riesgos.push({
+            codigo: 'RM-06',
+            descripcion: 'Ciclo anterior no detectado: comparación interanual no posible',
+            severidad: 'baja',
+            accion: 'verificar si es primer ciclo o si hay datos históricos no rehidratados'
+        });
+    }
+    if (_aprendizajes.length === 0) {
+        _riesgos.push({
+            codigo: 'RM-07',
+            descripcion: 'Aprendizajes no documentados: riesgo de pérdida de conocimiento acumulado',
+            severidad: 'media',
+            accion: 'documentar aprendizajes antes de transición a siguiente ciclo'
+        });
+    }
+
+    // ── 9. F — LECTURA OPERATIVA ─────────────────────────────────────────────
+    // Clasificación basada solo en campos existentes — sin interpretación generativa
+    var _clasificacion = 'sin_base';
+    var _razonClasificacion = [];
+
+    var _tieneMunicipio  = !!_municipio;
+    var _tieneAnio       = _anio !== null;
+    var _tieneActs       = _totalActs > 0;
+    var _tieneEPVSA      = _epvsaSelec.length > 0;
+    var _tieneEval       = _b(_artEval, 'disponible');
+    var _tieneAprendizajes = _aprendizajes.length > 0;
+    var _tieneArrastre   = _tasaArrastre !== null && _tasaArrastre > 0;
+    var _memNarrComp     = _s(_mem, 'contextoPolitico', '') !== '' ||
+                           _s(_mem, 'contextoPoblacional', '') !== '';
+
+    if (!_tieneMunicipio || !_tieneAnio) {
+        _clasificacion = 'sin_base';
+        _razonClasificacion.push('municipio o anio no disponible');
+    } else if (!_tieneActs && !_tieneEPVSA) {
+        _clasificacion = 'sin_base';
+        _razonClasificacion.push('sin actuaciones ni EPVSA registradas');
+    } else if (_tieneEval && _tieneAprendizajes && _memNarrComp && _nFasesCom >= 5) {
+        _clasificacion = 'ciclo_cerrable_con_revision_humana';
+        _razonClasificacion.push('evaluacion, aprendizajes y memoria narrativa presentes');
+    } else if (_tieneEval && _tieneAprendizajes && _nFasesCom >= 4) {
+        _clasificacion = 'ciclo_operativo_con_arrastre';
+        _razonClasificacion.push('evaluacion y aprendizajes presentes; memoria narrativa pendiente');
+    } else if (_tieneActs || _tieneEPVSA) {
+        if (_tieneArrastre || _actPendientes > 0) {
+            _clasificacion = 'ciclo_operativo_incompleto';
+            _razonClasificacion.push('actuaciones con arrastre detectado');
+        } else {
+            _clasificacion = 'parcial_utilizable';
+            _razonClasificacion.push('datos presentes sin evaluacion cerrada');
+        }
+    }
+
+    var s_lecturaOperativa = {
+        clasificacion:        _clasificacion,
+        razon:                _razonClasificacion,
+        faseActual:           _faseCiclo,
+        estadoActual:         _estadoCiclo,
+        fasesCompletadas:     _nFasesCom,
+        porcentajeCiclo:      _pctCiclo,
+        tendenciaArrastre:    _tendencia,
+        rangoTemporal:        _rangoTemporal,
+        _notaMetodologica:    'clasificacion_basada_en_campos_existentes_no_en_interpretacion_generativa'
+    };
+
+    // ── 10. G — SIGUIENTE CICLO ──────────────────────────────────────────────
+    var _condicionesCumplidas = [];
+    var _condicionesPendientes = [];
+
+    if (_tieneEval)         _condicionesCumplidas.push('evaluacion_disponible');
+    else                    _condicionesPendientes.push('evaluacion_pendiente');
+
+    if (_tieneActs)         _condicionesCumplidas.push('actuaciones_registradas');
+    else                    _condicionesPendientes.push('actuaciones_sin_registrar');
+
+    if (_tieneAprendizajes) _condicionesCumplidas.push('aprendizajes_documentados');
+    else                    _condicionesPendientes.push('aprendizajes_pendientes');
+
+    if (_memNarrComp)       _condicionesCumplidas.push('memoria_narrativa_parcial');
+    else                    _condicionesPendientes.push('memoria_narrativa_humana_pendiente');
+
+    if (_tieneEPVSA)        _condicionesCumplidas.push('epvsa_seleccionadas');
+    else                    _condicionesPendientes.push('epvsa_no_seleccionadas');
+
+    var _preparadoSiguiente = _condicionesCumplidas.length >= 3 &&
+                              _tieneEval && _tieneActs;
+
+    var s_siguienteCiclo = {
+        preparado:              _preparadoSiguiente,
+        elementosTransferibles: _elemTransf,
+        condicionesCumplidas:   _condicionesCumplidas,
+        condicionesPendientes:  _condicionesPendientes,
+        necesitaCierreHumano:   !_memNarrComp || !_tieneAprendizajes,
+        necesitaMemoriaNarrativa: !_memNarrComp,
+        necesitaAprendizajes:   !_tieneAprendizajes,
+        necesitaEvaluacion:     !_tieneEval,
+        _notaMetodologica:      'transicion_requiere_decision_investigador_no_automatica'
+    };
+
+    // ── 11. CAUTELAS DE LECTURA ──────────────────────────────────────────────
+    var _cautelasLectura = [
+        'esta_lectura_no_sustituye_analisis_experto',
+        'clasificacion_operativa_es_indicador_no_juicio',
+        'continuidad_inferida_de_campos_existentes_no_de_observacion_directa',
+        'discontinuidades_detectadas_no_implican_fracaso_del_ciclo',
+        'riesgos_metodologicos_son_alertas_no_veredictos',
+        'siguiente_ciclo_solo_abre_con_decision_humana',
+        '_aptoAnalisisAutomatico_false_es_restriccion_de_diseno'
+    ].concat(_caut);
+
+    // ── 12. RESULTADO ────────────────────────────────────────────────────────
+    return {
+        disponible:                  true,
+        _version:                    'lectura_ciclo_longitudinal_municipal_v1',
+        _sinEfectos:                 true,
+        _soloLectura:                true,
+        _noInferenciaAutomatica:     true,
+        _requiereInterpretacionHumana: true,
+        resumenEstructural:          s_resumenEstructural,
+        continuidad:                 s_continuidad,
+        discontinuidades:            s_discontinuidades,
+        trazabilidad:                s_trazabilidad,
+        riesgosMetodologicos:        _riesgos,
+        lecturaOperativa:            s_lecturaOperativa,
+        siguienteCiclo:              s_siguienteCiclo,
+        cautelas:                    _cautelasLectura
+    };
+};
+
+if (window.COMPAS) {
+    window.COMPAS.leerCicloLongitudinalMunicipal =
+        window.COMPAS_leerCicloLongitudinalMunicipal;
+}
+
+console.log('[COMPÁS] lecturaCicloLongitudinalMunicipalV1: COMPAS_leerCicloLongitudinalMunicipal() registrado ✓');
+
 /**
  * COMPAS_guardarEvidenciaTerritorialAtarfeDemo()
  * Cargador manual y explicito de metadatos de evidencia territorial oficial.
