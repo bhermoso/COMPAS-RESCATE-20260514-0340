@@ -52918,17 +52918,39 @@ function analizarDatosMunicipio() {
 
 
     // ── INVENTARIO DE FUENTES ─────────────────────────────────────────
+    // [Fase 2a — 2026-05-19] Lectura semántica vía accessor cuando esté disponible.
+    // Fallbacks exactos al comportamiento previo si el accessor no existe.
+    // No cambia variables, no cambia output, no toca propuestaEPVSA ni lógica posterior.
 
+    var _ft2a = (typeof window.COMPAS_obtenerFuentesTerritoriales === 'function')
+        ? window.COMPAS_obtenerFuentesTerritoriales({ silencioso: true })
+        : null;
+
+    // tieneInforme: datos.informe es local al municipio — no lo cubre el accessor
     var tieneInforme   = !!(datos.informe && datos.informe.htmlCompleto);
 
-    var tieneEstudiosDocs = !!(window.estudiosComplementarios &&
+    // tieneEstudiosDocs / tieneEscalas / tieneEstudios
+    // Vía accessor si disponible; fallback idéntico al original.
+    var tieneEstudiosDocs, _ibseMotor, _escMotor, tieneEscalas;
+    if (_ft2a && _ft2a.resumen) {
+        // El accessor ya resuelve estudios y IBSE con la misma cadena de prioridad
+        tieneEstudiosDocs = !!(_ft2a.fuentes.estudiosComplementarios &&
+                               _ft2a.fuentes.estudiosComplementarios.disponible);
+        _ibseMotor        = (_ft2a.fuentes.estudiosComplementarios &&
+                             _ft2a.fuentes.estudiosComplementarios.ibse &&
+                             _ft2a.fuentes.estudiosComplementarios.ibse.datos)
+                            || window.datosIBSE;
+        _escMotor         = (typeof _compasEscalasGet === 'function') ? _compasEscalasGet() : [];
+        tieneEscalas      = _ft2a.resumen.tieneIBSE || _escMotor.length > 0;
+    } else {
+        // Fallback exacto: comportamiento original
+        tieneEstudiosDocs = !!(window.estudiosComplementarios &&
                                window.estudiosComplementarios.length);
-
-    var _ibseMotor = window.datosIBSE;
-    var _escMotor = (typeof _compasEscalasGet === 'function') ? _compasEscalasGet() : [];
-
-    var tieneEscalas = (_ibseMotor && (_ibseMotor.n > 0 || _ibseMotor.n_valido > 0))
-                        || _escMotor.length > 0;
+        _ibseMotor        = window.datosIBSE;
+        _escMotor         = (typeof _compasEscalasGet === 'function') ? _compasEscalasGet() : [];
+        tieneEscalas      = (_ibseMotor && (_ibseMotor.n > 0 || _ibseMotor.n_valido > 0))
+                             || _escMotor.length > 0;
+    }
 
     // En COMPÁS, IBSE y escalas forman parte conceptual de
     // “Estudios complementarios (IBSE y otros)”.
@@ -52939,20 +52961,29 @@ function analizarDatosMunicipio() {
     //   temática  → datosParticipacionCiudadana con temasFreq (VRELAS)
     //   estratégica → prioridades.epvsa (canónico) o dpc sin temasFreq (rankingObjetivos)
     //   legacy    → datos.votacionRelas con temasFreq
-    var _dpc           = window.datosParticipacionCiudadana;
-    var _epvsa         = window.COMPAS && window.COMPAS.prioridades && window.COMPAS.prioridades.epvsa;
-    var pop            = (_dpc && _dpc.temasFreq)
-                         ? _dpc
-                         : (_epvsa && (_epvsa.n > 0 || (_epvsa.rankingObjetivos && _epvsa.rankingObjetivos.length)))
-                           ? _epvsa
-                           : (_dpc && _dpc.rankingObjetivos)
-                             ? _dpc
-                             : (datos.votacionRelas && datos.votacionRelas.temasFreq ? datos.votacionRelas : null);
-    // Fallback: COMPAS.prioridades.tematicas si pop sigue vacío y tiene n > 0
-    if (!pop) { var _cpTemV2 = window.COMPAS && window.COMPAS.prioridades && window.COMPAS.prioridades.tematicas; if (_cpTemV2 && _cpTemV2.n > 0) pop = _cpTemV2; }
+    var pop;
+    if (_ft2a && _ft2a.fuentes && _ft2a.fuentes.participacionCiudadana &&
+            _ft2a.fuentes.participacionCiudadana.datos) {
+        // Accessor ya resolvió el carril correcto
+        pop = _ft2a.fuentes.participacionCiudadana.datos;
+    } else {
+        // Fallback exacto: resolución de carril original
+        var _dpc   = window.datosParticipacionCiudadana;
+        var _epvsa = window.COMPAS && window.COMPAS.prioridades && window.COMPAS.prioridades.epvsa;
+        pop = (_dpc && _dpc.temasFreq)
+               ? _dpc
+               : (_epvsa && (_epvsa.n > 0 || (_epvsa.rankingObjetivos && _epvsa.rankingObjetivos.length)))
+                 ? _epvsa
+                 : (_dpc && _dpc.rankingObjetivos)
+                   ? _dpc
+                   : (datos.votacionRelas && datos.votacionRelas.temasFreq ? datos.votacionRelas : null);
+        // Fallback: COMPAS.prioridades.tematicas si pop sigue vacío y tiene n > 0
+        if (!pop) { var _cpTemV2 = window.COMPAS && window.COMPAS.prioridades && window.COMPAS.prioridades.tematicas; if (_cpTemV2 && _cpTemV2.n > 0) pop = _cpTemV2; }
+    }
 
     var tienePopular   = !!(pop && (pop.temasFreq || pop.rankingObjetivos || pop.n > 0));
 
+    // detFirebase / indFirebase: son datos locales del municipio — no los cubre el accessor
     var detFirebase    = datos.determinantes || {};
 
     var indFirebase    = datos.indicadores   || {};
@@ -54632,6 +54663,182 @@ if (tieneInforme && analisis.informeTopicos.length) {
 
         };
 
+    })();
+
+
+
+    // ── 12. CONTEXTO LONGITUDINAL RUNTIME (LONGI v1.11) ──────────────────
+    // Enriquece narrativa y síntesis con lectura longitudinal no inferencial.
+    // No modifica propuestaEPVSA, priorización, score SFA ni determinantes.
+    // No persiste. No escribe Firebase. No bloquea análisis si LONGI no existe.
+
+    (function() {
+        try {
+            if (!window.COMPAS || typeof window.COMPAS.construirContextoLongitudinalRuntime !== 'function') return;
+
+            var _ctx = window.COMPAS.construirContextoLongitudinalRuntime();
+            if (!_ctx || !_ctx.resumenRuntime) return;
+
+            var _res        = _ctx.resumenRuntime;
+            var _integ      = _ctx.integridad || {};
+            var _capas      = _ctx.capas      || {};
+
+            // Lecturas clave (con defaults seguros)
+            var _gobNivel      = (_res.gobernanza              || 'no_disponible').toString();
+            var _cierreNivel   = (_res.cierreHumano            || 'no_disponible').toString();
+            var _elegNivel     = (_res.elegibilidadPersistencia|| 'no_disponible').toString();
+            var _cohNivel      = (_res.coherencia              || 'no_disponible').toString();
+            var _preparado     = !!_res.preparadoPersistencia;
+            var _nPend         = typeof _res.decisionesPendientes === 'number' ? _res.decisionesPendientes : null;
+            var _nTotal        = typeof _res.totalActuaciones    === 'number' ? _res.totalActuaciones      : null;
+            var _capasDisp     = typeof _integ.capasDisponibles  === 'number' ? _integ.capasDisponibles    : 0;
+
+            // Gobernanza longitudinal (de v1.10 si disponible)
+            var _gobernanza = _capas.gobernanza || null;
+            var _nBloqueosGob = _gobernanza && Array.isArray(_gobernanza.bloqueosGobernanza)
+                ? _gobernanza.bloqueosGobernanza.filter(function(b){ return !b.origen || b.origen.indexOf('propagado') === -1; }).length
+                : 0;
+
+            // Multiciclo (de v1.7)
+            var _multi = _capas.multiciclo || null;
+            var _nCiclos = _multi && _multi.ciclos && typeof _multi.ciclos.nCiclos === 'number'
+                ? _multi.ciclos.nCiclos
+                : (_ctx.capas && _ctx.capas.contrato && _ctx.capas.contrato.ciclos
+                    ? (_ctx.capas.contrato.ciclos.detectados || []).length : 0);
+
+            // Coherencia (de v1.6)
+            var _coh = _capas.coherencia || null;
+            var _fragil = _cohNivel.indexOf('fragil') !== -1 || _cohNivel.indexOf('frágil') !== -1;
+
+            // ── Construcción de enriquecimiento longitudinal ──────────────
+
+            var _textosLongi = [];
+            var _cautelasLongi = [];
+
+            // 1. Madurez del ciclo
+            if (_nCiclos === 1) {
+                _textosLongi.push('El análisis corresponde al primer ciclo documentado en COMPÁS. ' +
+                    'Los indicadores longitudinales reflejan un punto de partida, ' +
+                    'sin comparación histórica disponible en el sistema.');
+            } else if (_nCiclos > 1) {
+                _textosLongi.push('El análisis se enmarca en un ciclo continuado con ' + _nCiclos + ' periodos documentados. ' +
+                    'La acumulación de registros permite una lectura de tendencia institucional.');
+            }
+
+            // 2. Gobernanza operativa
+            if (_gobNivel === 'bloqueada' && _nPend !== null && _nPend > 0) {
+                _textosLongi.push('La gobernanza longitudinal del ciclo presenta ' + _nPend + ' actuaci' +
+                    (_nPend === 1 ? 'ón pendiente' : 'ones pendientes') +
+                    ' de decisión de continuidad (continuar, cerrar, reformular o abandonar). ' +
+                    'Mientras persista esta situación, el cierre formal del ciclo no es viable.');
+                _cautelasLongi.push('Gobernanza bloqueada: ' + _nPend + ' actuaciones sin decisión declarada.');
+            } else if (_gobNivel === 'fragil') {
+                _textosLongi.push('La gobernanza longitudinal del ciclo es operativa pero frágil: ' +
+                    'existe un porcentaje significativo de actuaciones sin decisión de continuidad explícita. ' +
+                    'Se recomienda completar el proceso de revisión antes del cierre formal.');
+                _cautelasLongi.push('Gobernanza frágil: decisiones de continuidad incompletas.');
+            } else if (_gobNivel === 'operativa') {
+                _textosLongi.push('La gobernanza longitudinal del ciclo es operativa: ' +
+                    'todas las actuaciones tienen declarada su decisión de continuidad.');
+            }
+
+            // 3. Coherencia entre ciclos
+            if (_fragil) {
+                _cautelasLongi.push('Coherencia longitudinal válida pero frágil (' + _cohNivel + '): ' +
+                    'existen tensiones entre fuentes que conviene revisar antes del siguiente ciclo.');
+            }
+
+            // 4. Estado de cierre y persistencia
+            if (_cierreNivel === 'no_cerrable') {
+                _cautelasLongi.push('El ciclo no cumple los criterios mínimos para cierre formal (nivel: ' + _cierreNivel + ').');
+            } else if (_cierreNivel === 'preparado_parcial' || _cierreNivel === 'preparado') {
+                _textosLongi.push('El ciclo presenta condiciones suficientes para iniciar el proceso de cierre formal.');
+            }
+
+            if (_elegNivel === 'no_elegible') {
+                _cautelasLongi.push('El ciclo no es elegible para persistencia multiciclo en su estado actual.');
+            } else if (_elegNivel === 'elegible_parcial' || _elegNivel === 'elegible') {
+                _textosLongi.push('Las condiciones de elegibilidad para la continuidad multiciclo están parcial o totalmente cumplidas.');
+            }
+
+            // 5. Contexto de integridad LONGI
+            if (_capasDisp < 11 && _capasDisp > 0) {
+                var _falt = _integ.faltantes || [];
+                _cautelasLongi.push('El contexto longitudinal está disponible parcialmente (' + _capasDisp + '/11 capas). ' +
+                    (_falt.length ? 'Capas no disponibles: ' + _falt.join(', ') + '.' : ''));
+            }
+
+            // ── Integración en analisis.narrativa ────────────────────────
+
+            if (!analisis.narrativa) analisis.narrativa = {};
+
+            if (_textosLongi.length > 0 || _cautelasLongi.length > 0) {
+                var _bloqLongi = '';
+
+                if (_textosLongi.length > 0) {
+                    _bloqLongi += _textosLongi.join(' ');
+                }
+                if (_cautelasLongi.length > 0) {
+                    _bloqLongi += (_bloqLongi ? ' ' : '') +
+                        'Observaciones metodológicas: ' + _cautelasLongi.join(' ');
+                }
+
+                // Añadir a síntesis existente (no sustituir)
+                if (analisis.narrativa.sintesis) {
+                    analisis.narrativa.sintesis += '\n\n[Contexto longitudinal] ' + _bloqLongi;
+                } else {
+                    analisis.narrativa.sintesis = '[Contexto longitudinal] ' + _bloqLongi;
+                }
+
+                // Registro en contexto
+                if (analisis.narrativa.contexto) {
+                    analisis.narrativa.contexto += ' El análisis cuenta además con contexto longitudinal de ' +
+                        _capasDisp + ' capa' + (_capasDisp === 1 ? '' : 's') + ' LONGI.';
+                }
+            }
+
+            // ── Conclusión longitudinal (si hay contenido relevante) ─────
+
+            if (_textosLongi.length > 0) {
+                var _textoConclLongi = _textosLongi.join(' ');
+                if (_cautelasLongi.length > 0) {
+                    _textoConclLongi += ' Cautelas: ' + _cautelasLongi[0] +
+                        (_cautelasLongi.length > 1 ? ' (y ' + (_cautelasLongi.length - 1) + ' observación/es adicional/es).' : '');
+                }
+                analisis.conclusiones.push({
+                    id:           'contexto_longitudinal',
+                    prioridad:    95,
+                    especifica:   true,
+                    fuente_tipo:  'longitudinal',
+                    texto:        _textoConclLongi,
+                    base_analitica: 'LONGI v1.11 — contexto runtime (' + _capasDisp + '/11 capas disponibles)',
+                    interpretacion: 'Lectura no inferencial del estado longitudinal del ciclo COMPÁS.',
+                    oportunidad_accion: _gobNivel === 'bloqueada'
+                        ? 'Completar decisiones de continuidad de actuaciones para habilitar el cierre del ciclo.'
+                        : (_cierreNivel === 'preparado' || _cierreNivel === 'preparado_parcial'
+                            ? 'El ciclo está en condiciones de avanzar hacia el cierre formal.'
+                            : null)
+                });
+            }
+
+            // ── Registro en trazabilidad ─────────────────────────────────
+            if (analisis.trazabilidad && typeof analisis.trazabilidad === 'object') {
+                analisis.trazabilidad._longi_f12 = {
+                    version:        'F12_longi_v1_11',
+                    capasDisp:      _capasDisp,
+                    gobernanza:     _gobNivel,
+                    coherencia:     _cohNivel,
+                    cierreHumano:   _cierreNivel,
+                    elegibilidad:   _elegNivel,
+                    decisionesPend: _nPend,
+                    textosAnadidos: _textosLongi.length,
+                    cautelasAnadidas: _cautelasLongi.length
+                };
+            }
+
+        } catch(e) {
+            console.warn('[COMPÁS F12] Error en contexto longitudinal — análisis principal no afectado:', e);
+        }
     })();
 
 
@@ -80549,6 +80756,7 @@ window.__ultimaSalidaMotorSintesisV4 = null;
         window.__COMPAS_ejecutarMotorSintesis = async function() {
 
             try {
+                console.log('[F12 DIAG 1] __COMPAS_ejecutarMotorSintesis: ENTRADA try');
 
                 const ctx = contextoDesdeGlobalesHeredados();
 
@@ -80568,7 +80776,7 @@ window.__ultimaSalidaMotorSintesisV4 = null;
                 const salida = await motorSintesisPerfil.ejecutar(ctxFinal);
                 window.__ultimaSalidaMotorSintesis = salida;
 
-
+                console.log('[F12 DIAG 2] salida recibida. sinDatos:', salida && salida.sinDatos, '| datos:', !!(salida && salida.datos), '| error:', salida && salida.error);
 
                 if (!salida || salida.sinDatos || !salida.datos) {
 
@@ -80581,6 +80789,8 @@ window.__ultimaSalidaMotorSintesisV4 = null;
                 // Adaptar SalidaMotor al formato plano de window.analisisActual
 
                 const analisisAdaptado = adaptarSalidaMotorAAnalisisActual(salida, ctx);
+
+                console.log('[F12 DIAG 3] analisisAdaptado:', !!analisisAdaptado, '| origenCalculo:', analisisAdaptado && analisisAdaptado._origenCalculo);
 
                 if (!analisisAdaptado) {
 
@@ -80595,6 +80805,131 @@ window.__ultimaSalidaMotorSintesisV4 = null;
                 window.analisisActual = analisisAdaptado;
 
                 window.__ultimaSalidaMotorSintesis = salida;
+
+                console.log('[F12 DIAG 4] ANTES del bloque F12. window.analisisActual ok:', !!window.analisisActual, '| propuestaEPVSA:', Array.isArray(window.analisisActual && window.analisisActual.propuestaEPVSA) ? window.analisisActual.propuestaEPVSA.length : 'no-array');
+
+                // ── F12 RUNTIME · CONTEXTO LONGITUDINAL (LONGI v1.11) ──────────────────
+                // Enriquece window.analisisActual con datos del pipeline LONGI activo.
+                // Solo lectura sobre LONGI. No modifica: propuestaEPVSA, priorización,
+                // recomendaciones, fuentes, score, Firebase ni persistencia.
+                // ──────────────────────────────────────────────────────────────────────
+                (function _f12LongiRuntime() {
+                    try {
+                        console.log('[F12 DIAG 5] IIFE _f12LongiRuntime ejecutada. window.COMPAS:', !!window.COMPAS, '| fn:', typeof (window.COMPAS && window.COMPAS.construirContextoLongitudinalRuntime));
+                        if (!window.COMPAS || typeof window.COMPAS.construirContextoLongitudinalRuntime !== 'function') {
+                            console.warn('[F12 DIAG 5a] Guard 1 ACTIVO — LONGI no disponible en este punto');
+                            return;
+                        }
+                        if (!window.analisisActual) {
+                            console.warn('[F12 DIAG 5b] Guard 2 ACTIVO — window.analisisActual es null aquí');
+                            return;
+                        }
+
+                        var _ctx = window.COMPAS.construirContextoLongitudinalRuntime();
+                        console.log('[F12 DIAG 6] _ctx obtenido:', !!_ctx, '| resumenRuntime:', !!(_ctx && _ctx.resumenRuntime), '| totalActuaciones:', _ctx && _ctx.resumenRuntime && _ctx.resumenRuntime.totalActuaciones);
+                        if (!_ctx || !_ctx.resumenRuntime) {
+                            console.warn('[F12 DIAG 6a] Guard 3 ACTIVO — _ctx sin resumenRuntime');
+                            return;
+                        }
+
+                        var _res = _ctx.resumenRuntime;
+                        var _municipio = _res.municipio || null;
+                        var _total = typeof _res.totalActuaciones === 'number' ? _res.totalActuaciones : 0;
+                        var _pendDec = typeof _res.decisionesPendientes === 'number' ? _res.decisionesPendientes : 0;
+                        var _cierre = _res.cierreHumano || null;
+                        var _eleg = _res.elegibilidadPersistencia || null;
+                        var _coh = _res.coherencia || null;
+                        var _gov = _res.gobernanza || null;
+                        var _prep = !!_res.preparadoPersistencia;
+                        var _integridad = _ctx.integridad || null;
+
+                        // ── 1. Trazabilidad _longi_f12 ────────────────────────────────────────
+                        if (!window.analisisActual.trazabilidad) window.analisisActual.trazabilidad = {};
+                        if (!window.analisisActual.trazabilidad._longi_f12) {
+                            window.analisisActual.trazabilidad._longi_f12 = {
+                                version: 'f12_runtime_v1',
+                                fuente: 'LONGI_v1.11_modular',
+                                municipio: _municipio,
+                                totalActuaciones: _total,
+                                decisionesPendientes: _pendDec,
+                                preparadoPersistencia: _prep,
+                                capasDisponibles: _integridad ? _integridad.capasDisponibles : null,
+                                duracionMs: _ctx.rendimiento ? _ctx.rendimiento.duracionMs : null,
+                                ts: new Date().toISOString()
+                            };
+                        }
+
+                        // ── 2. Conclusión contexto_longitudinal ───────────────────────────────
+                        var _concls = Array.isArray(window.analisisActual.conclusiones)
+                            ? window.analisisActual.conclusiones
+                            : (window.analisisActual.conclusiones && Array.isArray(window.analisisActual.conclusiones.lista)
+                                ? window.analisisActual.conclusiones.lista
+                                : null);
+
+                        if (_concls && !_concls.some(function(c) { return c && c.id === 'contexto_longitudinal'; })) {
+                            var _textoLongi = (function() {
+                                if (_total === 0) return null;
+                                var _p = [];
+                                _p.push('El municipio registra ' + _total + ' actuaci' + (_total === 1 ? 'ón' : 'ones') + ' en el ciclo longitudinal activo.');
+                                if (_pendDec > 0) {
+                                    _p.push(_pendDec + ' ' + (_pendDec === 1 ? 'requiere' : 'requieren') + ' decisión técnica para el cierre del ciclo.');
+                                }
+                                if (_eleg && _eleg.elegible === false && _eleg.razon) {
+                                    _p.push('La elegibilidad para persistencia multiciclo no está acreditada: ' + _eleg.razon + '.');
+                                } else if (_eleg && _eleg.elegible === true) {
+                                    _p.push('El ciclo cumple los criterios de elegibilidad para persistencia multiciclo.');
+                                }
+                                if (_coh && Array.isArray(_coh.incidencias) && _coh.incidencias.length > 0) {
+                                    _p.push('Se detectan ' + _coh.incidencias.length + ' incidencia' + (_coh.incidencias.length === 1 ? '' : 's') + ' de coherencia longitudinal.');
+                                }
+                                return _p.join(' ');
+                            })();
+
+                            if (_textoLongi) {
+                                _concls.push({
+                                    id: 'contexto_longitudinal',
+                                    tipo: 'contexto_longitudinal',
+                                    texto: _textoLongi,
+                                    fuente: 'LONGI_v1.11',
+                                    fuente_tipo: 'longitudinal',
+                                    prioridad: 95,
+                                    especifica: true,
+                                    origen: 'f12_runtime_modular'
+                                });
+                            }
+                        }
+
+                        // ── 3. Narrativa.sintesis (prefijo longitudinal) ──────────────────────
+                        if (_total > 0) {
+                            if (!window.analisisActual.narrativa) window.analisisActual.narrativa = {};
+                            var _sinActual = window.analisisActual.narrativa.sintesis || '';
+                            var _MARCA = '[Contexto longitudinal]';
+                            if (_sinActual.indexOf(_MARCA) === -1) {
+                                var _sinLongi = (function() {
+                                    var _q = [];
+                                    if (_cierre && _cierre.cumpleRequisitosMinimos === true) {
+                                        _q.push('El ciclo longitudinal cumple los requisitos mínimos de cierre.');
+                                    } else if (_cierre && _cierre.cumpleRequisitosMinimos === false) {
+                                        _q.push('El ciclo longitudinal no cumple los requisitos mínimos de cierre.');
+                                    }
+                                    if (_gov && Array.isArray(_gov.actuacionesConDecisionPendiente) && _gov.actuacionesConDecisionPendiente.length > 0) {
+                                        _q.push(_gov.actuacionesConDecisionPendiente.length + ' actuaci' + (_gov.actuacionesConDecisionPendiente.length === 1 ? 'ón requiere' : 'ones requieren') + ' decisión de gobernanza.');
+                                    }
+                                    return _q.length ? _MARCA + ' ' + _q.join(' ') : null;
+                                })();
+                                if (_sinLongi) {
+                                    window.analisisActual.narrativa.sintesis = _sinLongi + (_sinActual ? ' ' + _sinActual : '');
+                                }
+                            }
+                        }
+
+                        console.log('[COMPÁS F12 runtime] Contexto longitudinal integrado.',
+                            '| total:', _total, '| pendDec:', _pendDec, '| prep:', _prep);
+
+                    } catch (e) {
+                        console.warn('[COMPÁS F12 runtime] Error al integrar contexto longitudinal — análisis principal no afectado:', e && e.message ? e.message : e);
+                    }
+                })();
 
                 // v4 se ejecuta como capa interpretativa paralela: auditable, no sustitutiva y sin persistencia.
                 try {
@@ -80636,6 +80971,7 @@ window.__ultimaSalidaMotorSintesisV4 = null;
             } catch (errMotor) {
 
                 console.warn('[COMPÁS modular] Fallback a motor heredado:', errMotor.message);
+                console.warn('[F12 DIAG CATCH] La ejecución cayó al catch. Causa:', errMotor && errMotor.message, '| Stack:', errMotor && errMotor.stack);
 
                 return _fallbackMotorHeredado();
 
@@ -81167,6 +81503,807 @@ window.ibse_v3_renderSegmentos = function(data) {
 </script>
 
 <!-- =========================================================
+     Accessor IBSE — punto único de lectura defensiva
+     COMPAS_obtenerDatosIBSE() — ibse_accessor_v1
+     NO escribe. NO llama Firebase. NO recalcula.
+     ========================================================= -->
+<script>
+/**
+ * COMPAS_obtenerDatosIBSE(opciones)
+ *
+ * Punto de acceso defensivo y único para datos IBSE en runtime.
+ * Consolida todas las fuentes activas sin escribir, sin recalcular,
+ * sin llamar Firebase.
+ *
+ * Prioridad de fuentes (de más a menos canónica):
+ *   1. datosMunicipioActual.fuentes.estudiosComplementarios.ibse  (futuro)
+ *   2. datosMunicipioActual.estudiosComplementarios.ibse           (futuro)
+ *   3. window.datosIBSE                                            (runtime activo)
+ *   4. datosMunicipioActual.ibseDatos                              (Firebase actual)
+ *   5. datosMunicipioActual.ibse_monitor                           (legacy)
+ *   6. window._ibse_v2_rawData / window._ibse_v2_csvReciente       (microdatos runtime)
+ *
+ * Retorna:
+ *   {
+ *     disponible: boolean,
+ *     fuente: string,
+ *     municipio: string|null,
+ *     datos: object|null,
+ *     agregado: object|null,
+ *     config: object|null,
+ *     microdatosDisponibles: boolean,
+ *     origenesDetectados: string[],
+ *     advertencias: string[],
+ *     version: "ibse_accessor_v1"
+ *   }
+ *
+ * @param {object} [opciones]
+ * @param {boolean} [opciones.silencioso] — si true, no emite console.warn parciales
+ * @returns {object}
+ */
+window.COMPAS_obtenerDatosIBSE = function(opciones) {
+    var _opt = opciones || {};
+    var _silencioso = !!_opt.silencioso;
+
+    var _municipio = null;
+    var _datos = null;
+    var _agregado = null;
+    var _config = null;
+    var _fuente = 'ninguna';
+    var _origenes = [];
+    var _advertencias = [];
+    var _microdatosDisponibles = false;
+
+    // ── Leer datosMunicipioActual si existe ─────────────────────────────────
+    var _dm = (typeof datosMunicipioActual !== 'undefined' && datosMunicipioActual)
+        ? datosMunicipioActual
+        : (window.datosMunicipioActual || null);
+
+    if (_dm) {
+        _municipio = _dm.id || _dm.codigo || _dm.nombre || null;
+
+        // ── Fuente 1: estructura futura fuentes.estudiosComplementarios.ibse ─
+        var _futuro1 = _dm.fuentes
+            && _dm.fuentes.estudiosComplementarios
+            && _dm.fuentes.estudiosComplementarios.ibse
+            ? _dm.fuentes.estudiosComplementarios.ibse
+            : null;
+        if (_futuro1 && (_futuro1.datos || _futuro1.agregado)) {
+            _origenes.push('fuentes.estudiosComplementarios.ibse');
+            _datos = _futuro1.datos || null;
+            _agregado = _futuro1.agregado || null;
+            _config = _futuro1.config || null;
+            _fuente = 'fuentes.estudiosComplementarios.ibse';
+        }
+
+        // ── Fuente 2: estructura futura estudiosComplementarios.ibse ─────────
+        if (_fuente === 'ninguna') {
+            var _futuro2 = _dm.estudiosComplementarios
+                && !Array.isArray(_dm.estudiosComplementarios)
+                && _dm.estudiosComplementarios.ibse
+                ? _dm.estudiosComplementarios.ibse
+                : null;
+            if (_futuro2 && (_futuro2.datos || _futuro2.agregado)) {
+                _origenes.push('estudiosComplementarios.ibse');
+                _datos = _futuro2.datos || null;
+                _agregado = _futuro2.agregado || null;
+                _config = _futuro2.config || null;
+                _fuente = 'estudiosComplementarios.ibse';
+            }
+        }
+
+        // ── Fuente 4: ibseDatos (Firebase actual) ────────────────────────────
+        if (_dm.ibseDatos && typeof _dm.ibseDatos === 'object') {
+            _origenes.push('datosMunicipioActual.ibseDatos');
+            if (_fuente === 'ninguna') {
+                _agregado = _dm.ibseDatos;
+                _fuente = 'datosMunicipioActual.ibseDatos';
+            }
+        }
+
+        // ── Fuente 5: ibse_monitor (legacy) ──────────────────────────────────
+        if (_dm.ibse_monitor && typeof _dm.ibse_monitor === 'object') {
+            _origenes.push('datosMunicipioActual.ibse_monitor (legacy)');
+            if (_fuente === 'ninguna') {
+                _agregado = _dm.ibse_monitor;
+                _fuente = 'datosMunicipioActual.ibse_monitor';
+                _advertencias.push('Fuente ibse_monitor es legacy. Migrar a ibseDatos.');
+            }
+        }
+
+        // ── Config IBSE (siempre leer si existe) ─────────────────────────────
+        if (_dm.ibse_config && typeof _dm.ibse_config === 'object') {
+            _origenes.push('datosMunicipioActual.ibse_config');
+            _config = _config || _dm.ibse_config;
+        }
+    }
+
+    // ── Fuente 3: window.datosIBSE (runtime activo) ─────────────────────────
+    if (window.datosIBSE && typeof window.datosIBSE === 'object') {
+        _origenes.push('window.datosIBSE');
+        if (_fuente === 'ninguna') {
+            _agregado = window.datosIBSE;
+            _fuente = 'window.datosIBSE';
+        }
+    }
+
+    // ── Fuente 6: microdatos runtime ─────────────────────────────────────────
+    var _hayRawData = !!(window._ibse_v2_rawData && window._ibse_v2_rawData.length);
+    var _hayCsvReciente = !!(window._ibse_v2_csvReciente && window._ibse_v2_csvReciente.datos && window._ibse_v2_csvReciente.datos.length);
+    var _hayLocal = !!(window._compasLocalIBSE_datos && window._compasLocalIBSE_datos.length);
+    _microdatosDisponibles = _hayRawData || _hayCsvReciente || _hayLocal;
+    if (_microdatosDisponibles) {
+        _origenes.push('microdatos_runtime');
+    }
+
+    // ── Resultado final ───────────────────────────────────────────────────────
+    var _disponible = _fuente !== 'ninguna' || _microdatosDisponibles;
+
+    if (!_disponible && !_silencioso) {
+        // No spam — solo si no hay absolutamente nada
+        _advertencias.push('Sin datos IBSE detectados en ninguna fuente conocida.');
+    }
+
+    return {
+        disponible:             _disponible,
+        fuente:                 _fuente,
+        municipio:              _municipio,
+        datos:                  _datos,
+        agregado:               _agregado,
+        config:                 _config,
+        microdatosDisponibles:  _microdatosDisponibles,
+        origenesDetectados:     _origenes,
+        advertencias:           _advertencias,
+        version:                'ibse_accessor_v1'
+    };
+};
+
+console.log('[COMPÁS] COMPAS_obtenerDatosIBSE() registrado — ibse_accessor_v1 ✓');
+</script>
+
+<!-- =========================================================
+     Accessor Estudios Complementarios — punto único de lectura defensiva
+     COMPAS_obtenerEstudiosComplementarios() — estudios_complementarios_accessor_v1
+     NO escribe. NO llama Firebase. NO rehidrata. NO recalcula.
+     IBSE se incluye como objeto especializado, no como fuente central.
+     ========================================================= -->
+<script>
+/**
+ * COMPAS_obtenerEstudiosComplementarios(opciones)
+ *
+ * Punto de acceso defensivo y único para Estudios Complementarios en runtime.
+ * Consolida listas, escalas e IBSE (como objeto especializado) desde todas
+ * las fuentes activas, sin escribir, sin recalcular, sin llamar Firebase.
+ *
+ * Prepara la arquitectura futura donde IBSE vive en:
+ *   municipios/{municipio}/estudiosComplementarios/ibse
+ * sin mover datos todavía.
+ *
+ * Prioridad de fuentes para la lista de estudios:
+ *   1. datosMunicipioActual.fuentes.estudiosComplementarios  (futuro)
+ *   2. datosMunicipioActual.estudiosComplementarios           (actual Firebase)
+ *   3. window.estudiosComplementarios                         (runtime cache)
+ *
+ * Prioridad de fuentes para escalas:
+ *   1. datosMunicipioActual.estudiosComplementariosEscalas
+ *   2. datosMunicipioActual.escalasComplementarias            (alias legacy)
+ *   3. window.escalasComplementarias
+ *
+ * IBSE: delegado a COMPAS_obtenerDatosIBSE() si existe, no duplicado.
+ *
+ * Retorna:
+ *   {
+ *     disponible: boolean,
+ *     municipio: string|null,
+ *     lista: array,
+ *     escalas: array,
+ *     ibse: object|null,
+ *     fuentesDetectadas: string[],
+ *     advertencias: string[],
+ *     version: "estudios_complementarios_accessor_v1"
+ *   }
+ *
+ * @param {object} [opciones]
+ * @param {boolean} [opciones.silencioso] — si true, suprime advertencias de ausencia
+ * @returns {object}
+ */
+window.COMPAS_obtenerEstudiosComplementarios = function(opciones) {
+    var _opt = opciones || {};
+    var _silencioso = !!_opt.silencioso;
+
+    var _municipio = null;
+    var _lista = [];
+    var _escalas = [];
+    var _ibse = null;
+    var _fuentes = [];
+    var _advertencias = [];
+
+    // ── Helper: normalizar a array sin romper ──────────────────────────────
+    function _toArray(v) {
+        if (!v) return [];
+        if (Array.isArray(v)) return v;
+        if (typeof v === 'object') return Object.values(v);
+        return [];
+    }
+
+    // ── Helper: deduplicar por id, nombre o tipo ───────────────────────────
+    function _deduplicar(arr) {
+        var _vistos = {};
+        return arr.filter(function(item) {
+            if (!item || typeof item !== 'object') return false;
+            var _clave = item.id || item.nombre || item.tipo || item.escala || JSON.stringify(item).slice(0, 40);
+            if (_vistos[_clave]) return false;
+            _vistos[_clave] = true;
+            return true;
+        });
+    }
+
+    // ── Leer datosMunicipioActual si existe ───────────────────────────────
+    var _dm = (typeof datosMunicipioActual !== 'undefined' && datosMunicipioActual)
+        ? datosMunicipioActual
+        : (window.datosMunicipioActual || null);
+
+    if (_dm) {
+        _municipio = _dm.id || _dm.codigo || _dm.nombre || null;
+
+        // ── Fuente 1: estructura futura fuentes.estudiosComplementarios ──────
+        var _futuro = _dm.fuentes && _dm.fuentes.estudiosComplementarios
+            ? _dm.fuentes.estudiosComplementarios
+            : null;
+        if (_futuro) {
+            _fuentes.push('datosMunicipioActual.fuentes.estudiosComplementarios');
+            var _fLista = _futuro.lista || _futuro;
+            if (Array.isArray(_fLista) || (typeof _fLista === 'object' && _fLista !== null && !_fLista.ibse)) {
+                _lista = _lista.concat(_toArray(_fLista));
+            }
+            if (_futuro.escalas) _escalas = _escalas.concat(_toArray(_futuro.escalas));
+        }
+
+        // ── Fuente 2: estudiosComplementarios actual (Firebase) ───────────
+        var _ecActual = _dm.estudiosComplementarios;
+        if (_ecActual) {
+            if (Array.isArray(_ecActual)) {
+                // Array plano — formato actual Firebase
+                _fuentes.push('datosMunicipioActual.estudiosComplementarios (array)');
+                _lista = _lista.concat(_ecActual);
+            } else if (typeof _ecActual === 'object') {
+                // Podría ser objeto con subcampos (incluyendo .ibse futuro)
+                _fuentes.push('datosMunicipioActual.estudiosComplementarios (objeto)');
+                // Excluir ibse — se maneja por separado
+                var _sinIBSE = Object.keys(_ecActual)
+                    .filter(function(k) { return k !== 'ibse'; })
+                    .reduce(function(acc, k) {
+                        var _v = _ecActual[k];
+                        if (_v && typeof _v === 'object') acc.push(_v);
+                        return acc;
+                    }, []);
+                _lista = _lista.concat(_sinIBSE);
+            }
+        }
+
+        // ── Escalas: estudiosComplementariosEscalas ───────────────────────
+        if (_dm.estudiosComplementariosEscalas) {
+            _fuentes.push('datosMunicipioActual.estudiosComplementariosEscalas');
+            _escalas = _escalas.concat(_toArray(_dm.estudiosComplementariosEscalas));
+        }
+
+        // ── Escalas: escalasComplementarias (alias legacy) ────────────────
+        if (_dm.escalasComplementarias) {
+            _fuentes.push('datosMunicipioActual.escalasComplementarias (alias legacy)');
+            _escalas = _escalas.concat(_toArray(_dm.escalasComplementarias));
+            _advertencias.push('escalasComplementarias es alias legacy de estudiosComplementariosEscalas.');
+        }
+    }
+
+    // ── Fuente 3: window.estudiosComplementarios (cache runtime) ──────────
+    if (window.estudiosComplementarios && Array.isArray(window.estudiosComplementarios) && window.estudiosComplementarios.length) {
+        _fuentes.push('window.estudiosComplementarios');
+        _lista = _lista.concat(window.estudiosComplementarios);
+    }
+
+    // ── Escalas: window.escalasComplementarias ────────────────────────────
+    if (window.escalasComplementarias && window.escalasComplementarias.length) {
+        _fuentes.push('window.escalasComplementarias');
+        _escalas = _escalas.concat(_toArray(window.escalasComplementarias));
+    }
+
+    // ── Deduplicar lista y escalas ─────────────────────────────────────────
+    _lista = _deduplicar(_lista);
+    _escalas = _deduplicar(_escalas);
+
+    // ── IBSE: delegar a COMPAS_obtenerDatosIBSE si está disponible ─────────
+    if (typeof window.COMPAS_obtenerDatosIBSE === 'function') {
+        var _ibseResult = window.COMPAS_obtenerDatosIBSE({ silencioso: true });
+        if (_ibseResult && _ibseResult.disponible) {
+            _ibse = _ibseResult;
+            _fuentes.push('COMPAS_obtenerDatosIBSE() [ibse_accessor_v1]');
+        }
+    } else {
+        _advertencias.push('COMPAS_obtenerDatosIBSE no disponible — IBSE no incluido.');
+    }
+
+    // ── Disponibilidad ─────────────────────────────────────────────────────
+    var _disponible = _lista.length > 0 || _escalas.length > 0 || !!_ibse;
+
+    if (!_disponible && !_silencioso) {
+        _advertencias.push('Sin estudios complementarios detectados en ninguna fuente conocida.');
+    }
+
+    return {
+        disponible:        _disponible,
+        municipio:         _municipio,
+        lista:             _lista,
+        escalas:           _escalas,
+        ibse:              _ibse,
+        fuentesDetectadas: _fuentes,
+        advertencias:      _advertencias,
+        version:           'estudios_complementarios_accessor_v1'
+    };
+};
+
+console.log('[COMPÁS] COMPAS_obtenerEstudiosComplementarios() registrado — estudios_complementarios_accessor_v1 ✓');
+</script>
+
+<!-- =========================================================
+     Accessor Fuentes Territoriales — capa semántica superior de lectura
+     COMPAS_obtenerFuentesTerritoriales() — fuentes_territoriales_accessor_v1
+     NO escribe. NO llama Firebase. NO rehidrata. NO lanza motores.
+     Consolida todas las fuentes disponibles para análisis territorial.
+     ========================================================= -->
+<script>
+/**
+ * COMPAS_obtenerFuentesTerritoriales(opciones)
+ *
+ * Capa semántica superior de lectura defensiva.
+ * Consolida todas las fuentes territoriales disponibles para análisis
+ * sin escribir, sin recalcular, sin llamar Firebase.
+ *
+ * Delega en:
+ *   - COMPAS_obtenerEstudiosComplementarios() para estudios e IBSE
+ *
+ * Retorna:
+ *   {
+ *     disponible: boolean,
+ *     municipio: string|null,
+ *     fuentes: {
+ *       informeSituacionSalud: object|null,
+ *       estudiosComplementarios: object|null,
+ *       determinantes: object|null,
+ *       indicadoresCMI: object|null,
+ *       activosComunitarios: object|null,
+ *       participacionCiudadana: object|null,
+ *       priorizacion: object|null
+ *     },
+ *     resumen: {
+ *       tieneInforme: boolean,
+ *       tieneEstudios: boolean,
+ *       tieneIBSE: boolean,
+ *       tieneDeterminantes: boolean,
+ *       tieneIndicadores: boolean,
+ *       tieneActivos: boolean,
+ *       tieneParticipacion: boolean,
+ *       tienePriorizacion: boolean,
+ *       nFuentes: number,
+ *       fuentesDisponibles: string[]
+ *     },
+ *     advertencias: string[],
+ *     version: "fuentes_territoriales_accessor_v1"
+ *   }
+ *
+ * @param {object} [opciones]
+ * @param {boolean} [opciones.silencioso] — suprime advertencias de ausencia
+ * @returns {object}
+ */
+window.COMPAS_obtenerFuentesTerritoriales = function(opciones) {
+    var _opt = opciones || {};
+    var _silencioso = !!_opt.silencioso;
+    var _advertencias = [];
+
+    // ── Helper: ¿tiene contenido real? ────────────────────────────────────
+    function _hayContenido(v) {
+        if (!v) return false;
+        if (Array.isArray(v)) return v.length > 0;
+        if (typeof v === 'object') return Object.keys(v).length > 0;
+        if (typeof v === 'string') return v.trim().length > 0;
+        return !!v;
+    }
+
+    // ── Leer datosMunicipioActual ──────────────────────────────────────────
+    var _dm = (typeof datosMunicipioActual !== 'undefined' && datosMunicipioActual)
+        ? datosMunicipioActual
+        : (window.datosMunicipioActual || null);
+
+    var _municipio = _dm
+        ? (_dm.id || _dm.codigo || _dm.nombre || null)
+        : null;
+
+    // ── 1. INFORME DE SITUACIÓN DE SALUD ──────────────────────────────────
+    var _informe = null;
+    var _dmInforme = _dm && _dm.informe ? _dm.informe : null;
+    var _pendiente = window.__compas_informe_pendiente || null;
+    if (_hayContenido(_dmInforme)) {
+        _informe = { fuente: 'datosMunicipioActual.informe', datos: _dmInforme };
+        if (_pendiente) _informe.pendiente = _pendiente;
+    } else if (_hayContenido(_pendiente)) {
+        _informe = { fuente: 'window.__compas_informe_pendiente', datos: _pendiente };
+        _advertencias.push('Informe solo disponible como pendiente local — no persistido.');
+    }
+
+    // ── 2. ESTUDIOS COMPLEMENTARIOS (delega en accessor v1) ───────────────
+    var _estudios = null;
+    if (typeof window.COMPAS_obtenerEstudiosComplementarios === 'function') {
+        var _ecResult = window.COMPAS_obtenerEstudiosComplementarios({ silencioso: true });
+        if (_ecResult && _ecResult.disponible) {
+            _estudios = _ecResult;
+        }
+    } else {
+        _advertencias.push('COMPAS_obtenerEstudiosComplementarios no disponible.');
+    }
+
+    // ── 3. DETERMINANTES ─────────────────────────────────────────────────
+    var _determinantes = null;
+    var _dmDet = _dm && _hayContenido(_dm.determinantes) ? _dm.determinantes : null;
+    var _winDet = _hayContenido(window.determinantesActuales) ? window.determinantesActuales : null;
+    if (_dmDet) {
+        _determinantes = { fuente: 'datosMunicipioActual.determinantes', datos: _dmDet };
+    } else if (_winDet) {
+        _determinantes = { fuente: 'window.determinantesActuales', datos: _winDet };
+    }
+
+    // ── 4. INDICADORES CMI ────────────────────────────────────────────────
+    var _indicadores = null;
+    var _dmInd = _dm && _hayContenido(_dm.indicadores) ? _dm.indicadores : null;
+    var _winInd = _hayContenido(window.indicadoresMunicipales) ? window.indicadoresMunicipales : null;
+    var _winCMI = _hayContenido(window.cuadroMandoIndicadores) ? window.cuadroMandoIndicadores : null;
+    if (_dmInd) {
+        _indicadores = { fuente: 'datosMunicipioActual.indicadores', datos: _dmInd };
+    } else if (_winInd) {
+        _indicadores = { fuente: 'window.indicadoresMunicipales', datos: _winInd };
+    } else if (_winCMI) {
+        _indicadores = { fuente: 'window.cuadroMandoIndicadores', datos: _winCMI };
+    }
+
+    // ── 5. ACTIVOS COMUNITARIOS ───────────────────────────────────────────
+    var _activos = null;
+    var _dmAct = _dm && _hayContenido(_dm.activosComunitarios) ? _dm.activosComunitarios : null;
+    var _winAct = _hayContenido(window.activosComunitarios) ? window.activosComunitarios : null;
+    if (_dmAct) {
+        _activos = { fuente: 'datosMunicipioActual.activosComunitarios', datos: _dmAct };
+    } else if (_winAct) {
+        _activos = { fuente: 'window.activosComunitarios', datos: _winAct };
+    }
+
+    // ── 6. PARTICIPACIÓN CIUDADANA ────────────────────────────────────────
+    var _participacion = null;
+    var _dmPar = _dm && _hayContenido(_dm.participacionCiudadana) ? _dm.participacionCiudadana : null;
+    var _winPar = _hayContenido(window.datosParticipacionCiudadana) ? window.datosParticipacionCiudadana
+        : (_hayContenido(window.participacionActual) ? window.participacionActual : null);
+    if (_dmPar) {
+        _participacion = { fuente: 'datosMunicipioActual.participacionCiudadana', datos: _dmPar };
+    } else if (_winPar) {
+        _participacion = { fuente: 'window.datosParticipacionCiudadana|participacionActual', datos: _winPar };
+    }
+
+    // ── 7. PRIORIZACIÓN ───────────────────────────────────────────────────
+    var _priorizacion = null;
+    var _dmDecision = _dm && _hayContenido(_dm.decisionPriorizacion) ? _dm.decisionPriorizacion : null;
+    var _dmSelEPVSA = _dm && _hayContenido(_dm.seleccionEPVSA) ? _dm.seleccionEPVSA : null;
+    var _winDecision = _hayContenido(window.decisionPriorizacionActual) ? window.decisionPriorizacionActual : null;
+    var _winSelEPVSA = (window.COMPAS && window.COMPAS.state && _hayContenido(window.COMPAS.state.seleccionEPVSA))
+        ? window.COMPAS.state.seleccionEPVSA : null;
+    var _priData = _dmDecision || _winDecision || _dmSelEPVSA || _winSelEPVSA;
+    if (_priData) {
+        _priorizacion = {
+            fuente: _dmDecision ? 'datosMunicipioActual.decisionPriorizacion'
+                : (_winDecision ? 'window.decisionPriorizacionActual'
+                    : (_dmSelEPVSA ? 'datosMunicipioActual.seleccionEPVSA'
+                        : 'window.COMPAS.state.seleccionEPVSA')),
+            datos: _priData,
+            seleccionEPVSA: _dmSelEPVSA || _winSelEPVSA || null
+        };
+    }
+
+    // ── 8. EVIDENCIA TERRITORIAL OFICIAL ─────────────────────────────────
+    // [Fase 2c — 2026-05-19] Renombrado semántico: documentosOficiales → evidenciaTerritorialOficial.
+    // SIMA, ARGOS/FAMP, INE, IECA, SAE, BOP y fuentes administrativas oficiales
+    // son evidencia territorial, no simples documentos.
+    // Solo lectura. No incrementa nFuentes. No mezcla con estudiosComplementarios.
+    // No alimenta propuestaEPVSA ni motores analíticos. Contexto instrumental.
+    var _evidenciaOficial = null;
+    var _dmEvidRaw = (_dm && _dm.fuentes && _hayContenido(_dm.fuentes.evidenciaTerritorialOficial))
+        ? _dm.fuentes.evidenciaTerritorialOficial
+        // fallback legacy: nodo anterior documentosOficiales (compatibilidad temporal)
+        : (_dm && _dm.fuentes && _hayContenido(_dm.fuentes.documentosOficiales))
+            ? _dm.fuentes.documentosOficiales
+            : null;
+    if (_dmEvidRaw) {
+        var _listaOficiales = (typeof _dmEvidRaw === 'object' && !Array.isArray(_dmEvidRaw))
+            ? Object.values(_dmEvidRaw)
+            : (Array.isArray(_dmEvidRaw) ? _dmEvidRaw : []);
+        _evidenciaOficial = {
+            disponible:  _listaOficiales.length > 0,
+            lista:       _listaOficiales,
+            nDocumentos: _listaOficiales.length,
+            organismos:  (function() {
+                var _orgs = [];
+                _listaOficiales.forEach(function(d) {
+                    var o = d && d.organismo;
+                    if (o && _orgs.indexOf(o) === -1) _orgs.push(o);
+                });
+                return _orgs;
+            })(),
+            categorias:  (function() {
+                var _cats = [];
+                _listaOficiales.forEach(function(d) {
+                    (d && Array.isArray(d.categoriasTematicas) ? d.categoriasTematicas : []).forEach(function(c) {
+                        if (_cats.indexOf(c) === -1) _cats.push(c);
+                    });
+                });
+                return _cats;
+            })()
+        };
+    }
+
+    // ── Resumen ────────────────────────────────────────────────────────────
+    var _tieneInforme    = !!_informe;
+    var _tieneEstudios   = !!(_estudios && (_estudios.lista.length > 0 || _estudios.escalas.length > 0));
+    var _tieneIBSE       = !!(_estudios && _estudios.ibse && _estudios.ibse.disponible);
+    var _tieneDet        = !!_determinantes;
+    var _tieneInd        = !!_indicadores;
+    var _tieneAct        = !!_activos;
+    var _tienePar        = !!_participacion;
+    var _tienePri        = !!_priorizacion;
+    // evidenciaTerritorialOficial: contexto instrumental — no entra en nFuentes ni en fuentes analíticas
+    var _tieneEvidOf     = !!(_evidenciaOficial && _evidenciaOficial.disponible);
+    var _nEvidOf         = _evidenciaOficial ? _evidenciaOficial.nDocumentos : 0;
+
+    var _fuentesDisp = [];
+    if (_tieneInforme)    _fuentesDisp.push('informeSituacionSalud');
+    if (_tieneEstudios)   _fuentesDisp.push('estudiosComplementarios');
+    if (_tieneIBSE)       _fuentesDisp.push('ibse');
+    if (_tieneDet)        _fuentesDisp.push('determinantes');
+    if (_tieneInd)        _fuentesDisp.push('indicadoresCMI');
+    if (_tieneAct)        _fuentesDisp.push('activosComunitarios');
+    if (_tienePar)        _fuentesDisp.push('participacionCiudadana');
+    if (_tienePri)        _fuentesDisp.push('priorizacion');
+    // evidenciaTerritorialOficial no entra en fuentesDisp — contexto, no fuente analítica primaria
+
+    // nFuentes conservador: IBSE no cuenta aparte de estudios; evidenciaTerritorialOficial tampoco
+    var _nFuentes = [_tieneInforme, _tieneEstudios, _tieneDet, _tieneInd,
+                     _tieneAct, _tienePar, _tienePri].filter(Boolean).length;
+
+    var _disponible = _nFuentes > 0;
+
+    if (!_disponible && !_silencioso) {
+        _advertencias.push('Sin fuentes territoriales detectadas para este municipio.');
+    }
+
+    return {
+        disponible: _disponible,
+        municipio:  _municipio,
+        fuentes: {
+            informeSituacionSalud:          _informe,
+            estudiosComplementarios:        _estudios,
+            determinantes:                  _determinantes,
+            indicadoresCMI:                 _indicadores,
+            activosComunitarios:            _activos,
+            participacionCiudadana:         _participacion,
+            priorizacion:                   _priorizacion,
+            evidenciaTerritorialOficial:    _evidenciaOficial,  // canónico
+            documentosOficiales:            _evidenciaOficial   // alias legacy — compatibilidad temporal
+        },
+        resumen: {
+            tieneInforme:                       _tieneInforme,
+            tieneEstudios:                      _tieneEstudios,
+            tieneIBSE:                          _tieneIBSE,
+            tieneDeterminantes:                 _tieneDet,
+            tieneIndicadores:                   _tieneInd,
+            tieneActivos:                       _tieneAct,
+            tieneParticipacion:                 _tienePar,
+            tienePriorizacion:                  _tienePri,
+            tieneEvidenciaTerritorialOficial:   _tieneEvidOf,   // canónico
+            nEvidenciaTerritorialOficial:        _nEvidOf,       // canónico
+            tieneDocumentosOficiales:           _tieneEvidOf,   // alias legacy
+            nDocumentosOficiales:               _nEvidOf,       // alias legacy
+            nFuentes:                           _nFuentes,
+            fuentesDisponibles:                 _fuentesDisp
+        },
+        advertencias: _advertencias,
+        version: 'fuentes_territoriales_accessor_v1'
+    };
+};
+
+console.log('[COMPÁS] COMPAS_obtenerFuentesTerritoriales() registrado — fuentes_territoriales_accessor_v1 ✓');
+
+/**
+ * COMPAS_guardarEvidenciaTerritorialAtarfeDemo()
+ * Cargador manual y explicito de metadatos de evidencia territorial oficial.
+ *
+ * Alcance:
+ * - Solo Atarfe.
+ * - Solo metadatos.
+ * - Sin binarios, sin Storage, sin parseo, sin motores, sin analisis automatico.
+ * - Escritura manual bajo fuentes/evidenciaTerritorialOficial.
+ */
+window.COMPAS_guardarEvidenciaTerritorialAtarfeDemo = async function() {
+    var fase = 'inicio';
+    try {
+        fase = 'validacion_municipio';
+        var municipioActual = null;
+        try {
+            municipioActual = (typeof getMunicipioActual === 'function') ? getMunicipioActual() : null;
+        } catch(eMun) {
+            municipioActual = null;
+        }
+
+        var dm = (typeof datosMunicipioActual !== 'undefined' && datosMunicipioActual)
+            ? datosMunicipioActual
+            : (window.datosMunicipioActual || null);
+
+        var municipioNorm = (municipioActual == null ? '' : String(municipioActual)).toLowerCase().trim();
+        var dmNombreNorm = dm && (dm.nombre || dm.municipio)
+            ? String(dm.nombre || dm.municipio).toLowerCase().trim()
+            : '';
+        var dmCodigoNorm = dm && (dm.codigoMunicipio || dm.codigo || dm.idMunicipio)
+            ? String(dm.codigoMunicipio || dm.codigo || dm.idMunicipio).trim()
+            : '';
+
+        var esAtarfe = municipioNorm === 'atarfe' ||
+            municipioNorm === '18022' ||
+            dmNombreNorm === 'atarfe' ||
+            dmCodigoNorm === '18022';
+
+        if (!esAtarfe) {
+            console.warn('[COMPÁS] Carga evidenciaTerritorialOficial demo abortada: municipio actual no es Atarfe.', {
+                municipioActual: municipioActual,
+                datosMunicipioActual: dm ? { nombre: dm.nombre || dm.municipio || null, codigo: dmCodigoNorm || null } : null
+            });
+            return { ok: false, error: 'municipio_no_atarfe', fase: fase };
+        }
+
+        var municipioId = municipioNorm === '18022' ? 'atarfe' : (municipioNorm || 'atarfe');
+        if (municipioId !== 'atarfe') municipioId = 'atarfe';
+
+        fase = 'validacion_firebase';
+        var dbRef = (typeof db !== 'undefined' && db)
+            ? db
+            : (window.db || null);
+        if (!dbRef && window.firebase && typeof window.firebase.database === 'function') {
+            dbRef = window.firebase.database();
+        }
+        if (!dbRef || typeof dbRef.ref !== 'function') {
+            console.warn('[COMPÁS] Carga evidenciaTerritorialOficial demo abortada: Firebase no disponible.');
+            return { ok: false, error: 'firebase_no_disponible', fase: fase };
+        }
+
+        var estrategia = (typeof estrategiaActual !== 'undefined' && estrategiaActual)
+            ? estrategiaActual
+            : (window.estrategiaActual || 'es-andalucia-epvsa');
+        if (!estrategia) {
+            console.warn('[COMPÁS] Carga evidenciaTerritorialOficial demo abortada: estrategiaActual no disponible.');
+            return { ok: false, error: 'estrategia_no_disponible', fase: fase };
+        }
+
+        fase = 'construccion_payload';
+        var fechaCarga = new Date().toISOString();
+        var documentos = {
+            sima_atarfe_2024: {
+                id: "sima_atarfe_2024",
+                titulo: "SIMA — Atarfe: indicadores municipales 2024",
+                fuente: "SIMA",
+                organismo: "Instituto de Estadística y Cartografía de Andalucía (IECA)",
+                fechaReferencia: "2024-01-01",
+                fechaCarga: fechaCarga,
+                tipoDocumento: "estadistica_multisectorial",
+                tipoEvidencia: "estadistica_oficial",
+                nivelEvidencia: "referencia_oficial_externa",
+                formato: "xls",
+                municipio: "Atarfe",
+                codigoMunicipio: "18022",
+                ambito: "municipal",
+                categoriasTematicas: [
+                    "demografia",
+                    "economia",
+                    "mercado_laboral",
+                    "educacion",
+                    "vivienda",
+                    "territorio",
+                    "hacienda_local",
+                    "medio_ambiente",
+                    "sociedad"
+                ],
+                usoCOMPAS: {
+                    analisisTerritorial: true,
+                    mejoramientoMunicipal: true,
+                    evaluacion: false,
+                    soloContexto: false
+                },
+                resumen: "Indicadores estadísticos multisectoriales del municipio de Atarfe procedentes del Sistema de Información Multiterritorial de Andalucía. Fuente estructural para determinantes socioeconómicos, demográficos, territoriales y municipales.",
+                archivoOriginal: "SIMA ATARFE.xls",
+                urlExterna: "https://www.juntadeandalucia.es/institutodeestadisticaycartografia/sima/ficha.htm?mun=18022",
+                hash: null,
+                actualizacionPeriodica: "anual",
+                version: "evidenciaTerritorialOficial_v1"
+            },
+            famp_atarfe_03_2026: {
+                id: "famp_atarfe_03_2026",
+                titulo: "ARGOS/FAMP — Atarfe: informe estadístico municipal marzo 2026",
+                fuente: "ARGOS/FAMP",
+                organismo: "Federación Andaluza de Municipios y Provincias (FAMP)",
+                fechaReferencia: "2026-03-01",
+                fechaCarga: fechaCarga,
+                tipoDocumento: "estadistica_socioeconomica_municipal",
+                tipoEvidencia: "informe_sectorial",
+                nivelEvidencia: "referencia_oficial_externa",
+                formato: "pdf",
+                municipio: "Atarfe",
+                codigoMunicipio: "18022",
+                ambito: "municipal",
+                categoriasTematicas: [
+                    "demografia",
+                    "inmigracion",
+                    "mercado_laboral",
+                    "paro_registrado",
+                    "contratacion",
+                    "actividad_economica",
+                    "sectores_economicos",
+                    "establecimientos",
+                    "desigualdades_sociales",
+                    "estructura_productiva"
+                ],
+                usoCOMPAS: {
+                    analisisTerritorial: true,
+                    mejoramientoMunicipal: true,
+                    evaluacion: true,
+                    soloContexto: false
+                },
+                resumen: "Informe estadístico municipal de Atarfe correspondiente a marzo de 2026. Incluye datos de territorio, población, inmigración, mercado de trabajo, paro registrado, contratación, sectores de actividad y establecimientos.",
+                archivoOriginal: "FAMP_MUN_18022_03_2026_PUB.PDF",
+                urlExterna: null,
+                hash: null,
+                actualizacionPeriodica: "mensual_trimestral",
+                version: "evidenciaTerritorialOficial_v1"
+            }
+        };
+
+        fase = 'guardado_firebase';
+        var ruta = 'estrategias/' + estrategia + '/municipios/' + municipioId + '/fuentes/evidenciaTerritorialOficial';
+        await dbRef.ref(ruta).update(documentos);
+
+        fase = 'actualizacion_runtime_defensiva';
+        if (dm) {
+            dm.fuentes = dm.fuentes || {};
+            var actual = dm.fuentes.evidenciaTerritorialOficial;
+            var actualObj = (actual && typeof actual === 'object' && !Array.isArray(actual)) ? actual : {};
+            dm.fuentes.evidenciaTerritorialOficial = Object.assign({}, actualObj, documentos);
+            if (typeof datosMunicipioActual !== 'undefined') datosMunicipioActual = dm;
+            window.datosMunicipioActual = dm;
+        }
+
+        var resumen = {
+            ok: true,
+            municipio: municipioId,
+            ruta: ruta,
+            documentosGuardados: Object.keys(documentos),
+            n: Object.keys(documentos).length
+        };
+        console.log('[COMPÁS] evidenciaTerritorialOficial Atarfe demo guardada manualmente.', resumen);
+        return resumen;
+
+    } catch(error) {
+        console.warn('[COMPÁS] Error guardando evidenciaTerritorialOficial Atarfe demo.', { fase: fase, error: error });
+        return {
+            ok: false,
+            error: error && error.message ? error.message : String(error),
+            fase: fase
+        };
+    }
+};
+
+console.log('[COMPÁS] COMPAS_guardarEvidenciaTerritorialAtarfeDemo() registrado — carga_manual_evidencia_territorial_atarfe_v1');
+</script>
+
+<!-- =========================================================
      Puente IBSE Local ↔ EAS P57b
      ========================================================= -->
 <script>
@@ -81183,6 +82320,23 @@ window.COMPAS_calcularIBSELocalComparableEAS = function() {
         console.warn('[COMPÁS IBSE↔EAS] Sin datos IBSE disponibles');
         return null;
     }
+
+    // ── Cache defensiva — evita recomputación repetida ──────────────────────
+    // Clave: longitud de datos + fingerprint del primer registro + municipio activo + n refs.
+    // Se invalida automáticamente si cambia cualquiera de los factores.
+    var _dm_cache = (typeof datosMunicipioActual !== 'undefined' && datosMunicipioActual) || window.datosMunicipioActual || null;
+    var _mun_cache = (_dm_cache && (_dm_cache.id || _dm_cache.codigo || _dm_cache.nombre)) || '';
+    var _r0_cache  = datos.length > 0 ? JSON.stringify(datos[0]).slice(0, 80) : '';
+    var _refs_cache = window.referenciasEAS ? Object.keys(window.referenciasEAS).length : 0;
+    var _clave_cache = datos.length + '|' + _r0_cache + '|' + _mun_cache + '|' + _refs_cache;
+
+    var _cache = window.__COMPAS_IBSE_EAS_CACHE;
+    if (_cache && _cache.key === _clave_cache && _cache.resultado) {
+        return _cache.resultado;
+    }
+    // Clave nueva o primera vez — preparar entrada de cache para rellenar al final
+    window.__COMPAS_IBSE_EAS_CACHE = { key: _clave_cache, resultado: null };
+    // ── Fin cache check — cálculo real a continuación ────────────────────────
 
     // Mapeo IBSE → P57b con polaridad
     var mapeo = {
@@ -81244,6 +82398,10 @@ window.COMPAS_calcularIBSELocalComparableEAS = function() {
         indicadores: indicadores
     };
     
+    // Almacenar resultado en cache para reutilización en llamadas subsecuentes
+    if (window.__COMPAS_IBSE_EAS_CACHE) {
+        window.__COMPAS_IBSE_EAS_CACHE.resultado = resultado;
+    }
     console.log('[COMPÁS IBSE↔EAS] valores locales comparables calculados', resultado);
     return resultado;
 };

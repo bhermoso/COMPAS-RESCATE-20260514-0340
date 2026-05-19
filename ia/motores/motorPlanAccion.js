@@ -43,11 +43,31 @@ import { validarContextoPropuesta } from '../validacionIA.js';
  * @returns {object}   analisisAccionable
  */
 function _obtenerAnalisisAccionable(analisis, contextoIA) {
+    // Path 1: window.analisisAccionable existe y tiene activosDetectados — usarlo directamente.
     if (typeof window !== 'undefined' && window.analisisAccionable &&
             Array.isArray(window.analisisAccionable.activosDetectados)) {
         return window.analisisAccionable;
     }
-    return _derivarAnalisisAccionable(analisis, contextoIA);
+
+    // [Fase 1 — accessor semántico] Path 1b: si contextoIA.participacion está vacío,
+    // intentar leerlo desde COMPAS_obtenerFuentesTerritoriales como fallback contextual mínimo.
+    // No genera análisis nuevo. Solo enriquece la participación para la derivación.
+    var _ctxDerivacion = contextoIA;
+    if (typeof window !== 'undefined' &&
+            typeof window.COMPAS_obtenerFuentesTerritoriales === 'function' &&
+            !contextoIA.participacion) {
+        var _ft = window.COMPAS_obtenerFuentesTerritoriales({ silencioso: true });
+        if (_ft && _ft.disponible && _ft.fuentes.participacionCiudadana && _ft.fuentes.participacionCiudadana.datos) {
+            // Crear copia superficial del contexto con participacion enriquecida.
+            // Object.assign sobre objeto frozen devuelve copia mutable — seguro para _derivarAnalisisAccionable.
+            _ctxDerivacion = Object.assign({}, contextoIA, {
+                participacion: _ft.fuentes.participacionCiudadana.datos
+            });
+        }
+    }
+
+    // Path 2: derivar desde analisis y contexto (posiblemente enriquecido).
+    return _derivarAnalisisAccionable(analisis, _ctxDerivacion);
 }
 
 /**

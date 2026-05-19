@@ -235,8 +235,17 @@ export function contextoDesdeGlobalesHeredados() {
     const datosMunicipio        = (typeof datosMunicipioActual !== 'undefined'            && datosMunicipioActual)           || {};
     const analisisPrevio        = (typeof window !== 'undefined'                           && window.analisisActual)          || null;
     const analisisPrevioV3      = (typeof window !== 'undefined'                           && window.analisisActualV3)        || null;
-    const participacion         = (typeof window !== 'undefined'                           && window.datosParticipacionCiudadana) || null;
-    const estudiosComplementarios = (typeof window !== 'undefined'                          && window.estudiosComplementarios)|| [];
+    // [Fase 1 — accessor semántico] Leer participación vía COMPAS_obtenerFuentesTerritoriales
+    // si está disponible; fallback a global heredado.
+    const participacion = (typeof window !== 'undefined' && typeof window.COMPAS_obtenerFuentesTerritoriales === 'function')
+        ? (window.COMPAS_obtenerFuentesTerritoriales({ silencioso: true }).fuentes.participacionCiudadana?.datos || window.datosParticipacionCiudadana || null)
+        : ((typeof window !== 'undefined' && window.datosParticipacionCiudadana) || null);
+
+    // [Fase 1 — accessor semántico] Leer estudios vía COMPAS_obtenerEstudiosComplementarios
+    // si está disponible; fallback a global heredado.
+    const estudiosComplementarios = (typeof window !== 'undefined' && typeof window.COMPAS_obtenerEstudiosComplementarios === 'function')
+        ? (window.COMPAS_obtenerEstudiosComplementarios({ silencioso: true }).lista || window.estudiosComplementarios || [])
+        : ((typeof window !== 'undefined' && window.estudiosComplementarios) || []);
     const referenciasEASData    = (typeof referenciasEAS !== 'undefined'                   && referenciasEAS)                 || {};
     const enriquecimientoTerritorial = (typeof window !== 'undefined' && window.enriquecimientoTerritorialActual) || null;
 
