@@ -1,3 +1,58 @@
+function _normalizarEvidenciaTerritorialOficial(evidenciaAccessor) {
+    if (!evidenciaAccessor || !evidenciaAccessor.disponible) return null;
+
+    const lista = Array.isArray(evidenciaAccessor.lista)
+        ? evidenciaAccessor.lista
+        : [];
+
+    const fuentes = lista.map(function(doc) {
+        doc = doc || {};
+        return {
+            id:              doc.id || null,
+            titulo:          doc.titulo || null,
+            fuente:          doc.fuente || null,
+            organismo:       doc.organismo || null,
+            tipoDocumento:   doc.tipoDocumento || null,
+            tipoEvidencia:   doc.tipoEvidencia || null,
+            nivelEvidencia:  doc.nivelEvidencia || null,
+            formato:         doc.formato || null,
+            fechaReferencia: doc.fechaReferencia || null,
+        };
+    });
+
+    const categorias = Array.isArray(evidenciaAccessor.categorias)
+        ? [...evidenciaAccessor.categorias]
+        : [];
+    const organismos = Array.isArray(evidenciaAccessor.organismos)
+        ? [...evidenciaAccessor.organismos]
+        : [];
+
+    const usos = lista.reduce(function(acc, doc) {
+        const uso = (doc && doc.usoCOMPAS) || {};
+        acc.analisisTerritorial = acc.analisisTerritorial || !!uso.analisisTerritorial;
+        acc.mejoramientoMunicipal = acc.mejoramientoMunicipal || !!uso.mejoramientoMunicipal;
+        acc.evaluacion = acc.evaluacion || !!uso.evaluacion;
+        acc.soloContexto = acc.soloContexto || !!uso.soloContexto;
+        return acc;
+    }, {
+        analisisTerritorial: false,
+        mejoramientoMunicipal: false,
+        evaluacion: false,
+        soloContexto: false,
+    });
+
+    return Object.freeze({
+        disponible: fuentes.length > 0,
+        n: fuentes.length,
+        fuentes: Object.freeze(fuentes),
+        categorias: Object.freeze(categorias),
+        organismos: Object.freeze(organismos),
+        usos: Object.freeze(usos),
+        lecturaMetodologica: 'contexto_estructural',
+        version: 'contexto_evidencia_territorial_oficial_v1',
+    });
+}
+
 /**
  * COMPÁS — Constructor del Contexto IA
  * ia/contextoIA.js
@@ -93,6 +148,7 @@ export function crearContextoIA({
 
     // Enriquecimiento territorial externo (no persistente, no oficial)
     enriquecimientoTerritorial = null,
+    evidenciaTerritorialOficial = null,
 
     // Fuentes (se infiere si no se da)
     fuentes             = null,
@@ -116,6 +172,7 @@ export function crearContextoIA({
         participacion,
         estudiosComplementarios,
         enriquecimientoTerritorial,
+        evidenciaTerritorialOficial,
     });
 
     return Object.freeze({
@@ -150,6 +207,7 @@ export function crearContextoIA({
 
         // ── Inventario de fuentes ──────────────────────────────────────────
         //    Los motores deben consultar esto para saber con qué pueden trabajar.
+        evidenciaTerritorialOficial,
         fuentes: Object.freeze(fuentesEfectivas),
 
         toString() {
@@ -168,7 +226,7 @@ export function crearContextoIA({
  * Equivalente modular de la detección de fuentes en analizarDatosMunicipio() (HTML l.24528).
  * @private
  */
-function _inferirFuentes({ datosMunicipio = {}, determinantes = {}, indicadores = {}, informe, participacion, estudiosComplementarios = [], enriquecimientoTerritorial = null }) {
+function _inferirFuentes({ datosMunicipio = {}, determinantes = {}, indicadores = {}, informe, participacion, estudiosComplementarios = [], enriquecimientoTerritorial = null, evidenciaTerritorialOficial = null }) {
     const tieneInforme   = !!(informe && informe.htmlCompleto)
                         || !!(datosMunicipio.informe && datosMunicipio.informe.htmlCompleto);
     const tieneEstudios  = Array.isArray(estudiosComplementarios) && estudiosComplementarios.length > 0;
@@ -178,6 +236,10 @@ function _inferirFuentes({ datosMunicipio = {}, determinantes = {}, indicadores 
     const indData        = indicadores  || datosMunicipio.indicadores  || {};
     const tieneIndicadores = Object.keys(indData).length > 0;
     const tieneEnriquecimientoTerritorial = !!enriquecimientoTerritorial;
+    const tieneEvidenciaTerritorialOficial = !!(evidenciaTerritorialOficial && evidenciaTerritorialOficial.disponible);
+    const nEvidenciaTerritorialOficial = tieneEvidenciaTerritorialOficial
+        ? (evidenciaTerritorialOficial.n || 0)
+        : 0;
 
     const nParticipantes = participacion
         ? (participacion.totalParticipantes || participacion.n || 0)
@@ -190,6 +252,8 @@ function _inferirFuentes({ datosMunicipio = {}, determinantes = {}, indicadores 
         tieneDet,
         tieneIndicadores,
         tieneEnriquecimientoTerritorial, // fuente contextual no ponderable en fase 0
+        tieneEvidenciaTerritorialOficial, // fuente estructural/contextual; no pondera nFuentes
+        nEvidenciaTerritorialOficial,
         nEstudios:      estudiosComplementarios.length,
         nParticipantes,
     };
@@ -235,10 +299,13 @@ export function contextoDesdeGlobalesHeredados() {
     const datosMunicipio        = (typeof datosMunicipioActual !== 'undefined'            && datosMunicipioActual)           || {};
     const analisisPrevio        = (typeof window !== 'undefined'                           && window.analisisActual)          || null;
     const analisisPrevioV3      = (typeof window !== 'undefined'                           && window.analisisActualV3)        || null;
+    const fuentesTerritoriales  = (typeof window !== 'undefined' && typeof window.COMPAS_obtenerFuentesTerritoriales === 'function')
+        ? window.COMPAS_obtenerFuentesTerritoriales({ silencioso: true })
+        : null;
     // [Fase 1 — accessor semántico] Leer participación vía COMPAS_obtenerFuentesTerritoriales
     // si está disponible; fallback a global heredado.
-    const participacion = (typeof window !== 'undefined' && typeof window.COMPAS_obtenerFuentesTerritoriales === 'function')
-        ? (window.COMPAS_obtenerFuentesTerritoriales({ silencioso: true }).fuentes.participacionCiudadana?.datos || window.datosParticipacionCiudadana || null)
+    const participacion = fuentesTerritoriales
+        ? (fuentesTerritoriales.fuentes.participacionCiudadana?.datos || window.datosParticipacionCiudadana || null)
         : ((typeof window !== 'undefined' && window.datosParticipacionCiudadana) || null);
 
     // [Fase 1 — accessor semántico] Leer estudios vía COMPAS_obtenerEstudiosComplementarios
@@ -248,6 +315,11 @@ export function contextoDesdeGlobalesHeredados() {
         : ((typeof window !== 'undefined' && window.estudiosComplementarios) || []);
     const referenciasEASData    = (typeof referenciasEAS !== 'undefined'                   && referenciasEAS)                 || {};
     const enriquecimientoTerritorial = (typeof window !== 'undefined' && window.enriquecimientoTerritorialActual) || null;
+    const evidenciaTerritorialOficial = _normalizarEvidenciaTerritorialOficial(
+        fuentesTerritoriales && fuentesTerritoriales.fuentes
+            ? fuentesTerritoriales.fuentes.evidenciaTerritorialOficial
+            : null
+    );
 
     // Extraer sub-objetos del nodo del municipio
     const determinantes = (datosMunicipio && datosMunicipio.determinantes) || {};
@@ -274,6 +346,7 @@ export function contextoDesdeGlobalesHeredados() {
         participacion,
         estudiosComplementarios,
         enriquecimientoTerritorial,
+        evidenciaTerritorialOficial,
     });
 }
 
