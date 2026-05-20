@@ -87828,6 +87828,188 @@ if (window.COMPAS) {
 
 console.log('[COMPÁS] contextoLongitudinalEvaluacionV1: COMPAS_obtenerContextoLongitudinalEvaluacion() registrado ✓');
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONTEXTO LONGITUDINAL COMPILADOR V1
+// Resumen longitudinal compacto y prudente para consumo desde el compilador/
+// documento global. Derivado exclusivamente de COMPAS_obtenerContextoLongitudinalEvaluacion.
+//
+// Sin LONGI activo. Sin propuestaEPVSA. Sin nFuentes. Sin confianza. Sin Firebase.
+// Sin scoring. Sin IA narrativa. Sin DOM. Sin HTML. Sin CSS.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window.COMPAS_obtenerContextoLongitudinalCompilador = function(opciones) {
+    opciones = opciones || {};
+
+    // ── 0. VACÍO TIPADO ─────────────────────────────────────────────────────
+    var _vacio = {
+        _version: 'contexto_longitudinal_compilador_v1',
+        _sinEfectos: true,
+        _soloLectura: true,
+        _noInferenciaAutomatica: true,
+        municipio: '',
+        anio: null,
+        resumenInstitucional: {
+            clasificacion: 'sin_base',
+            continuidad: 'sin_datos',
+            arrastres: 0,
+            preparadoSiguienteCiclo: false,
+            requiereCierreHumano: true
+        },
+        alertasMetodologicas: [],
+        trazabilidad: {
+            fuente: 'COMPAS_obtenerContextoLongitudinalEvaluacion',
+            parcialUsable: true,
+            disponible: false,
+            nRiesgos: 0,
+            riesgosAlta: 0
+        },
+        lecturaDocumental: {
+            incluirAdvertenciaLongitudinal: false,
+            incluirNotaCausalidad: true,
+            incluirEstadoCiclo: true,
+            recomendacionVisual: 'nota_metodologica_discreta',
+            textoBase: 'La lectura longitudinal contextualiza la situación operativa del ciclo municipal y la continuidad de actuaciones, pero no constituye evidencia causal directa sobre el impacto atribuible al plan local.'
+        },
+        contextoEvaluacion: null
+    };
+
+    // ── 1. OBTENER CONTEXTO EVALUATIVO ───────────────────────────────────────
+    var _ctx = null;
+    try {
+        if (typeof COMPAS_obtenerContextoLongitudinalEvaluacion === 'function') {
+            _ctx = COMPAS_obtenerContextoLongitudinalEvaluacion(opciones);
+        }
+    } catch(e) { _ctx = null; }
+
+    if (!_ctx) return _vacio;
+
+    // ── 2. EXTRAER CAMPOS ────────────────────────────────────────────────────
+    var _municipio   = _ctx.municipio   || '';
+    var _anio        = _ctx.anio        || null;
+    var _disponible  = !!_ctx.disponible;
+    var _parcial     = !!(_ctx.estadoLongitudinal && _ctx.estadoLongitudinal.parcialUsable);
+    var _clasif      = _ctx.clasificacion || 'sin_base';
+    var _arrastres   = (typeof _ctx.nArrastres === 'number' && !isNaN(_ctx.nArrastres))
+        ? _ctx.nArrastres : 0;
+    var _tieneArr    = !!_ctx.tieneArrastre;
+    var _cierreHum   = !!_ctx.requiereCierreHumano;
+    var _preparado   = !!_ctx.preparadoSiguienteCiclo;
+    var _nRiesgos    = (typeof _ctx.nRiesgos    === 'number') ? _ctx.nRiesgos    : 0;
+    var _riesgosAlta = (typeof _ctx.riesgosAlta === 'number') ? _ctx.riesgosAlta : 0;
+
+    // ── 3. RESUMEN INSTITUCIONAL ─────────────────────────────────────────────
+    // Continuidad: etiqueta compacta — sin interpretación
+    var _continuidad = 'sin_datos';
+    if (_clasif === 'ciclo_operativo_con_arrastre')          _continuidad = 'con_arrastre';
+    else if (_clasif === 'ciclo_operativo_incompleto')        _continuidad = 'incompleto';
+    else if (_clasif === 'ciclo_cerrable_con_revision_humana') _continuidad = 'cerrable_con_revision';
+    else if (_clasif === 'parcial_utilizable')                 _continuidad = 'parcial';
+    else if (_clasif !== 'sin_base')                          _continuidad = _clasif;
+
+    var _resumenInstitucional = {
+        clasificacion:           _clasif,
+        continuidad:             _continuidad,
+        arrastres:               _arrastres,
+        preparadoSiguienteCiclo: _preparado,
+        requiereCierreHumano:    _cierreHum
+    };
+
+    // ── 4. ALERTAS METODOLÓGICAS ─────────────────────────────────────────────
+    // Sin reinterpretar, sin priorizar, sin scoring.
+    var _alertas = [];
+
+    if (_tieneArr) {
+        _alertas.push({
+            codigo: 'ALM-01',
+            tipo: 'arrastre',
+            descripcion: 'Existen actuaciones con arrastre de ciclo(s) anterior(es)',
+            n: _arrastres,
+            _requiereRevisionHumana: true
+        });
+    }
+    if (_cierreHum) {
+        _alertas.push({
+            codigo: 'ALM-02',
+            tipo: 'cierre_pendiente',
+            descripcion: 'El ciclo requiere cierre humano antes de abrir el siguiente',
+            _requiereRevisionHumana: true
+        });
+    }
+    if (!_disponible) {
+        _alertas.push({
+            codigo: 'ALM-03',
+            tipo: 'disponibilidad_parcial',
+            descripcion: 'Estado longitudinal parcialmente resuelto: datos del ciclo incompletos',
+            parcialUsable: _parcial,
+            _requiereRevisionHumana: true
+        });
+    }
+    if (_riesgosAlta > 0) {
+        _alertas.push({
+            codigo: 'ALM-04',
+            tipo: 'riesgos_alta_severidad',
+            descripcion: 'Existen riesgos metodológicos de severidad alta en la lectura longitudinal',
+            n: _riesgosAlta,
+            _requiereRevisionHumana: true
+        });
+    }
+    if (_clasif === 'ciclo_operativo_incompleto' || _clasif === 'parcial_utilizable') {
+        _alertas.push({
+            codigo: 'ALM-05',
+            tipo: 'clasificacion_longitudinal',
+            descripcion: 'El ciclo se clasifica como operativo pero con elementos pendientes de completar',
+            clasificacion: _clasif,
+            _requiereRevisionHumana: true
+        });
+    }
+
+    // ── 5. TRAZABILIDAD ──────────────────────────────────────────────────────
+    var _trazabilidad = {
+        fuente:       'COMPAS_obtenerContextoLongitudinalEvaluacion',
+        parcialUsable: _parcial,
+        disponible:   _disponible,
+        nRiesgos:     _nRiesgos,
+        riesgosAlta:  _riesgosAlta
+    };
+
+    // ── 6. LECTURA DOCUMENTAL ────────────────────────────────────────────────
+    var _incluirAdv = _tieneArr || _cierreHum || _nRiesgos > 0;
+
+    var _textoBase = 'La lectura longitudinal contextualiza la situación operativa del ciclo municipal ' +
+        'y la continuidad de actuaciones, pero no constituye evidencia causal directa ' +
+        'sobre el impacto atribuible al plan local.';
+
+    var _lecturaDocumental = {
+        incluirAdvertenciaLongitudinal: _incluirAdv,
+        incluirNotaCausalidad:          true,
+        incluirEstadoCiclo:             true,
+        recomendacionVisual:            'nota_metodologica_discreta',
+        textoBase:                      _textoBase
+    };
+
+    // ── 7. RESULTADO ─────────────────────────────────────────────────────────
+    return {
+        _version:               'contexto_longitudinal_compilador_v1',
+        _sinEfectos:            true,
+        _soloLectura:           true,
+        _noInferenciaAutomatica: true,
+        municipio:              _municipio,
+        anio:                   _anio,
+        resumenInstitucional:   _resumenInstitucional,
+        alertasMetodologicas:   _alertas,
+        trazabilidad:           _trazabilidad,
+        lecturaDocumental:      _lecturaDocumental,
+        contextoEvaluacion:     _ctx
+    };
+};
+
+if (window.COMPAS) {
+    window.COMPAS.obtenerContextoLongitudinalCompilador =
+        window.COMPAS_obtenerContextoLongitudinalCompilador;
+}
+
+console.log('[COMPÁS] contextoLongitudinalCompiladorV1: COMPAS_obtenerContextoLongitudinalCompilador() registrado ✓');
+
 /**
  * COMPAS_guardarEvidenciaTerritorialAtarfeDemo()
  * Cargador manual y explicito de metadatos de evidencia territorial oficial.
