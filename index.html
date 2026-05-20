@@ -88010,6 +88010,185 @@ if (window.COMPAS) {
 
 console.log('[COMPÁS] contextoLongitudinalCompiladorV1: COMPAS_obtenerContextoLongitudinalCompilador() registrado ✓');
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONTEXTO LONGITUDINAL IA V1
+// Contexto longitudinal compacto y prudente para consumo desde motores IA.
+// Derivado exclusivamente de COMPAS_obtenerContextoLongitudinalCompilador.
+// No genera recomendaciones. No infiere causalidad. No altera motores.
+//
+// Sin LONGI activo. Sin propuestaEPVSA. Sin nFuentes. Sin confianza. Sin Firebase.
+// Sin scoring. Sin NLP. Sin narrativa automática. Sin DOM. Sin HTML.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window.COMPAS_obtenerContextoLongitudinalIA = function(opciones) {
+    opciones = opciones || {};
+
+    // ── 0. VACÍO TIPADO ─────────────────────────────────────────────────────
+    var _vacio = {
+        _version: 'contexto_longitudinal_ia_v1',
+        _sinEfectos: true,
+        _soloLectura: true,
+        _noInferenciaAutomatica: true,
+        _noCausal: true,
+        _noRecomendador: true,
+        municipio: '',
+        anio: null,
+        contextoIA: {
+            estadoCiclo: 'no_determinado',
+            clasificacion: 'sin_base',
+            continuidad: 'sin_datos',
+            tieneArrastre: false,
+            nArrastres: 0,
+            requiereCierreHumano: true,
+            preparadoSiguienteCiclo: false
+        },
+        cautelasIA: {
+            usarSoloComoContexto: true,
+            noUsarComoImpacto: true,
+            noUsarComoEvidenciaCausal: true,
+            noUsarParaScoring: true,
+            noUsarParaPriorizacionAutomatica: true
+        },
+        senalesContextuales: [],
+        textoMetodologicoBase: 'El contexto longitudinal se aporta exclusivamente como información metodológica y de continuidad operativa. No constituye evidencia causal del impacto atribuible al plan local ni debe utilizarse para inferencia automática de efectividad.',
+        contextoCompilador: null
+    };
+
+    // ── 1. OBTENER CONTEXTO COMPILADOR ───────────────────────────────────────
+    var _comp = null;
+    try {
+        if (typeof COMPAS_obtenerContextoLongitudinalCompilador === 'function') {
+            _comp = COMPAS_obtenerContextoLongitudinalCompilador(opciones);
+        }
+    } catch(e) { _comp = null; }
+
+    if (!_comp) return _vacio;
+
+    // ── 2. EXTRAER CAMPOS ────────────────────────────────────────────────────
+    var _municipio   = _comp.municipio || '';
+    var _anio        = _comp.anio      || null;
+
+    var _ri          = _comp.resumenInstitucional || {};
+    var _clasif      = _ri.clasificacion       || 'sin_base';
+    var _continuidad = _ri.continuidad         || 'sin_datos';
+    var _arrastres   = (typeof _ri.arrastres === 'number' && !isNaN(_ri.arrastres))
+        ? _ri.arrastres : 0;
+    var _tieneArr    = _arrastres > 0;
+    var _cierreHum   = !!_ri.requiereCierreHumano;
+    var _preparado   = !!_ri.preparadoSiguienteCiclo;
+
+    var _traz        = _comp.trazabilidad || {};
+    var _disponible  = !!_traz.disponible;
+    var _parcial     = !!_traz.parcialUsable;
+    var _nRiesgos    = (typeof _traz.nRiesgos    === 'number') ? _traz.nRiesgos    : 0;
+    var _riesgosAlta = (typeof _traz.riesgosAlta === 'number') ? _traz.riesgosAlta : 0;
+
+    // estadoCiclo desde contextoEvaluacion si existe
+    var _estadoCiclo = 'no_determinado';
+    try {
+        var _ctxE = _comp.contextoEvaluacion;
+        var _est  = _ctxE && _ctxE.estadoLongitudinal;
+        _estadoCiclo = (_est && _est.ciclo && _est.ciclo.identidad && _est.ciclo.identidad.estadoCiclo)
+            ? _est.ciclo.identidad.estadoCiclo
+            : (_clasif !== 'sin_base' ? 'en_curso' : 'no_determinado');
+    } catch(e) { _estadoCiclo = 'no_determinado'; }
+
+    // ── 3. CONTEXTO IA ───────────────────────────────────────────────────────
+    var _contextoIA = {
+        estadoCiclo:             _estadoCiclo,
+        clasificacion:           _clasif,
+        continuidad:             _continuidad,
+        tieneArrastre:           _tieneArr,
+        nArrastres:              _arrastres,
+        requiereCierreHumano:    _cierreHum,
+        preparadoSiguienteCiclo: _preparado
+    };
+
+    // ── 4. CAUTELAS IA ───────────────────────────────────────────────────────
+    var _cautelasIA = {
+        usarSoloComoContexto:            true,
+        noUsarComoImpacto:               true,
+        noUsarComoEvidenciaCausal:       true,
+        noUsarParaScoring:               true,
+        noUsarParaPriorizacionAutomatica: true
+    };
+
+    // ── 5. SEÑALES CONTEXTUALES ──────────────────────────────────────────────
+    // Descriptivas, no interpretativas. Sin recomendaciones. Sin conclusiones.
+    var _senales = [];
+
+    if (_tieneArr) {
+        _senales.push({
+            clave: 'municipio_con_arrastres_activos',
+            valor: _arrastres,
+            _interpretacion: false
+        });
+    }
+    if (_cierreHum) {
+        _senales.push({
+            clave: 'cierre_humano_pendiente',
+            _interpretacion: false
+        });
+    }
+    if (_disponible && _clasif !== 'sin_base') {
+        _senales.push({
+            clave: 'continuidad_operativa_detectada',
+            clasificacion: _clasif,
+            _interpretacion: false
+        });
+    }
+    if (_riesgosAlta > 0) {
+        _senales.push({
+            clave: 'riesgo_metodologico_alto',
+            n: _riesgosAlta,
+            _interpretacion: false
+        });
+    }
+    if (!_disponible && _parcial) {
+        _senales.push({
+            clave: 'estado_longitudinal_parcial_utilizable',
+            _interpretacion: false
+        });
+    }
+    if (_preparado) {
+        _senales.push({
+            clave: 'condiciones_minimas_siguiente_ciclo_cumplidas',
+            _interpretacion: false
+        });
+    }
+    if (_nRiesgos > 0 && _riesgosAlta === 0) {
+        _senales.push({
+            clave: 'riesgos_metodologicos_presentes_severidad_no_alta',
+            n: _nRiesgos,
+            _interpretacion: false
+        });
+    }
+
+    // ── 6. RESULTADO ─────────────────────────────────────────────────────────
+    return {
+        _version:                'contexto_longitudinal_ia_v1',
+        _sinEfectos:             true,
+        _soloLectura:            true,
+        _noInferenciaAutomatica: true,
+        _noCausal:               true,
+        _noRecomendador:         true,
+        municipio:               _municipio,
+        anio:                    _anio,
+        contextoIA:              _contextoIA,
+        cautelasIA:              _cautelasIA,
+        senalesContextuales:     _senales,
+        textoMetodologicoBase:   'El contexto longitudinal se aporta exclusivamente como información metodológica y de continuidad operativa. No constituye evidencia causal del impacto atribuible al plan local ni debe utilizarse para inferencia automática de efectividad.',
+        contextoCompilador:      _comp
+    };
+};
+
+if (window.COMPAS) {
+    window.COMPAS.obtenerContextoLongitudinalIA =
+        window.COMPAS_obtenerContextoLongitudinalIA;
+}
+
+console.log('[COMPÁS] contextoLongitudinalIAV1: COMPAS_obtenerContextoLongitudinalIA() registrado ✓');
+
 /**
  * COMPAS_guardarEvidenciaTerritorialAtarfeDemo()
  * Cargador manual y explicito de metadatos de evidencia territorial oficial.
