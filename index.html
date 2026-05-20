@@ -87720,6 +87720,114 @@ if (window.COMPAS) {
 
 console.log('[COMPÁS] estadoLongitudinalMunicipalAdapterV1: COMPAS_obtenerEstadoLongitudinalMunicipal() registrado ✓');
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONTEXTO LONGITUDINAL EVALUACIÓN V1
+// Resumen longitudinal compacto y prudente para consumo desde evaluación/Fase 6.
+// Solo lectura. Derivado exclusivamente de COMPAS_obtenerEstadoLongitudinalMunicipal.
+//
+// Sin LONGI activo. Sin propuestaEPVSA. Sin nFuentes. Sin confianza. Sin Firebase.
+// Sin cálculo evaluativo. Sin indicadores. Sin dashboard. Sin DOM. Sin HTML.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window.COMPAS_obtenerContextoLongitudinalEvaluacion = function(opciones) {
+    opciones = opciones || {};
+
+    // ── 0. VACÍO TIPADO ─────────────────────────────────────────────────────
+    var _vacio = {
+        _version: 'contexto_longitudinal_evaluacion_v1',
+        _sinEfectos: true,
+        _soloLectura: true,
+        _noInferenciaAutomatica: true,
+        disponible: false,
+        municipio: '',
+        anio: null,
+        clasificacion: 'sin_base',
+        tieneArrastre: false,
+        nArrastres: 0,
+        requiereCierreHumano: true,
+        preparadoSiguienteCiclo: false,
+        riesgosAlta: 0,
+        nRiesgos: 0,
+        lecturaEvaluativa: {
+            usarComoContexto: false,
+            noUsarComoImpacto: true,
+            noUsarComoEvidenciaCausal: true,
+            advertencia: 'estado_longitudinal_no_disponible_contexto_parcial_aun_util'
+        },
+        estadoLongitudinal: null
+    };
+
+    // ── 1. OBTENER ESTADO LONGITUDINAL ───────────────────────────────────────
+    var _estado = null;
+    try {
+        if (typeof COMPAS_obtenerEstadoLongitudinalMunicipal === 'function') {
+            _estado = COMPAS_obtenerEstadoLongitudinalMunicipal(opciones);
+        }
+    } catch(e) { _estado = null; }
+
+    if (!_estado) return _vacio;
+
+    // ── 2. EXTRAER CAMPOS COMPACTOS ──────────────────────────────────────────
+    var _disponible  = !!_estado.disponible;
+    var _parcial     = !!_estado.parcialUsable;
+    var _municipio   = _estado.municipio   || '';
+    var _anio        = _estado.anio        || null;
+    var _clasif      = _estado.clasificacion || 'sin_base';
+    var _arrastre    = !!_estado.tieneArrastre;
+    var _nArrastres  = (typeof _estado.nArrastres === 'number' && !isNaN(_estado.nArrastres))
+        ? _estado.nArrastres : 0;
+    var _cierreHum   = !!_estado.requiereCierreHumano;
+    var _preparado   = !!_estado.preparadoSiguienteCiclo;
+    var _nRiesgos    = (typeof _estado.nRiesgos   === 'number') ? _estado.nRiesgos   : 0;
+    var _riesgosAlta = (typeof _estado.riesgosAlta === 'number') ? _estado.riesgosAlta : 0;
+
+    // ── 3. LECTURA EVALUATIVA ────────────────────────────────────────────────
+    // usarComoContexto: true si el estado es parcialmente utilizable,
+    // independientemente de si disponible es false (puede ser parcial pero útil).
+    var _usarComoCtx = _parcial;
+
+    var _advertencia = 'el_estado_longitudinal_contextualiza_la_evaluacion_no_demuestra_impacto_causal_del_plan';
+    if (!_disponible) {
+        _advertencia = 'estado_longitudinal_parcial_municipio_o_ciclo_no_completamente_resuelto_contextualizacion_limitada';
+    } else if (_arrastre) {
+        _advertencia = 'ciclo_con_arrastre_la_evaluacion_refleja_actuaciones_pendientes_de_ciclos_anteriores_no_solo_impacto_nuevo';
+    }
+
+    var _lecturaEvaluativa = {
+        usarComoContexto:          _usarComoCtx,
+        noUsarComoImpacto:         true,
+        noUsarComoEvidenciaCausal: true,
+        advertencia:               _advertencia
+    };
+
+    // ── 4. RESULTADO ─────────────────────────────────────────────────────────
+    return {
+        _version:                  'contexto_longitudinal_evaluacion_v1',
+        _sinEfectos:               true,
+        _soloLectura:              true,
+        _noInferenciaAutomatica:   true,
+        disponible:                _disponible,
+        municipio:                 _municipio,
+        anio:                      _anio,
+        clasificacion:             _clasif,
+        tieneArrastre:             _arrastre,
+        nArrastres:                _nArrastres,
+        requiereCierreHumano:      _cierreHum,
+        preparadoSiguienteCiclo:   _preparado,
+        riesgosAlta:               _riesgosAlta,
+        nRiesgos:                  _nRiesgos,
+        lecturaEvaluativa:         _lecturaEvaluativa,
+        estadoLongitudinal:        _estado
+    };
+};
+
+if (window.COMPAS) {
+    window.COMPAS.obtenerContextoLongitudinalEvaluacion =
+        window.COMPAS_obtenerContextoLongitudinalEvaluacion;
+}
+
+console.log('[COMPÁS] contextoLongitudinalEvaluacionV1: COMPAS_obtenerContextoLongitudinalEvaluacion() registrado ✓');
+
 /**
  * COMPAS_guardarEvidenciaTerritorialAtarfeDemo()
  * Cargador manual y explicito de metadatos de evidencia territorial oficial.
