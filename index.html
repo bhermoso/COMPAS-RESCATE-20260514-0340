@@ -88189,6 +88189,903 @@ if (window.COMPAS) {
 
 console.log('[COMPÁS] contextoLongitudinalIAV1: COMPAS_obtenerContextoLongitudinalIA() registrado ✓');
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONTRATO DE CONSUMO LONGITUDINAL V1
+// Objeto normativo de solo lectura que define reglas de uso transversal de LONGI.
+// No construye UI. No persiste. No modifica estado. No llama motores. Sin efectos.
+//
+// Sin LONGI activo. Sin propuestaEPVSA. Sin nFuentes. Sin confianza. Sin Firebase.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window.COMPAS_obtenerContratoConsumoLongitudinal = function(opciones) {
+
+    var _usosPermitidos = [
+        { codigo: 'UP-01', uso: 'contextualizar_evaluacion',             descripcion: 'Usar LONGI como contexto operativo de la evaluación, nunca como evidencia de impacto' },
+        { codigo: 'UP-02', uso: 'documentar_arrastres',                  descripcion: 'Registrar y visibilizar actuaciones con arrastre de ciclos anteriores' },
+        { codigo: 'UP-03', uso: 'señalar_cierre_humano_pendiente',        descripcion: 'Indicar al investigador que el ciclo requiere revisión y cierre humano' },
+        { codigo: 'UP-04', uso: 'advertir_longitudinalidad_parcial',      descripcion: 'Informar de que el estado longitudinal es parcial y metodológicamente limitado' },
+        { codigo: 'UP-05', uso: 'informar_compilador_documento',          descripcion: 'Incluir notas metodológicas discretas en el documento/compilador institucional' },
+        { codigo: 'UP-06', uso: 'contexto_no_causal_motores_ia',          descripcion: 'Aportar señales contextuales descriptivas a motores IA, sin scoring ni priorización' },
+        { codigo: 'UP-07', uso: 'auditoria_metodologica',                 descripcion: 'Apoyar revisión de trazabilidad, secciones leídas y campos no disponibles' },
+        { codigo: 'UP-08', uso: 'detectar_necesidad_revision_gobernanza', descripcion: 'Identificar condiciones que requieren decisión humana antes de abrir siguiente ciclo' }
+    ];
+
+    var _usosProhibidos = [
+        { codigo: 'UPR-01', uso: 'demostrar_impacto_causal',               descripcion: 'LONGI no puede demostrar que el plan local causó cambios en indicadores de salud' },
+        { codigo: 'UPR-02', uso: 'recalcular_indicadores',                  descripcion: 'LONGI no recalcula ni reemplaza indicadores longitudinales propios de evaluación' },
+        { codigo: 'UPR-03', uso: 'modificar_scoring_epvsa',                 descripcion: 'LONGI no puede alterar pesos, relevancia ni selección de EPVSA' },
+        { codigo: 'UPR-04', uso: 'decidir_prioridades_automaticamente',     descripcion: 'La clasificación longitudinal no puede disparar priorización automática de actuaciones' },
+        { codigo: 'UPR-05', uso: 'generar_recomendaciones_autonomas',       descripcion: 'LONGI no genera recomendaciones por sí solo; requiere decisión investigadora' },
+        { codigo: 'UPR-06', uso: 'cerrar_ciclos_automaticamente',           descripcion: 'El cierre de ciclo requiere revisión humana explícita; no puede automatizarse' },
+        { codigo: 'UPR-07', uso: 'persistir_cambios_sin_orden_explicita',   descripcion: 'Ninguna función LONGI escribe en Firebase ni en estado global sin orden explícita' },
+        { codigo: 'UPR-08', uso: 'sustituir_revision_humana',               descripcion: 'LONGI no reemplaza al investigador en territorio ni al técnico municipal' },
+        { codigo: 'UPR-09', uso: 'reinterpretar_señales_como_resultados',   descripcion: 'Las señales contextuales son descriptivas; no deben usarse como resultados evaluativos' },
+        { codigo: 'UPR-10', uso: 'narrativa_longitudinal_inventada',        descripcion: 'Prohibido generar narrativa longitudinal sin base en campos reales del contrato' }
+    ];
+
+    var _invariantes = {
+        noCausalidad:               true,
+        noScoring:                  true,
+        noPriorizacionAutomatica:   true,
+        noRecomendacionAutomatica:  true,
+        noCierreAutomatico:         true,
+        requiereRevisionHumana:     true,
+        noPersistenciaAutomatica:   true
+    };
+
+    var _reglasPorConsumidor = {
+        evaluacion: {
+            puede: [
+                'usar_longi_como_contexto_operativo',
+                'mostrar_advertencia_de_arrastre',
+                'indicar_necesidad_cierre_humano'
+            ],
+            noPuede: [
+                'usar_longi_como_evidencia_de_impacto',
+                'modificar_indicadores_con_datos_longi',
+                'reemplazar_evaluacion_con_clasificacion_longitudinal'
+            ],
+            fuenteAutorizada: 'COMPAS_obtenerContextoLongitudinalEvaluacion'
+        },
+        compilador: {
+            puede: [
+                'incluir_nota_metodologica_discreta',
+                'referenciar_estado_operativo_del_ciclo',
+                'señalar_continuidad_o_discontinuidad_como_contexto'
+            ],
+            noPuede: [
+                'incluir_conclusiones_causales_automaticas',
+                'generar_seccion_de_impacto_longitudinal',
+                'sustituir_narrativa_investigadora_con_longi'
+            ],
+            fuenteAutorizada: 'COMPAS_obtenerContextoLongitudinalCompilador'
+        },
+        motoresIA: {
+            puede: [
+                'leer_señales_contextuales_descriptivas',
+                'conocer_clasificacion_del_ciclo',
+                'conocer_existencia_de_arrastres'
+            ],
+            noPuede: [
+                'usar_longi_para_scoring_epvsa',
+                'usar_longi_para_priorizacion_automatica',
+                'usar_longi_para_inferir_efectividad_del_plan'
+            ],
+            fuenteAutorizada: 'COMPAS_obtenerContextoLongitudinalIA'
+        },
+        gobernanza: {
+            puede: [
+                'detectar_necesidad_de_revision_humana',
+                'identificar_condiciones_de_cierre_de_ciclo',
+                'auditar_trazabilidad_de_fuentes_longi'
+            ],
+            noPuede: [
+                'cerrar_ciclo_sin_confirmacion_humana',
+                'abrir_siguiente_ciclo_automaticamente',
+                'persistir_estado_longitudinal_sin_orden_explicita'
+            ],
+            fuenteAutorizada: 'COMPAS_obtenerEstadoLongitudinalMunicipal'
+        }
+    };
+
+    var _criteriosRevisionHumana = [
+        { codigo: 'CRH-01', criterio: 'arrastres_activos',              descripcion: 'Existen actuaciones con arrastre — revisar antes de abrir ciclo siguiente' },
+        { codigo: 'CRH-02', criterio: 'memoria_narrativa_vacia',        descripcion: 'La memoria narrativa no ha sido completada por el investigador' },
+        { codigo: 'CRH-03', criterio: 'evaluacion_sin_cierre',          descripcion: 'La evaluación del ciclo no tiene snapshot de cierre disponible' },
+        { codigo: 'CRH-04', criterio: 'aprendizajes_no_documentados',   descripcion: 'No se han registrado aprendizajes del ciclo' },
+        { codigo: 'CRH-05', criterio: 'riesgos_alta_severidad',         descripcion: 'Existen riesgos metodológicos de severidad alta en la lectura longitudinal' },
+        { codigo: 'CRH-06', criterio: 'ciclo_anterior_no_detectado',    descripcion: 'No se puede comparar con ciclo anterior — posible primer ciclo o datos incompletos' },
+        { codigo: 'CRH-07', criterio: 'estado_longitudinal_sin_base',   descripcion: 'El estado longitudinal no puede construirse — municipio o año no detectados' }
+    ];
+
+    var _advertenciasMetodologicas = [
+        'la_clasificacion_longitudinal_es_inferida_no_declarada_por_el_municipio',
+        'las_señales_contextuales_son_descriptivas_no_interpretativas',
+        'la_continuidad_inferida_no_equivale_a_eficacia_del_plan',
+        'el_arrastre_no_implica_fracaso_puede_deberse_a_complejidad_o_recursos',
+        'el_cierre_humano_es_imprescindible_longi_solo_detecta_condiciones',
+        'el_contrato_longitudinal_es_parcialmente_usable_por_diseno',
+        'ninguna_funcion_longi_escribe_en_firebase_ni_estado_global'
+    ];
+
+    return {
+        _version:                'contrato_consumo_longitudinal_v1',
+        _sinEfectos:             true,
+        _soloLectura:            true,
+        _noInferenciaAutomatica: true,
+
+        ambito: {
+            descripcion: 'Reglas de consumo transversal del contexto longitudinal en COMPÁS',
+            consumidoresPrevistos: [
+                'evaluacion',
+                'compilador',
+                'motores_ia',
+                'auditoria',
+                'gobernanza',
+                'cierre_ciclo'
+            ]
+        },
+
+        fuentesAutorizadas: [
+            'COMPAS_obtenerEstadoLongitudinalMunicipal',
+            'COMPAS_obtenerContextoLongitudinalEvaluacion',
+            'COMPAS_obtenerContextoLongitudinalCompilador',
+            'COMPAS_obtenerContextoLongitudinalIA'
+        ],
+
+        usosPermitidos:           _usosPermitidos,
+        usosProhibidos:           _usosProhibidos,
+        invariantes:              _invariantes,
+        reglasPorConsumidor:      _reglasPorConsumidor,
+        criteriosDeRevisionHumana: _criteriosRevisionHumana,
+        advertenciasMetodologicas: _advertenciasMetodologicas
+    };
+};
+
+if (window.COMPAS) {
+    window.COMPAS.obtenerContratoConsumoLongitudinal =
+        window.COMPAS_obtenerContratoConsumoLongitudinal;
+}
+
+console.log('[COMPÁS] contratoConsumoLongitudinalV1: COMPAS_obtenerContratoConsumoLongitudinal() registrado ✓');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUDITOR DE CONSUMO LONGITUDINAL V1
+// Auditoría metodológica pasiva y sin efectos del consumo LONGI.
+// Verifica invariantes, detecta consumidores, emite alertas descriptivas.
+// Función pura. Un único return. Solo lectura. Sin efectos secundarios.
+//
+// Sin propuestaEPVSA. Sin nFuentes. Sin confianza. Sin Firebase. Sin DOM.
+// Sin fetch. Sin listeners. Sin timers. Sin mutación de estado.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window.COMPAS_auditarConsumoLongitudinal = function(opciones) {
+    opciones = opciones || {};
+
+    // ── 1. RECOPILAR FUENTES ─────────────────────────────────────────────────
+    // Cada llamada envuelta en try/catch — auditor no puede bloquearse por un consumidor.
+
+    var _contrato  = null;
+    var _estado    = null;
+    var _ctxEval   = null;
+    var _ctxComp   = null;
+    var _ctxIA     = null;
+
+    var _errores = [];
+
+    try {
+        if (typeof COMPAS_obtenerContratoConsumoLongitudinal === 'function')
+            _contrato = COMPAS_obtenerContratoConsumoLongitudinal(opciones);
+    } catch(e) { _errores.push({ fuente: 'COMPAS_obtenerContratoConsumoLongitudinal', error: String(e) }); }
+
+    try {
+        if (typeof COMPAS_obtenerEstadoLongitudinalMunicipal === 'function')
+            _estado = COMPAS_obtenerEstadoLongitudinalMunicipal(opciones);
+    } catch(e) { _errores.push({ fuente: 'COMPAS_obtenerEstadoLongitudinalMunicipal', error: String(e) }); }
+
+    try {
+        if (typeof COMPAS_obtenerContextoLongitudinalEvaluacion === 'function')
+            _ctxEval = COMPAS_obtenerContextoLongitudinalEvaluacion(opciones);
+    } catch(e) { _errores.push({ fuente: 'COMPAS_obtenerContextoLongitudinalEvaluacion', error: String(e) }); }
+
+    try {
+        if (typeof COMPAS_obtenerContextoLongitudinalCompilador === 'function')
+            _ctxComp = COMPAS_obtenerContextoLongitudinalCompilador(opciones);
+    } catch(e) { _errores.push({ fuente: 'COMPAS_obtenerContextoLongitudinalCompilador', error: String(e) }); }
+
+    try {
+        if (typeof COMPAS_obtenerContextoLongitudinalIA === 'function')
+            _ctxIA = COMPAS_obtenerContextoLongitudinalIA(opciones);
+    } catch(e) { _errores.push({ fuente: 'COMPAS_obtenerContextoLongitudinalIA', error: String(e) }); }
+
+    // ── 2. DETECTAR CONSUMIDORES ─────────────────────────────────────────────
+    var _consumidoresDetectados  = [];
+    var _consumidoresDesconocidos = [];
+
+    var _defConsumidores = [
+        {
+            id: 'evaluacion',
+            funcion: 'COMPAS_obtenerContextoLongitudinalEvaluacion',
+            objeto: _ctxEval,
+            inversionEsperada: 'contexto_no_causal'
+        },
+        {
+            id: 'compilador',
+            funcion: 'COMPAS_obtenerContextoLongitudinalCompilador',
+            objeto: _ctxComp,
+            inversionEsperada: 'nota_metodologica_discreta'
+        },
+        {
+            id: 'motores_ia',
+            funcion: 'COMPAS_obtenerContextoLongitudinalIA',
+            objeto: _ctxIA,
+            inversionEsperada: 'señales_contextuales_descriptivas'
+        },
+        {
+            id: 'gobernanza',
+            funcion: 'COMPAS_obtenerEstadoLongitudinalMunicipal',
+            objeto: _estado,
+            inversionEsperada: 'deteccion_necesidad_revision_humana'
+        }
+    ];
+
+    _defConsumidores.forEach(function(def) {
+        var _ok        = def.objeto !== null && def.objeto !== undefined;
+        var _version   = _ok ? (def.objeto._version || '') : '';
+        var _sinEfectos = _ok ? (def.objeto._sinEfectos === true) : false;
+        var _soloLect  = _ok ? (def.objeto._soloLectura === true ||
+                                  def.objeto._sinEfectos === true) : false;
+        var _noInf     = _ok ? (def.objeto._noInferenciaAutomatica === true) : false;
+
+        _consumidoresDetectados.push({
+            consumidor:         def.id,
+            funcion:            def.funcion,
+            disponible:         _ok,
+            version:            _version,
+            sinEfectos:         _sinEfectos,
+            soloLectura:        _soloLect,
+            noInferencia:       _noInf,
+            inversionEsperada:  def.inversionEsperada,
+            _auditoriaOk:       _ok && _sinEfectos && _noInf
+        });
+    });
+
+    // Consumidores externos desconocidos: buscar en window.COMPAS funciones LONGI no auditadas
+    try {
+        var _fnsLONGI = [
+            'construirCicloLongitudinalMunicipal',
+            'leerCicloLongitudinalMunicipal',
+            'obtenerEstadoLongitudinalMunicipal',
+            'obtenerContextoLongitudinalEvaluacion',
+            'obtenerContextoLongitudinalCompilador',
+            'obtenerContextoLongitudinalIA',
+            'obtenerContratoConsumoLongitudinal',
+            'auditarConsumoLongitudinal'
+        ];
+        var _auditados = _defConsumidores.map(function(d) { return d.funcion; });
+        if (window.COMPAS && typeof window.COMPAS === 'object') {
+            Object.keys(window.COMPAS).forEach(function(k) {
+                if (typeof window.COMPAS[k] === 'function' &&
+                        k.toLowerCase().indexOf('longitudinal') !== -1 &&
+                        _fnsLONGI.indexOf(k) === -1) {
+                    _consumidoresDesconocidos.push({
+                        nombre: 'COMPAS.' + k,
+                        nota: 'funcion_longitudinal_no_auditada_en_contrato'
+                    });
+                }
+            });
+        }
+    } catch(e) {}
+
+    // ── 3. VERIFICAR INVARIANTES ─────────────────────────────────────────────
+    var _invDef = [
+        { clave: 'noCausalidad',             label: 'No causalidad' },
+        { clave: 'noScoring',                label: 'No scoring' },
+        { clave: 'noPriorizacionAutomatica', label: 'No priorización automática' },
+        { clave: 'noRecomendacionAutomatica',label: 'No recomendación automática' },
+        { clave: 'noCierreAutomatico',       label: 'No cierre automático' },
+        { clave: 'requiereRevisionHumana',   label: 'Requiere revisión humana' },
+        { clave: 'noPersistenciaAutomatica', label: 'No persistencia automática' }
+    ];
+
+    var _invariantesVerificadas    = [];
+    var _invariantesNoVerificadas  = [];
+    var _contratoInvariantes = (_contrato && _contrato.invariantes) ? _contrato.invariantes : {};
+
+    _invDef.forEach(function(inv) {
+        var _val = _contratoInvariantes[inv.clave];
+        var _verificada = _val === true;
+        var _entrada = {
+            invariante:      inv.clave,
+            label:           inv.label,
+            valorEnContrato: _val,
+            verificada:      _verificada
+        };
+        if (_verificada) _invariantesVerificadas.push(_entrada);
+        else             _invariantesNoVerificadas.push(_entrada);
+    });
+
+    // También verificar en cada consumidor detectado
+    var _invPorConsumidor = {};
+    _consumidoresDetectados.forEach(function(cons) {
+        _invPorConsumidor[cons.consumidor] = {
+            sinEfectos:   cons.sinEfectos,
+            soloLectura:  cons.soloLectura,
+            noInferencia: cons.noInferencia,
+            auditoriaOk:  cons._auditoriaOk
+        };
+    });
+
+    // ── 4. DETECTAR USOS POTENCIALMENTE INCOMPATIBLES ────────────────────────
+    var _riesgos = [];
+
+    // RM-A01: consumidor IA — verificar que no expone scoring
+    if (_ctxIA) {
+        var _caut = _ctxIA.cautelasIA || {};
+        if (_caut.noUsarParaScoring !== true) {
+            _riesgos.push({
+                codigo: 'RM-A01',
+                consumidor: 'motores_ia',
+                descripcion: 'cautelasIA.noUsarParaScoring no está confirmado como true',
+                severidad: 'alta'
+            });
+        }
+        if (_caut.noUsarComoEvidenciaCausal !== true) {
+            _riesgos.push({
+                codigo: 'RM-A02',
+                consumidor: 'motores_ia',
+                descripcion: 'cautelasIA.noUsarComoEvidenciaCausal no está confirmado como true',
+                severidad: 'alta'
+            });
+        }
+    } else {
+        _riesgos.push({
+            codigo: 'RM-A03',
+            consumidor: 'motores_ia',
+            descripcion: 'Contexto IA no disponible — no se puede auditar consumo IA',
+            severidad: 'media'
+        });
+    }
+
+    // RM-A04: consumidor evaluación — verificar lecturaEvaluativa.noUsarComoImpacto
+    if (_ctxEval) {
+        var _le = _ctxEval.lecturaEvaluativa || {};
+        if (_le.noUsarComoImpacto !== true) {
+            _riesgos.push({
+                codigo: 'RM-A04',
+                consumidor: 'evaluacion',
+                descripcion: 'lecturaEvaluativa.noUsarComoImpacto no está confirmado como true',
+                severidad: 'alta'
+            });
+        }
+        if (_le.noUsarComoEvidenciaCausal !== true) {
+            _riesgos.push({
+                codigo: 'RM-A05',
+                consumidor: 'evaluacion',
+                descripcion: 'lecturaEvaluativa.noUsarComoEvidenciaCausal no está confirmado como true',
+                severidad: 'alta'
+            });
+        }
+    } else {
+        _riesgos.push({
+            codigo: 'RM-A06',
+            consumidor: 'evaluacion',
+            descripcion: 'Contexto evaluación no disponible — no se puede auditar consumo evaluativo',
+            severidad: 'media'
+        });
+    }
+
+    // RM-A07: compilador — verificar recomendacionVisual
+    if (_ctxComp) {
+        var _ld = _ctxComp.lecturaDocumental || {};
+        if (_ld.recomendacionVisual !== 'nota_metodologica_discreta') {
+            _riesgos.push({
+                codigo: 'RM-A07',
+                consumidor: 'compilador',
+                descripcion: 'lecturaDocumental.recomendacionVisual no es "nota_metodologica_discreta"',
+                severidad: 'media'
+            });
+        }
+        if (_ld.incluirNotaCausalidad !== true) {
+            _riesgos.push({
+                codigo: 'RM-A08',
+                consumidor: 'compilador',
+                descripcion: 'lecturaDocumental.incluirNotaCausalidad no está confirmado como true',
+                severidad: 'media'
+            });
+        }
+    } else {
+        _riesgos.push({
+            codigo: 'RM-A09',
+            consumidor: 'compilador',
+            descripcion: 'Contexto compilador no disponible — no se puede auditar consumo documental',
+            severidad: 'media'
+        });
+    }
+
+    // RM-A10: contrato normativo — verificar que existe y es coherente
+    if (!_contrato) {
+        _riesgos.push({
+            codigo: 'RM-A10',
+            consumidor: 'gobernanza',
+            descripcion: 'Contrato normativo de consumo no disponible — gobernanza sin referencia',
+            severidad: 'alta'
+        });
+    } else if (!_contrato.invariantes || Object.keys(_contrato.invariantes).length < 7) {
+        _riesgos.push({
+            codigo: 'RM-A11',
+            consumidor: 'gobernanza',
+            descripcion: 'Contrato normativo incompleto — invariantes no cubiertas en su totalidad',
+            severidad: 'media'
+        });
+    }
+
+    // RM-A12: consumidores desconocidos detectados
+    if (_consumidoresDesconocidos.length > 0) {
+        _riesgos.push({
+            codigo: 'RM-A12',
+            consumidor: 'desconocido',
+            descripcion: 'Funciones longitudinales detectadas fuera del contrato de consumo auditado',
+            n: _consumidoresDesconocidos.length,
+            severidad: 'baja'
+        });
+    }
+
+    // RM-A13: errores en llamadas a fuentes
+    if (_errores.length > 0) {
+        _riesgos.push({
+            codigo: 'RM-A13',
+            consumidor: 'infraestructura',
+            descripcion: 'Errores al llamar fuentes LONGI durante auditoría',
+            n: _errores.length,
+            severidad: 'alta'
+        });
+    }
+
+    // ── 5. ADVERTENCIAS METODOLÓGICAS ────────────────────────────────────────
+    var _advertencias = [];
+
+    if (_estado && !_estado.disponible) {
+        _advertencias.push({
+            codigo: 'ADV-A01',
+            descripcion: 'Estado longitudinal no disponible — auditoría sobre contrato parcial',
+            accion: 'cargar municipio antes de auditar'
+        });
+    }
+    if (_invariantesNoVerificadas.length > 0) {
+        _advertencias.push({
+            codigo: 'ADV-A02',
+            descripcion: 'Invariantes sin confirmar en contrato normativo',
+            n: _invariantesNoVerificadas.length,
+            accion: 'revisar COMPAS_obtenerContratoConsumoLongitudinal'
+        });
+    }
+    var _consKO = _consumidoresDetectados.filter(function(c) { return !c._auditoriaOk; });
+    if (_consKO.length > 0) {
+        _advertencias.push({
+            codigo: 'ADV-A03',
+            descripcion: 'Consumidores con auditoría incompleta (no disponibles o sin invariantes)',
+            n: _consKO.length,
+            consumidores: _consKO.map(function(c) { return c.consumidor; }),
+            accion: 'verificar que las funciones están registradas en runtime'
+        });
+    }
+    if (_consumidoresDesconocidos.length > 0) {
+        _advertencias.push({
+            codigo: 'ADV-A04',
+            descripcion: 'Funciones longitudinales fuera del perímetro auditado',
+            n: _consumidoresDesconocidos.length,
+            accion: 'incorporar al contrato normativo si procede'
+        });
+    }
+
+    // ── 6. RESUMEN ───────────────────────────────────────────────────────────
+    var _nConsOk  = _consumidoresDetectados.filter(function(c) { return c._auditoriaOk; }).length;
+    var _nRisgos  = _riesgos.length;
+    var _nRisgosA = _riesgos.filter(function(r) { return r.severidad === 'alta'; }).length;
+    var _nInvOk   = _invariantesVerificadas.length;
+    var _nInvKO   = _invariantesNoVerificadas.length;
+    var _audOk    = _nRisgosA === 0 && _errores.length === 0 && _nConsOk === _consumidoresDetectados.length;
+
+    var _resumen = {
+        auditoriaOk:               _audOk,
+        consumidoresAuditados:     _consumidoresDetectados.length,
+        consumidoresOk:            _nConsOk,
+        consumidoresDesconocidos:  _consumidoresDesconocidos.length,
+        invariantesVerificadas:    _nInvOk,
+        invariantesNoVerificadas:  _nInvKO,
+        riesgos:                   _nRisgos,
+        riesgosAlta:               _nRisgosA,
+        advertencias:              _advertencias.length,
+        erroresFuentes:            _errores.length,
+        _notaMetodologica:         'auditoria_descriptiva_no_ejecutiva_no_autocorrige'
+    };
+
+    // ── 7. INVARIANTES (resumen plano para console.log directo) ─────────────
+    var _invPlano = {};
+    _invDef.forEach(function(inv) {
+        _invPlano[inv.clave] = (_contratoInvariantes[inv.clave] === true);
+    });
+
+    // ── 8. RESULTADO — UN ÚNICO RETURN ──────────────────────────────────────
+    return {
+        _version:                'auditoria_consumo_longitudinal_v1',
+        _sinEfectos:             true,
+        _soloLectura:            true,
+        _noInferenciaAutomatica: true,
+        _auditorPasivo:          true,
+        resumen:                 _resumen,
+        invariantes:             _invPlano,
+        invariantesDetalle: {
+            verificadas:    _invariantesVerificadas,
+            noVerificadas:  _invariantesNoVerificadas,
+            porConsumidor:  _invPorConsumidor
+        },
+        consumidoresDetectados:   _consumidoresDetectados,
+        consumidoresDesconocidos: _consumidoresDesconocidos,
+        riesgos:                  _riesgos,
+        advertencias:             _advertencias,
+        erroresFuentes:           _errores
+    };
+};
+
+if (window.COMPAS) {
+    window.COMPAS.auditarConsumoLongitudinal =
+        window.COMPAS_auditarConsumoLongitudinal;
+}
+
+console.log('[COMPÁS] auditorConsumoLongitudinalV1: COMPAS_auditarConsumoLongitudinal() registrado ✓');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAPA DE DEPENDENCIAS LONGITUDINALES V1
+// Cartografía estructural pasiva del ecosistema LONGI.
+// Escaneo heurístico de window.COMPAS. Descriptivo, no normativo, no bloqueante.
+// Función pura. Return único. Sin efectos secundarios.
+//
+// Sin propuestaEPVSA. Sin nFuentes. Sin confianza. Sin Firebase. Sin DOM.
+// Sin fetch. Sin listeners. Sin timers. Sin mutación de estado.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window.COMPAS_auditarDependenciasLongitudinales = function(opciones) {
+    opciones = opciones || {};
+
+    // ── A. CATÁLOGO DE FUNCIONES LONGI CANÓNICAS ─────────────────────────────
+    // Fuente de verdad del perímetro LONGI oficial.
+    var _catalogoLONGI = [
+        { nombre: 'COMPAS_construirCicloLongitudinalMunicipal',    capa: 'contrato',    nivel: 1 },
+        { nombre: 'COMPAS_leerCicloLongitudinalMunicipal',         capa: 'lectura',     nivel: 2 },
+        { nombre: 'COMPAS_obtenerEstadoLongitudinalMunicipal',     capa: 'adaptador',   nivel: 3 },
+        { nombre: 'COMPAS_obtenerContextoLongitudinalEvaluacion',  capa: 'consumo',     nivel: 4 },
+        { nombre: 'COMPAS_obtenerContextoLongitudinalCompilador',  capa: 'consumo',     nivel: 4 },
+        { nombre: 'COMPAS_obtenerContextoLongitudinalIA',          capa: 'consumo',     nivel: 4 },
+        { nombre: 'COMPAS_obtenerContratoConsumoLongitudinal',     capa: 'gobernanza',  nivel: 5 },
+        { nombre: 'COMPAS_auditarConsumoLongitudinal',             capa: 'auditoria',   nivel: 6 },
+        { nombre: 'COMPAS_auditarDependenciasLongitudinales',      capa: 'cartografia', nivel: 6 }
+    ];
+
+    var _nombresCanonicos = _catalogoLONGI.map(function(f) { return f.nombre; });
+
+    // ── B. HEURÍSTICAS DE CLASIFICACIÓN ─────────────────────────────────────
+    // Aplica sobre nombres de propiedades de window.COMPAS.
+    // Nunca vinculante. Confianza explícita. Descriptiva.
+    var _heuristicas = [
+        {
+            id: 'H-01',
+            patron: /longitudinal/i,
+            tipoConsumo: 'longitudinal_generico',
+            riesgoBase: 'bajo',
+            descripcion: 'Nombre contiene "longitudinal" — posible consumidor LONGI'
+        },
+        {
+            id: 'H-02',
+            patron: /ciclo/i,
+            tipoConsumo: 'ciclo_municipal',
+            riesgoBase: 'bajo',
+            descripcion: 'Nombre contiene "ciclo" — posible gestión de ciclo'
+        },
+        {
+            id: 'H-03',
+            patron: /arrastre/i,
+            tipoConsumo: 'gestion_arrastre',
+            riesgoBase: 'medio',
+            descripcion: 'Nombre contiene "arrastre" — riesgo de recalcular arrastres'
+        },
+        {
+            id: 'H-04',
+            patron: /scoring|score|puntuacion|puntuación/i,
+            tipoConsumo: 'scoring_potencial',
+            riesgoBase: 'alto',
+            descripcion: 'Nombre sugiere scoring — incompatible con invariante noScoring'
+        },
+        {
+            id: 'H-05',
+            patron: /causal|impacto|efecto|efectividad/i,
+            tipoConsumo: 'causalidad_potencial',
+            riesgoBase: 'alto',
+            descripcion: 'Nombre sugiere causalidad — incompatible con invariante noCausalidad'
+        },
+        {
+            id: 'H-06',
+            patron: /cerrar|cierre|close/i,
+            tipoConsumo: 'cierre_potencial',
+            riesgoBase: 'alto',
+            descripcion: 'Nombre sugiere cierre — incompatible con noCierreAutomatico'
+        },
+        {
+            id: 'H-07',
+            patron: /priorizar|priorizacion|priorización/i,
+            tipoConsumo: 'priorizacion_potencial',
+            riesgoBase: 'alto',
+            descripcion: 'Nombre sugiere priorización — incompatible con noPriorizacionAutomatica'
+        },
+        {
+            id: 'H-08',
+            patron: /persistir|guardar|save|escribir/i,
+            tipoConsumo: 'persistencia_potencial',
+            riesgoBase: 'medio',
+            descripcion: 'Nombre sugiere persistencia — verificar si escribe estado LONGI'
+        },
+        {
+            id: 'H-09',
+            patron: /contexto.*ia|ia.*contexto|motor.*ia|ia.*motor/i,
+            tipoConsumo: 'contexto_ia',
+            riesgoBase: 'bajo',
+            descripcion: 'Posible consumidor IA de contexto LONGI — cautelar scoring'
+        },
+        {
+            id: 'H-10',
+            patron: /recomendacion|recomendación|recomendar/i,
+            tipoConsumo: 'recomendacion_potencial',
+            riesgoBase: 'alto',
+            descripcion: 'Nombre sugiere recomendación automática — incompatible con noRecomendacionAutomatica'
+        }
+    ];
+
+    // Helper: aplicar heurísticas a un nombre
+    function _aplicarHeuristicas(nombre) {
+        var _hits = [];
+        _heuristicas.forEach(function(h) {
+            if (h.patron.test(nombre)) _hits.push(h);
+        });
+        return _hits;
+    }
+
+    // Helper: nivel de confianza heurística
+    function _confianzaHeuristica(nHits, esCanonical) {
+        if (esCanonical) return 'confirmado';
+        if (nHits === 0)  return 'ninguna';
+        if (nHits === 1)  return 'baja';
+        if (nHits === 2)  return 'media';
+        return 'alta';
+    }
+
+    // ── C. SCAN WINDOW.COMPAS ────────────────────────────────────────────────
+    var _dependencias          = [];
+    var _consumidoresConfirmados = [];
+    var _consumidoresSospechosos = [];
+    var _riesgos               = [];
+    var _erroresScan           = [];
+
+    try {
+        var _comp = window.COMPAS;
+        if (_comp && typeof _comp === 'object') {
+            Object.keys(_comp).forEach(function(k) {
+                try {
+                    var _tipo    = typeof _comp[k];
+                    var _nombre  = 'COMPAS.' + k;
+                    var _esFunc  = _tipo === 'function';
+                    var _globalN = 'COMPAS_' + k;    // forma global equivalente
+
+                    // ¿Es canónico LONGI?
+                    var _canon = _catalogoLONGI.filter(function(c) {
+                        return c.nombre === k || c.nombre === _globalN;
+                    });
+                    var _esCanonical = _canon.length > 0;
+                    var _capa        = _esCanonical ? _canon[0].capa  : 'desconocida';
+                    var _nivel       = _esCanonical ? _canon[0].nivel : null;
+
+                    // Heurísticas sobre el nombre
+                    var _hits       = _aplicarHeuristicas(k);
+                    var _confianza  = _confianzaHeuristica(_hits.length, _esCanonical);
+                    var _riesgoMax  = 'ninguno';
+                    _hits.forEach(function(h) {
+                        if (h.riesgoBase === 'alto')  _riesgoMax = 'alto';
+                        else if (h.riesgoBase === 'medio' && _riesgoMax !== 'alto') _riesgoMax = 'medio';
+                        else if (h.riesgoBase === 'bajo'  && _riesgoMax === 'ninguno') _riesgoMax = 'bajo';
+                    });
+
+                    // ¿Es función? Intentar leer _version/_sinEfectos si devuelve algo
+                    var _versionDetectada = '';
+                    var _sinEfectosDetect = null;
+                    if (_esFunc && _esCanonical) {
+                        try {
+                            var _resultado = _comp[k]({});
+                            if (_resultado && typeof _resultado === 'object') {
+                                _versionDetectada = _resultado._version || '';
+                                _sinEfectosDetect = _resultado._sinEfectos === true;
+                            }
+                        } catch(eCall) {
+                            _versionDetectada = 'error_al_llamar';
+                        }
+                    }
+
+                    var _entrada = {
+                        nombre:           _nombre,
+                        tipo:             _tipo,
+                        esLONGI:          _esCanonical || _hits.length > 0,
+                        esCanonicoLONGI:  _esCanonical,
+                        capa:             _capa,
+                        nivel:            _nivel,
+                        heuristicasMatch: _hits.map(function(h) { return h.id; }),
+                        tiposConsumo:     _hits.map(function(h) { return h.tipoConsumo; }),
+                        riesgoHeuristico: _riesgoMax,
+                        confianzaHeuristica: _confianza,
+                        versionDetectada: _versionDetectada,
+                        sinEfectosDetect: _sinEfectosDetect,
+                        _heuristica:      true,
+                        _noVinculante:    true
+                    };
+
+                    _dependencias.push(_entrada);
+
+                    if (_esCanonical) {
+                        _consumidoresConfirmados.push({
+                            nombre:       _nombre,
+                            capa:         _capa,
+                            nivel:        _nivel,
+                            tipo:         _tipo,
+                            version:      _versionDetectada,
+                            sinEfectos:   _sinEfectosDetect
+                        });
+                    } else if (_hits.length > 0) {
+                        _consumidoresSospechosos.push({
+                            nombre:       _nombre,
+                            tipo:         _tipo,
+                            heuristicas:  _hits.map(function(h) { return h.id + ':' + h.tipoConsumo; }),
+                            riesgo:       _riesgoMax,
+                            confianza:    _confianza,
+                            _noVinculante: true
+                        });
+
+                        // Generar riesgo si severidad alta
+                        if (_riesgoMax === 'alto') {
+                            _riesgos.push({
+                                codigo:      'RM-D' + String(_riesgos.length + 1).padStart(2, '0'),
+                                nombre:      _nombre,
+                                heuristicas: _hits.filter(function(h) { return h.riesgoBase === 'alto'; })
+                                                  .map(function(h) { return h.id + ':' + h.descripcion; }),
+                                severidad:   'alta',
+                                confianza:   _confianza,
+                                _heuristica: true,
+                                _noVinculante: true
+                            });
+                        }
+                    }
+                } catch(eKey) {
+                    _erroresScan.push({ clave: k, error: String(eKey) });
+                }
+            });
+        }
+    } catch(eScan) {
+        _erroresScan.push({ clave: 'window.COMPAS', error: String(eScan) });
+    }
+
+    // ── D. VERIFICAR FUNCIONES GLOBALES LONGI ────────────────────────────────
+    // Detectar funciones canónicas que existen en window pero no en window.COMPAS
+    _catalogoLONGI.forEach(function(def) {
+        try {
+            var _enCompas  = _consumidoresConfirmados.some(function(c) {
+                return c.nombre === 'COMPAS.' + def.nombre.replace('COMPAS_', '') ||
+                       c.nombre === 'COMPAS.' + def.nombre;
+            });
+            var _enWindow  = typeof window[def.nombre] === 'function';
+            if (_enWindow && !_enCompas) {
+                _consumidoresConfirmados.push({
+                    nombre:     'window.' + def.nombre,
+                    capa:       def.capa,
+                    nivel:      def.nivel,
+                    tipo:       'function',
+                    version:    '',
+                    sinEfectos: null,
+                    nota:       'en_window_no_en_window_COMPAS'
+                });
+            }
+        } catch(e) {}
+    });
+
+    // ── E. ADVERTENCIAS METODOLÓGICAS ────────────────────────────────────────
+    var _advertencias = [];
+
+    if (_consumidoresSospechosos.length > 0) {
+        _advertencias.push({
+            codigo: 'ADV-D01',
+            descripcion: 'Existen funciones con coincidencias heurísticas fuera del perímetro LONGI canónico',
+            n: _consumidoresSospechosos.length,
+            nota: 'heuristica_descriptiva_no_vinculante',
+            accion: 'revisar manualmente si acceden a funciones LONGI'
+        });
+    }
+    var _riesgosAltos = _riesgos.filter(function(r) { return r.severidad === 'alta'; });
+    if (_riesgosAltos.length > 0) {
+        _advertencias.push({
+            codigo: 'ADV-D02',
+            descripcion: 'Funciones con heurísticas de riesgo alto detectadas',
+            n: _riesgosAltos.length,
+            nota: 'no_implica_infraccion_requiere_revision_humana',
+            accion: 'auditar manualmente si usan datos LONGI de forma incompatible'
+        });
+    }
+    if (_erroresScan.length > 0) {
+        _advertencias.push({
+            codigo: 'ADV-D03',
+            descripcion: 'Errores durante escaneo de window.COMPAS',
+            n: _erroresScan.length,
+            accion: 'revisar claves que produjeron error'
+        });
+    }
+
+    var _canon_faltantes = _catalogoLONGI.filter(function(def) {
+        return !_consumidoresConfirmados.some(function(c) {
+            return c.nombre.indexOf(def.nombre.replace('COMPAS_', '')) !== -1 ||
+                   c.nombre.indexOf(def.nombre) !== -1;
+        });
+    });
+    if (_canon_faltantes.length > 0) {
+        _advertencias.push({
+            codigo: 'ADV-D04',
+            descripcion: 'Funciones LONGI canónicas no detectadas en window.COMPAS ni window global',
+            n: _canon_faltantes.length,
+            faltantes: _canon_faltantes.map(function(f) { return f.nombre; }),
+            accion: 'verificar que están registradas correctamente'
+        });
+    }
+
+    // ── F. RESUMEN ────────────────────────────────────────────────────────────
+    var _resumen = {
+        totalDependenciasEscaneadas: _dependencias.length,
+        consumidoresConfirmados:     _consumidoresConfirmados.length,
+        consumidoresSospechosos:     _consumidoresSospechosos.length,
+        riesgos:                     _riesgos.length,
+        riesgosAlta:                 _riesgosAltos.length,
+        advertencias:                _advertencias.length,
+        erroresScan:                 _erroresScan.length,
+        canonicosEnPerimetro:        _catalogoLONGI.length,
+        canonicosDetectados:         _consumidoresConfirmados.length,
+        canonicosNoDetectados:       _canon_faltantes.length,
+        _notaHeuristica:             'scan_heuristico_sobre_window_COMPAS_no_vinculante_no_normativo',
+        _notaConfianza:              'niveles_confianza_basados_en_patron_nombre_no_en_ejecucion'
+    };
+
+    // ── G. RETURN ÚNICO ───────────────────────────────────────────────────────
+    return {
+        _version:                'mapa_dependencias_longitudinales_v1',
+        _sinEfectos:             true,
+        _soloLectura:            true,
+        _noInferenciaAutomatica: true,
+        _cartografiaPasiva:      true,
+        _heuristicaNoVinculante: true,
+        resumen:                 _resumen,
+        catalogo:                _catalogoLONGI,
+        heuristicas:             _heuristicas.map(function(h) {
+                                     return { id: h.id, tipoConsumo: h.tipoConsumo,
+                                              riesgoBase: h.riesgoBase, descripcion: h.descripcion };
+                                 }),
+        dependencias:            _dependencias,
+        consumidoresConfirmados: _consumidoresConfirmados,
+        consumidoresSospechosos: _consumidoresSospechosos,
+        riesgos:                 _riesgos,
+        advertencias:            _advertencias,
+        erroresScan:             _erroresScan
+    };
+};
+
+if (window.COMPAS) {
+    window.COMPAS.auditarDependenciasLongitudinales =
+        window.COMPAS_auditarDependenciasLongitudinales;
+}
+
+console.log('[COMPÁS] mapaDependenciasLongitudinalesV1: COMPAS_auditarDependenciasLongitudinales() registrado ✓');
+
 /**
  * COMPAS_guardarEvidenciaTerritorialAtarfeDemo()
  * Cargador manual y explicito de metadatos de evidencia territorial oficial.
