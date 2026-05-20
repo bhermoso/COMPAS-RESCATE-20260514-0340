@@ -86531,6 +86531,15 @@ window.COMPAS_construirCicloLongitudinalMunicipal = function(opciones) {
             : '';
     } catch(e) {}
 
+    // Fallback: municipio desde contratoBase (getMunicipioActual ya resuelto allí)
+    if (!_municipio) {
+        try {
+            var _cbMun = (_contratoBase && _contratoBase.municipio)
+                ? String(_contratoBase.municipio).trim() : '';
+            if (_cbMun) _municipio = _cbMun;
+        } catch(e) {}
+    }
+
     if (!_municipio) return _vacio;
 
     // ── 4. DETECTAR AÑO Y FECHA DE CORTE ────────────────────────────────────
@@ -86569,6 +86578,16 @@ window.COMPAS_construirCicloLongitudinalMunicipal = function(opciones) {
                 if (!isNaN(_anioActual)) _fechaCorte = _pf;
                 else _anioActual = null;
             }
+        } catch(e) {}
+    }
+
+    // Fallback: año desde contratoBase.ciclos.cicloActivo (ya calculado por el contrato base)
+    if (_anioActual === null) {
+        try {
+            var _cbAnio = (_contratoBase && _contratoBase.ciclos && _contratoBase.ciclos.cicloActivo)
+                ? parseInt(String(_contratoBase.ciclos.cicloActivo).split('-')[0], 10)
+                : NaN;
+            if (!isNaN(_cbAnio) && _cbAnio > 1990 && _cbAnio < 2100) _anioActual = _cbAnio;
         } catch(e) {}
     }
 
@@ -87490,6 +87509,216 @@ if (window.COMPAS) {
 }
 
 console.log('[COMPÁS] lecturaCicloLongitudinalMunicipalV1: COMPAS_leerCicloLongitudinalMunicipal() registrado ✓');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADAPTADOR ESTADO LONGITUDINAL MUNICIPAL V1
+// Entrada única y estable para consulta del estado longitudinal del municipio.
+// Construye ciclo + lectura y expone campos compactos para consumo rápido.
+//
+// Sin LONGI activo. Sin propuestaEPVSA. Sin nFuentes. Sin confianza. Sin Firebase.
+// Sin new Date(). Sin motores. Sin inferencia. Sin narrativa. Sin escritura.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window.COMPAS_obtenerEstadoLongitudinalMunicipal = function(opciones) {
+    opciones = opciones || {};
+
+    // ── 0. VACÍO TIPADO ─────────────────────────────────────────────────────
+    var _vacio = {
+        _version: 'estado_longitudinal_municipal_adapter_v1',
+        _sinEfectos: true,
+        _soloLectura: true,
+        _noInferenciaAutomatica: true,
+        disponible: false,
+        municipio: '',
+        anio: null,
+        parcialUsable: true,
+        clasificacion: 'sin_base',
+        preparadoSiguienteCiclo: false,
+        requiereCierreHumano: true,
+        tieneArrastre: false,
+        nArrastres: 0,
+        nRiesgos: 0,
+        riesgosAlta: 0,
+        artefactosPresentes: [],
+        artefactosAusentes: [],
+        resumen: { continuidad: 'sin_datos', discontinuidad: 'sin_datos', trazabilidad: 'sin_datos' },
+        referencias: { cicloVersion: '', lecturaVersion: '' },
+        ciclo: null,
+        lectura: null
+    };
+
+    // ── 1. CONSTRUIR CICLO ───────────────────────────────────────────────────
+    var _ciclo = null;
+    try {
+        if (typeof COMPAS_construirCicloLongitudinalMunicipal === 'function') {
+            _ciclo = COMPAS_construirCicloLongitudinalMunicipal(opciones);
+        }
+    } catch(e) { _ciclo = null; }
+
+    if (!_ciclo) return _vacio;
+
+    // ── 2. CONSTRUIR LECTURA ─────────────────────────────────────────────────
+    var _lectura = null;
+    try {
+        if (typeof COMPAS_leerCicloLongitudinalMunicipal === 'function') {
+            _lectura = COMPAS_leerCicloLongitudinalMunicipal(_ciclo, opciones);
+        }
+    } catch(e) { _lectura = null; }
+
+    if (!_lectura) return _vacio;
+
+    // ── 3. EXTRACTORES MÍNIMOS ───────────────────────────────────────────────
+    var _g = function(obj, path, def) {
+        try {
+            var parts = path.split('.');
+            var cur = obj;
+            for (var i = 0; i < parts.length; i++) {
+                if (cur == null) return def;
+                cur = cur[parts[i]];
+            }
+            return (cur !== undefined && cur !== null) ? cur : def;
+        } catch(e) { return def; }
+    };
+
+    // ── 4. CAMPOS COMPACTOS ──────────────────────────────────────────────────
+
+    // Identidad
+    var _municipio  = _g(_ciclo,   'identidad.municipio', '');
+    var _anio       = _g(_ciclo,   'identidad.anio',      null);
+    var _disponible = !!_g(_ciclo, 'disponible',          false);
+    var _parcial    = !!_g(_ciclo, '_parcialEsUsable',    true);
+
+    // Arrastres — cascada defensiva; calculado antes de clasificacion.
+    // Fuente canónica: ciclo.genealogiaDecisiones.decisiones →
+    //   tipo:'reorientacion', elemento:'actuaciones_con_arrastre', campo 'cantidad'.
+    // El contratoBase expone arrastres=50 en actuaciones.arrastres; el ciclo lo transfiere
+    // solo a la genealogía, no a evaluacionAcumulada (porEstado.pendiente vs pendientes).
+    var _nArrastres = 0;
+
+    // 1. ciclo.genealogiaDecisiones.decisiones → reorientacion/actuaciones_con_arrastre
+    try {
+        var _genDec = (_ciclo && _ciclo.genealogiaDecisiones &&
+                       Array.isArray(_ciclo.genealogiaDecisiones.decisiones))
+            ? _ciclo.genealogiaDecisiones.decisiones : [];
+        for (var _gdi = 0; _gdi < _genDec.length; _gdi++) {
+            var _gd = _genDec[_gdi];
+            if (_gd && _gd.tipo === 'reorientacion' &&
+                    _gd.elemento === 'actuaciones_con_arrastre' &&
+                    typeof _gd.cantidad === 'number' && !isNaN(_gd.cantidad)) {
+                _nArrastres = _gd.cantidad;
+                break;
+            }
+        }
+    } catch(e) {}
+
+    // 2. lectura.continuidad.arrastresDetectados
+    if (_nArrastres === 0) {
+        try {
+            var _cad = _g(_lectura, 'continuidad.arrastresDetectados', null);
+            if (typeof _cad === 'number' && !isNaN(_cad) && _cad > 0) _nArrastres = _cad;
+        } catch(e) {}
+    }
+
+    // 3. lectura.continuidad.actuacionesPendientes (último recurso)
+    if (_nArrastres === 0) {
+        try {
+            var _actPend = _g(_lectura, 'continuidad.actuacionesPendientes', 0);
+            if (typeof _actPend === 'number' && !isNaN(_actPend)) _nArrastres = _actPend;
+        } catch(e) {}
+    }
+
+    var _tieneArrastre = _nArrastres > 0;
+
+    // Clasificación — regla defensiva: prioriza estado real sobre lectura interna
+    // La lectura puede conservar 'sin_base' si el ciclo tenía identidad vacía en el momento
+    // en que se construyó la lectura (antes de que los fallbacks de municipio/año actuaran).
+    var _lecClasif = _g(_lectura, 'lecturaOperativa.clasificacion', 'sin_base');
+    var _clasificacion;
+    if (!_disponible || !_municipio || _anio === null) {
+        _clasificacion = 'sin_base';
+    } else if (_nArrastres > 0) {
+        _clasificacion = 'ciclo_operativo_con_arrastre';
+    } else if (_lecClasif && _lecClasif !== 'sin_base') {
+        _clasificacion = _lecClasif;
+    } else {
+        _clasificacion = 'parcial_utilizable';
+    }
+
+    // Siguiente ciclo
+    var _preparado       = !!_g(_lectura, 'siguienteCiclo.preparado',             false);
+    var _cierreHumano    = !!_g(_lectura, 'siguienteCiclo.necesitaCierreHumano',  true);
+
+    // Riesgos — desde lector, sin alterarlos
+    var _riesgos = [];
+    try {
+        var _rawRiesgos = _g(_lectura, 'riesgosMetodologicos', []);
+        _riesgos = Array.isArray(_rawRiesgos) ? _rawRiesgos : [];
+    } catch(e) { _riesgos = []; }
+
+    var _nRiesgos   = _riesgos.length;
+    var _riesgosAlta = _riesgos.filter(function(r) {
+        return r && r.severidad === 'alta';
+    }).length;
+
+    // Artefactos — desde lector
+    var _artPresentes = _g(_lectura, 'resumenEstructural.artefactosPresentes', []);
+    var _artAusentes  = _g(_lectura, 'resumenEstructural.artefactosAusentes',  []);
+    if (!Array.isArray(_artPresentes)) _artPresentes = [];
+    if (!Array.isArray(_artAusentes))  _artAusentes  = [];
+
+    // Resumen narrativo compacto (etiquetas, no interpretación)
+    var _resumCont  = _tieneArrastre
+        ? ('arrastre:' + _nArrastres + ' persistencias:' + (_g(_lectura, 'continuidad.totalPersistencias', 0)))
+        : 'sin_arrastre_detectado';
+    var _resumDisc  = _g(_lectura, 'discontinuidades.totalBrechas', 0) > 0
+        ? ('brechas:' + _g(_lectura, 'discontinuidades.totalBrechas', 0))
+        : 'sin_brechas_detectadas';
+    var _resumTraz  = 'secciones:' + (_g(_lectura, 'trazabilidad.seccionesLeidas', [])).length +
+                      ' campos_no_disponibles:' + (_g(_lectura, 'trazabilidad.camposNoDisponibles', [])).length;
+
+    // Referencias de versión
+    var _cicloVer   = _g(_ciclo,   '_version', '');
+    var _lecturaVer = _g(_lectura, '_version', '');
+
+    // ── 5. RESULTADO ─────────────────────────────────────────────────────────
+    return {
+        _version:               'estado_longitudinal_municipal_adapter_v1',
+        _sinEfectos:            true,
+        _soloLectura:           true,
+        _noInferenciaAutomatica: true,
+        disponible:             _disponible,
+        municipio:              _municipio,
+        anio:                   _anio,
+        parcialUsable:          _parcial,
+        clasificacion:          _clasificacion,
+        preparadoSiguienteCiclo: _preparado,
+        requiereCierreHumano:   _cierreHumano,
+        tieneArrastre:          _tieneArrastre,
+        nArrastres:             _nArrastres,
+        nRiesgos:               _nRiesgos,
+        riesgosAlta:            _riesgosAlta,
+        artefactosPresentes:    _artPresentes,
+        artefactosAusentes:     _artAusentes,
+        resumen: {
+            continuidad:    _resumCont,
+            discontinuidad: _resumDisc,
+            trazabilidad:   _resumTraz
+        },
+        referencias: {
+            cicloVersion:   _cicloVer,
+            lecturaVersion: _lecturaVer
+        },
+        ciclo:   _ciclo,
+        lectura: _lectura
+    };
+};
+
+if (window.COMPAS) {
+    window.COMPAS.obtenerEstadoLongitudinalMunicipal =
+        window.COMPAS_obtenerEstadoLongitudinalMunicipal;
+}
+
+console.log('[COMPÁS] estadoLongitudinalMunicipalAdapterV1: COMPAS_obtenerEstadoLongitudinalMunicipal() registrado ✓');
 
 /**
  * COMPAS_guardarEvidenciaTerritorialAtarfeDemo()
