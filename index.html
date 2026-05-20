@@ -89086,6 +89086,458 @@ if (window.COMPAS) {
 
 console.log('[COMPÁS] mapaDependenciasLongitudinalesV1: COMPAS_auditarDependenciasLongitudinales() registrado ✓');
 
+/* ============================================================
+ * COMPAS_auditarMotorLecturaTerritorialIA()
+ * Versión: auditoria_motor_lectura_territorial_ia_v1
+ *
+ * Cartografía estructural pasiva del motor IA territorial.
+ * Lee window.analisisActual tal como fue producido por
+ * analizarDatosMunicipio() y audita:
+ *   – Fuentes reales consumidas vs ignoradas
+ *   – Capas temáticas presentes / ausentes
+ *   – Patrones narrativos genéricos vs interpretativos
+ *   – Presencia de DSS, desigualdades, activos, participación,
+ *     gobernanza, longitudinalidad, salutogénesis
+ *   – Riesgos metodológicos de la lectura territorial
+ *
+ * INVARIANTES:
+ *   _sinEfectos:true — sin escritura Firebase, sin DOM, sin motores
+ *   _aptoAnalisisAutomatico:false
+ *   _requiereInterpretacionHumana:true
+ *   _noInferenciaAutomatica:true
+ *   _parcialEsUsable:true (en todas las ramas)
+ *   Sin new Date()
+ * ============================================================ */
+window.COMPAS_auditarMotorLecturaTerritorialIA = function(opciones) {
+    var _opts = (opciones && typeof opciones === 'object') ? opciones : {};
+
+    /* ---- helpers ---- */
+    var _b = function(o, k) {
+        try {
+            var p = k.split('.');
+            var r = o;
+            for (var i = 0; i < p.length; i++) {
+                if (r == null) return false;
+                r = r[p[i]];
+            }
+            return !!r;
+        } catch(e) { return false; }
+    };
+    var _g = function(o, k, def) {
+        try {
+            var p = k.split('.');
+            var r = o;
+            for (var i = 0; i < p.length; i++) {
+                if (r == null || typeof r !== 'object') return def;
+                r = r[p[i]];
+            }
+            return (r !== undefined && r !== null) ? r : def;
+        } catch(e) { return def; }
+    };
+
+    /* patrones textuales para clasificar narrativa */
+    var _GENERICOS = [
+        /aporta la base epidemiol/i,
+        /base de datos de mortalidad/i,
+        /indicadores de salud/i,
+        /Informe de Situaci[oó]n de Salud/i,
+        /Plan Local de Salud/i,
+        /contribuye a la comprensi[oó]n/i,
+        /refuerza el an[aá]lisis/i,
+        /permite contextualizar/i,
+        /complementa la informaci[oó]n/i,
+        /proporciona una visi[oó]n/i
+    ];
+    var _INTERPRETATIVOS = [
+        /brecha/i,
+        /desigualdad/i,
+        /inequidad/i,
+        /factor de riesgo asociado/i,
+        /determinante social/i,
+        /vulnerabilidad diferencial/i,
+        /concentraci[oó]n de/i,
+        /distribuci[oó]n no uniforme/i,
+        /mayor prevalencia en/i,
+        /barrio/i,
+        /zona/i,
+        /periferia/i,
+        /exclusi[oó]n social/i,
+        /pobreza/i,
+        /precariedad/i
+    ];
+    var _DSS_PATRONES = [
+        /determinante/i,
+        /desigualdad/i,
+        /inequidad/i,
+        /vulnerabilidad/i,
+        /precariedad/i,
+        /pobreza/i,
+        /exclusi[oó]n/i,
+        /empleo/i,
+        /vivienda/i,
+        /educaci[oó]n/i,
+        /renta/i,
+        /ingreso/i,
+        /clase social/i
+    ];
+    var _ACTIVOS_PATRONES = [
+        /activo/i,
+        /recurso/i,
+        /fortaleza/i,
+        /capacidad/i,
+        /resiliencia/i,
+        /potencial/i,
+        /apoyo social/i,
+        /red social/i,
+        /comunidad/i,
+        /participaci[oó]n ciudadana/i
+    ];
+    var _SALUTOGENESIS_PATRONES = [
+        /salutog[eé]n/i,
+        /sentido de coherencia/i,
+        /recursos generalizados de resistencia/i,
+        /bienestar positivo/i,
+        /activos de salud/i,
+        /promoci[oó]n de la salud/i,
+        /empoderamiento/i
+    ];
+    var _LONGITUDINAL_PATRONES = [
+        /contexto longitudinal/i,
+        /ciclo anterior/i,
+        /tendencia/i,
+        /evoluci[oó]n/i,
+        /comparaci[oó]n interanual/i,
+        /arrastre/i,
+        /continuidad/i,
+        /histórico/i
+    ];
+    var _GOBERNANZA_PATRONES = [
+        /gobernanza/i,
+        /intersectorial/i,
+        /coordinaci[oó]n/i,
+        /comisi[oó]n de salud/i,
+        /mesa de salud/i,
+        /concejo/i,
+        /ayuntamiento/i,
+        /plan de acci[oó]n/i,
+        /rendici[oó]n de cuentas/i
+    ];
+
+    var _contarPatrones = function(texto, patrones) {
+        if (!texto || typeof texto !== 'string') return 0;
+        var c = 0;
+        for (var i = 0; i < patrones.length; i++) {
+            if (patrones[i].test(texto)) c++;
+        }
+        return c;
+    };
+    var _detectarPatrones = function(texto, patrones) {
+        var encontrados = [];
+        if (!texto || typeof texto !== 'string') return encontrados;
+        for (var i = 0; i < patrones.length; i++) {
+            if (patrones[i].test(texto)) {
+                encontrados.push(patrones[i].source);
+            }
+        }
+        return encontrados;
+    };
+
+    /* ---- resultado vacío defensivo ---- */
+    var _vacio = {
+        disponible:                  false,
+        _parcialEsUsable:            true,
+        _version:                    'auditoria_motor_lectura_territorial_ia_v1',
+        _sinEfectos:                 true,
+        _aptoAnalisisAutomatico:     false,
+        _requiereInterpretacionHumana: true,
+        _noInferenciaAutomatica:     true,
+        motivo:                      'analisisActual_no_disponible',
+        fuentesConsumidas:           [],
+        fuentesIgnoradas:            [],
+        capasPresentes:              [],
+        capasAusentes:               [],
+        bloquesDetectados:           [],
+        patronesGenericos:           [],
+        patronesInterpretativos:     [],
+        riesgosMetodologicos:        [],
+        auditoriaNarrativa:          {},
+        resumen:                     { lecturaDescriptiva: true, lecturaInterpretativa: false,
+                                       puntuacionInterpretacion: 0, puntuacionGenerica: 0 }
+    };
+
+    /* ---- leer analisisActual ---- */
+    var _analisis = null;
+    try {
+        _analisis = (typeof window !== 'undefined' && window.analisisActual &&
+                     typeof window.analisisActual === 'object')
+            ? window.analisisActual : null;
+    } catch(e) { _analisis = null; }
+
+    if (!_analisis) return _vacio;
+
+    /* ---- A. FUENTES CONSUMIDAS / IGNORADAS ---- */
+    var _fuentes = _g(_analisis, 'fuentes', {});
+    var _fuentesConsumidas = [];
+    var _fuentesIgnoradas  = [];
+
+    var _mapaFuentes = [
+        { clave: 'tieneInforme',    etiqueta: 'Informe de Situación de Salud',
+          descripcion: 'Base epidemiológica estructural del PLS' },
+        { clave: 'tieneEstudios',   etiqueta: 'Estudios complementarios (IBSE/escalas/complementarios)',
+          descripcion: 'Estudios locales, IBSE, escalas validadas' },
+        { clave: 'tienePopular',    etiqueta: 'Participación ciudadana (EPVSA/datosParticipacion)',
+          descripcion: 'Diagnóstico participativo y voz ciudadana' },
+        { clave: 'tieneDet',        etiqueta: 'Determinantes sociales de salud',
+          descripcion: 'Datos socioeconómicos, vivienda, educación, empleo' },
+        { clave: 'tieneIndicadores', etiqueta: 'Indicadores territoriales',
+          descripcion: 'Indicadores de salud pública locales' }
+    ];
+
+    for (var _fi = 0; _fi < _mapaFuentes.length; _fi++) {
+        var _mf = _mapaFuentes[_fi];
+        if (_fuentes[_mf.clave]) {
+            _fuentesConsumidas.push({ fuente: _mf.etiqueta, descripcion: _mf.descripcion });
+        } else {
+            _fuentesIgnoradas.push({ fuente: _mf.etiqueta, descripcion: _mf.descripcion,
+                                     impacto: 'capa_ausente_en_lectura' });
+        }
+    }
+
+    /* también verificar fuentes en window directamente */
+    var _extraFuentes = [];
+    var _fuentesExtra = [
+        { clave: 'datosParticipacionCiudadana', etiqueta: 'Participación ciudadana directa' },
+        { clave: 'datosMunicipioActual',        etiqueta: 'Datos municipio actual' },
+        { clave: 'contratoBase',                etiqueta: 'Contrato base municipal' },
+        { clave: 'datosIBSE',                   etiqueta: 'Datos IBSE' }
+    ];
+    try {
+        for (var _efi = 0; _efi < _fuentesExtra.length; _efi++) {
+            var _ef = _fuentesExtra[_efi];
+            var _existe = (typeof window !== 'undefined' && window[_ef.clave] != null);
+            _extraFuentes.push({ fuente: _ef.etiqueta, clave: _ef.clave,
+                                 existeEnWindow: _existe });
+        }
+    } catch(e) {}
+
+    /* ---- B. CAPAS TEMÁTICAS ---- */
+    var _textoTotal = '';
+    try {
+        var _concs = Array.isArray(_analisis.conclusiones) ? _analisis.conclusiones : [];
+        var _recs  = Array.isArray(_analisis.recomendaciones) ? _analisis.recomendaciones : [];
+        var _forts = Array.isArray(_analisis.fortalezas) ? _analisis.fortalezas : [];
+        var _opors = Array.isArray(_analisis.oportunidades) ? _analisis.oportunidades : [];
+        var _nar   = _g(_analisis, 'narrativa', {});
+        _textoTotal = [
+            _concs.join(' '), _recs.join(' '), _forts.join(' '), _opors.join(' '),
+            String(_nar.sintesis || ''), String(_nar.contexto || '')
+        ].join(' ');
+    } catch(e) { _textoTotal = ''; }
+
+    var _capasDefinicion = [
+        { id: 'DSS',            label: 'Determinantes sociales de salud',
+          patrones: _DSS_PATRONES },
+        { id: 'activos',        label: 'Activos y recursos de salud',
+          patrones: _ACTIVOS_PATRONES },
+        { id: 'salutogenesis',  label: 'Perspectiva salutogénica',
+          patrones: _SALUTOGENESIS_PATRONES },
+        { id: 'longitudinal',   label: 'Contexto longitudinal/histórico',
+          patrones: _LONGITUDINAL_PATRONES },
+        { id: 'gobernanza',     label: 'Gobernanza e intersectorialidad',
+          patrones: _GOBERNANZA_PATRONES }
+    ];
+
+    var _capasPresentes  = [];
+    var _capasAusentes   = [];
+
+    for (var _ci = 0; _ci < _capasDefinicion.length; _ci++) {
+        var _cap = _capasDefinicion[_ci];
+        var _detectados = _detectarPatrones(_textoTotal, _cap.patrones);
+        if (_detectados.length > 0) {
+            _capasPresentes.push({ capa: _cap.id, label: _cap.label,
+                                   patronesEncontrados: _detectados.length,
+                                   ejemplos: _detectados.slice(0, 3) });
+        } else {
+            _capasAusentes.push({ capa: _cap.id, label: _cap.label,
+                                  impacto: 'lectura_sin_esta_dimension' });
+        }
+    }
+
+    /* ---- C. BLOQUES NARRATIVOS DETECTADOS ---- */
+    var _bloquesDetectados = [];
+    try {
+        var _sintesis = String(_g(_analisis, 'narrativa.sintesis', ''));
+        var _contexto = String(_g(_analisis, 'narrativa.contexto', ''));
+
+        /* dividir sintesis en fragmentos separados por \n\n */
+        var _frags = _sintesis.split(/\n\n+/);
+        for (var _bki = 0; _bki < _frags.length; _bki++) {
+            var _frag = _frags[_bki].trim();
+            if (_frag.length < 20) continue;
+            var _nGen  = _contarPatrones(_frag, _GENERICOS);
+            var _nInt  = _contarPatrones(_frag, _INTERPRETATIVOS);
+            var _tipo  = 'desconocido';
+            if (_frag.indexOf('[Contexto longitudinal]') === 0) _tipo = 'bloque_longitudinal';
+            else if (_nGen > _nInt) _tipo = 'bloque_generico';
+            else if (_nInt > 0)     _tipo = 'bloque_interpretativo';
+            else                    _tipo = 'bloque_neutro';
+
+            _bloquesDetectados.push({
+                indice:       _bki,
+                tipo:         _tipo,
+                longitud:     _frag.length,
+                nPatGenerico: _nGen,
+                nPatInterpretativo: _nInt,
+                fragmento:    _frag.substring(0, 120) + (_frag.length > 120 ? '…' : '')
+            });
+        }
+
+        /* contexto como bloque independiente */
+        if (_contexto.length > 20) {
+            _bloquesDetectados.push({
+                indice:       'contexto',
+                tipo:         'bloque_contexto',
+                longitud:     _contexto.length,
+                nPatGenerico: _contarPatrones(_contexto, _GENERICOS),
+                nPatInterpretativo: _contarPatrones(_contexto, _INTERPRETATIVOS),
+                fragmento:    _contexto.substring(0, 120) + (_contexto.length > 120 ? '…' : '')
+            });
+        }
+    } catch(e) {}
+
+    /* ---- D. CLASIFICACIÓN GLOBAL: genérico vs interpretativo ---- */
+    var _ptGenerico      = _contarPatrones(_textoTotal, _GENERICOS);
+    var _ptInterpretativo = _contarPatrones(_textoTotal, _INTERPRETATIVOS);
+    var _patronesGenericos      = _detectarPatrones(_textoTotal, _GENERICOS);
+    var _patronesInterpretativos = _detectarPatrones(_textoTotal, _INTERPRETATIVOS);
+    var _lecturaDescriptiva     = _ptGenerico >= _ptInterpretativo;
+    var _lecturaInterpretativa  = _ptInterpretativo > _ptGenerico;
+
+    /* ---- E. RIESGOS METODOLÓGICOS ---- */
+    var _riesgos = [];
+
+    if (_fuentesIgnoradas.length >= 3) {
+        _riesgos.push({
+            codigo:      'RM-TERRITORIAL-01',
+            tipo:        'cobertura_insuficiente',
+            descripcion: 'Motor IA utilizó menos de 3 de 5 fuentes disponibles',
+            fuentesIgnoradas: _fuentesIgnoradas.map(function(f) { return f.fuente; }),
+            accion:      'revisar_carga_datos_antes_analisis'
+        });
+    }
+
+    if (_capasAusentes.length >= 3) {
+        _riesgos.push({
+            codigo:      'RM-TERRITORIAL-02',
+            tipo:        'lectura_unidimensional',
+            descripcion: 'Narrativa generada sin ' + _capasAusentes.length + ' capas temáticas clave',
+            capasAusentes: _capasAusentes.map(function(c) { return c.label; }),
+            accion:      'enriquecer_datos_fuente_para_proxima_ejecucion'
+        });
+    }
+
+    if (_lecturaDescriptiva && _ptInterpretativo === 0) {
+        _riesgos.push({
+            codigo:      'RM-TERRITORIAL-03',
+            tipo:        'narrativa_exclusivamente_generica',
+            descripcion: 'Ningún patrón interpretativo detectado — narrativa institucional sin territorialización',
+            accion:      'revisar_si_datos_DSS_y_participacion_estan_cargados'
+        });
+    }
+
+    var _tieneBloqueLongi = _bloquesDetectados.some(function(b) {
+        return b.tipo === 'bloque_longitudinal';
+    });
+    if (!_tieneBloqueLongi) {
+        _riesgos.push({
+            codigo:      'RM-TERRITORIAL-04',
+            tipo:        'ausencia_contexto_longitudinal',
+            descripcion: 'No se detectó bloque de contexto longitudinal en la narrativa',
+            accion:      'verificar_si_LONGI_esta_disponible_y_conectado'
+        });
+    }
+
+    var _dssAusente = _capasAusentes.some(function(c) { return c.capa === 'DSS'; });
+    if (_dssAusente && !_b(_fuentes, 'tieneDet')) {
+        _riesgos.push({
+            codigo:      'RM-TERRITORIAL-05',
+            tipo:        'ausencia_determinantes_sociales',
+            descripcion: 'Sin datos de determinantes y sin patrones DSS en narrativa — análisis epidemiológico sin contexto social',
+            accion:      'cargar_datos_determinantes_para_lectura_equitativa'
+        });
+    }
+
+    /* ---- F. AUDITORÍA NARRATIVA ---- */
+    var _auditoriaNarrativa = {
+        tieneSintesis:       _b(_analisis, 'narrativa.sintesis') &&
+                             String(_g(_analisis, 'narrativa.sintesis', '')).length > 0,
+        tieneContexto:       _b(_analisis, 'narrativa.contexto') &&
+                             String(_g(_analisis, 'narrativa.contexto', '')).length > 0,
+        longitudSintesis:    String(_g(_analisis, 'narrativa.sintesis', '')).length,
+        longitudContexto:    String(_g(_analisis, 'narrativa.contexto', '')).length,
+        nConclusiones:       Array.isArray(_analisis.conclusiones) ? _analisis.conclusiones.length : 0,
+        nRecomendaciones:    Array.isArray(_analisis.recomendaciones) ? _analisis.recomendaciones.length : 0,
+        nFortalezas:         Array.isArray(_analisis.fortalezas) ? _analisis.fortalezas.length : 0,
+        nOportunidades:      Array.isArray(_analisis.oportunidades) ? _analisis.oportunidades.length : 0,
+        bloquesTotal:        _bloquesDetectados.length,
+        bloquesGenericos:    _bloquesDetectados.filter(function(b) { return b.tipo === 'bloque_generico'; }).length,
+        bloquesInterpretativos: _bloquesDetectados.filter(function(b) { return b.tipo === 'bloque_interpretativo'; }).length,
+        bloquesLongitudinales:  _bloquesDetectados.filter(function(b) { return b.tipo === 'bloque_longitudinal'; }).length,
+        propGenerico:        (_bloquesDetectados.length > 0)
+                             ? Math.round(100 * _bloquesDetectados.filter(function(b) {
+                                   return b.tipo === 'bloque_generico'; }).length / _bloquesDetectados.length)
+                             : 0
+    };
+
+    /* ---- G. RESUMEN ---- */
+    var _resumen = {
+        disponible:              true,
+        fuentesConsumidas:       _fuentesConsumidas.length,
+        fuentesIgnoradas:        _fuentesIgnoradas.length,
+        capasPresentes:          _capasPresentes.length,
+        capasAusentes:           _capasAusentes.length,
+        lecturaDescriptiva:      _lecturaDescriptiva,
+        lecturaInterpretativa:   _lecturaInterpretativa,
+        puntuacionGenerica:      _ptGenerico,
+        puntuacionInterpretacion: _ptInterpretativo,
+        nRiesgos:                _riesgos.length,
+        nBloquesDetectados:      _bloquesDetectados.length,
+        tieneContextoLongitudinal: _tieneBloqueLongi,
+        calidadLectura:          _ptInterpretativo >= 3 ? 'interpretativa'
+                                 : _ptInterpretativo >= 1 ? 'mixta'
+                                 : 'generica_institucional'
+    };
+
+    return {
+        disponible:                  true,
+        _parcialEsUsable:            true,
+        _version:                    'auditoria_motor_lectura_territorial_ia_v1',
+        _sinEfectos:                 true,
+        _soloLectura:                true,
+        _aptoAnalisisAutomatico:     false,
+        _requiereInterpretacionHumana: true,
+        _noInferenciaAutomatica:     true,
+        fuentesConsumidas:           _fuentesConsumidas,
+        fuentesIgnoradas:            _fuentesIgnoradas,
+        fuentesWindowExtra:          _extraFuentes,
+        capasPresentes:              _capasPresentes,
+        capasAusentes:               _capasAusentes,
+        bloquesDetectados:           _bloquesDetectados,
+        patronesGenericos:           _patronesGenericos,
+        patronesInterpretativos:     _patronesInterpretativos,
+        riesgosMetodologicos:        _riesgos,
+        auditoriaNarrativa:          _auditoriaNarrativa,
+        resumen:                     _resumen
+    };
+};
+
+if (window.COMPAS) {
+    window.COMPAS.auditarMotorLecturaTerritorialIA =
+        window.COMPAS_auditarMotorLecturaTerritorialIA;
+}
+
+console.log('[COMPÁS] motorAuditoriaLecturaTerritorialIAv1: COMPAS_auditarMotorLecturaTerritorialIA() registrado ✓');
+
 /**
  * COMPAS_guardarEvidenciaTerritorialAtarfeDemo()
  * Cargador manual y explicito de metadatos de evidencia territorial oficial.
