@@ -1313,20 +1313,35 @@ function _v4_leerGobernanzaLongitudinal(salida) {
     }
 
     // Tensión: arrastre cronificado → lectura organizacional diferenciada de causas posibles
+    // [2026-05-21] Guard: si el snapshot clasifica 'sin_cierres_primer_ciclo', el arrastre no es
+    // interpretable como fragilidad institucional. Se registra como hipótesis metodológica de baja
+    // severidad (equivalente conceptual a cont_02 de LONGI v1.1 — arrastre técnico inicial).
     if (_arrastre !== null && _arrastre >= 50) {
-        _v4_push(salida.tensiones, {
-            id: 'ten_arrastre_cronificado',
-            tipo: 'tension', categoria: 'fragilidad_institucional',
-            // [2026-05-17] Lectura organizacional: el arrastre no implica fracaso por sí solo.
-            // Introduce hipótesis interpretativas cautas sobre causas posibles en lugar de describir
-            // el dato. Distingue: complejidad estructural, capacidad operativa, dependencia de actores,
-            // exceso de carga estratégica, madurez insuficiente de la red de implementación.
-            texto: 'El ' + Math.round(_arrastre) + '% de actuaciones del ciclo presenta arrastre. Este patrón puede responder a causas distintas — complejidad estructural de las acciones, capacidad operativa del equipo insuficiente para el volumen comprometido, dependencia de actores o recursos externos no asegurados, o exceso de carga estratégica respecto a la madurez institucional disponible — que conviene explorar antes de comprometer nuevos objetivos. No implica necesariamente fracaso: puede reflejar una transición de ciclo o una red de implementación en proceso de consolidación.',
-            fuentes: ['agenda_evaluacion'], nivelEvidencia: 2, certeza: 'media',
-            justificacion: 'tasaArrastre = ' + _arrastre + '% (>= 50%) en lecturaEvaluativaLongitudinal. Dato cuantitativo real del ciclo. Lectura organizacional: hipótesis de causa, no certeza diagnóstica.',
-            habilitaRecomendacion: true, habilitaEPVSA: false,
-            regla: 'fragilidad_arrastre_cronificado',
-        });
+        if (_ejecucion === 'sin_cierres_primer_ciclo') {
+            _v4_push(salida.hipotesis, {
+                id: 'hip_arrastre_primer_ciclo',
+                tipo: 'hipotesis', categoria: 'limitacion_metodologica',
+                texto: 'Existe actividad registrada y arrastre completo (' + Math.round(_arrastre) + '%), pero al tratarse de un primer ciclo sin cierres verificables, esta señal debe leerse como limitación de madurez longitudinal, no como evidencia de baja capacidad institucional. La interpretación de ejecución requiere al menos un ciclo completo con cierres.',
+                fuentes: ['agenda_evaluacion'], nivelEvidencia: 3, certeza: 'baja',
+                justificacion: 'ejecucion.estado = sin_cierres_primer_ciclo con tasaArrastre = ' + _arrastre + '%. Regla equivalente a cont_02 LONGI v1.1 (arrastre técnico inicial). Diagnóstico de fragilidad institucional no válido en este contexto.',
+                habilitaRecomendacion: false, habilitaEPVSA: false,
+                regla: 'arrastre_primer_ciclo_sin_cierres',
+            });
+        } else {
+            _v4_push(salida.tensiones, {
+                id: 'ten_arrastre_cronificado',
+                tipo: 'tension', categoria: 'fragilidad_institucional',
+                // [2026-05-17] Lectura organizacional: el arrastre no implica fracaso por sí solo.
+                // Introduce hipótesis interpretativas cautas sobre causas posibles en lugar de describir
+                // el dato. Distingue: complejidad estructural, capacidad operativa, dependencia de actores,
+                // exceso de carga estratégica, madurez insuficiente de la red de implementación.
+                texto: 'El ' + Math.round(_arrastre) + '% de actuaciones del ciclo presenta arrastre. Este patrón puede responder a causas distintas — complejidad estructural de las acciones, capacidad operativa del equipo insuficiente para el volumen comprometido, dependencia de actores o recursos externos no asegurados, o exceso de carga estratégica respecto a la madurez institucional disponible — que conviene explorar antes de comprometer nuevos objetivos. No implica necesariamente fracaso: puede reflejar una transición de ciclo o una red de implementación en proceso de consolidación.',
+                fuentes: ['agenda_evaluacion'], nivelEvidencia: 2, certeza: 'media',
+                justificacion: 'tasaArrastre = ' + _arrastre + '% (>= 50%) en lecturaEvaluativaLongitudinal. Dato cuantitativo real del ciclo. Lectura organizacional: hipótesis de causa, no certeza diagnóstica.',
+                habilitaRecomendacion: true, habilitaEPVSA: false,
+                regla: 'fragilidad_arrastre_cronificado',
+            });
+        }
     }
 
     // Fortaleza: red comunitaria activa → intersectorialidad operativa documentada
@@ -2143,7 +2158,21 @@ function _v4_construirSintesisTerritorial(v4, analisis) {
     } else if (_peso >= 3 && _nN1 >= 1) {
         _apert = 'El análisis dispone de fuentes cuantitativas directas' + _mencStr + '.';
     } else if (_peso >= 2 && _nN2 >= 1) {
-        _apert = 'El análisis se construye principalmente sobre evidencia secundaria' + _mencStr + ', sin indicadores municipales directos.';
+        // [narr-iss v1.1 2026-05-23] Dimensiones pendientes expresadas en términos institucionales genéricos.
+        // Sin referencia a instrumentos concretos (IBSE, CMI) para no acotar la arquitectura futura.
+        if (_tieneISS) {
+            var _dimFalt = [];
+            if (!_tieneCMI) _dimFalt.push('monitorización, seguimiento y evaluación longitudinal');
+            if (!_tieneDET) _dimFalt.push('determinantes sociales locales (EAS)');
+            _dimFalt.push('estudios complementarios locales e información sobre salud y bienestar percibidos');
+            _apert = 'El análisis se apoya en el Informe de Situación de Salud como base diagnóstica epidemiológica —'
+                   + ' fuente de indicadores sanitarios oficiales de mortalidad, morbilidad, demografía y utilización de servicios'
+                   + (_menc.length ? ' (' + _menc.join(', ') + ')' : '') + '.'
+                   + ' Las siguientes dimensiones están pendientes de incorporación: ' + _dimFalt.join(', ') + '.';
+        } else {
+            _apert = 'El análisis dispone de evidencia documental complementaria' + _mencStr
+                   + ' sin base diagnóstica epidemiológica directa; los resultados tienen carácter orientativo.';
+        }
     } else if (_peso >= 1) {
         _apert = 'La base de información disponible es limitada' + (_menc.length ? _mencStr : '') + '; la lectura que sigue tiene carácter provisional.';
     } else {
@@ -2192,7 +2221,12 @@ function _v4_construirSintesisTerritorial(v4, analisis) {
         _fraSen = 'Se detectan ' + _nInequidad + ' alerta' + (_nInequidad > 1 ? 's' : '') +
                   ' de inequidad que no alcanzan umbral de tensión estructural confirmada con la evidencia disponible.';
     } else {
-        _fraSen = 'No emergen señales estructurales dominantes con la información disponible.';
+        // [narr-iss v1 2026-05-22] Distinguir ausencia de señales detectadas de ausencia de problemas reales.
+        _fraSen = 'No se identifican señales estructurales cuantificadas con la información disponible'
+                + (_tieneISS && _nN1 === 0
+                    ? '; la lectura del Informe de Situación de Salud puede revelar patrones que la detección cuantitativa no captura sin fuentes complementarias'
+                    : '')
+                + '.';
     }
     _p1.push(_fraSen);
 
@@ -2216,6 +2250,13 @@ function _v4_construirSintesisTerritorial(v4, analisis) {
             _fraGov = 'La ejecución del ciclo es parcial' +
                       (_govArr !== null && _govArr > 25 ? ' (' + Math.round(_govArr) + '% de arrastre, nivel ' + _nivelArr + ')' : '') +
                       '. La capacidad de cierre puede estar condicionada por la densidad de la agenda o por dependencias externas no aseguradas; conviene identificar cuáles actuaciones arrastradas son recuperables y cuáles requieren reformulación.';
+        } else if (_govEj === 'sin_cierres_primer_ciclo') {
+            // [2026-05-21] Primer ciclo sin cierres verificables: cautela metodológica, no diagnóstico
+            // de baja capacidad. El arrastre al 100% en un primer ciclo refleja madurez longitudinal
+            // insuficiente del sistema, no necesariamente debilidad institucional.
+            _fraGov = 'El ciclo registra actividad comprometida' +
+                      (_govArr !== null ? ' (' + Math.round(_govArr) + '% de arrastre)' : '') +
+                      ', pero al tratarse del primer ciclo operativo sin cierres verificables, esta señal refleja una limitación de madurez longitudinal del sistema de seguimiento, no una evidencia de baja capacidad institucional. La lectura de ejecución requiere al menos un ciclo completo con cierres para ser interpretada con fiabilidad.';
         }
         if (_govTrazab === 'no_verificable') {
             _fraGov += (_fraGov ? ' ' : '') + 'La trazabilidad de evidencias del ciclo no es verificable, lo que limita la rendición de cuentas.';
@@ -2233,7 +2274,11 @@ function _v4_construirSintesisTerritorial(v4, analisis) {
     if (_nivelInc === 'alta') {
         _cualif = 'La densidad de evidencia es insuficiente para conclusiones consolidadas; las inferencias tienen carácter orientativo y requieren contraste técnico y participativo antes de traducirse en agenda operativa.';
     } else if (_nivelInc === 'media-alta') {
-        _cualif = 'La lectura tiene carácter tentativo; la evidencia disponible permite orientar deliberación, pero no automatizar decisiones sin contraste previo.';
+        // [narr-iss v1 2026-05-22] Sustituir "tentativo" — el ISS aporta base epidemiológica sólida.
+        // La cautela se dirige a la ausencia de perspectivas complementarias, no a la calidad del ISS.
+        _cualif = 'La lectura se apoya en la evidencia epidemiológica disponible y puede orientar deliberación técnica;'
+                + ' la incorporación de perspectivas complementarias —comunitaria, subjetiva y longitudinal—'
+                + ' es necesaria antes de traducirla directamente en agenda operativa.';
     } else {
         _cualif = 'La lectura es prudente e informada por evidencia estructurada; puede orientar deliberación técnica sin constituir por sí misma una decisión operativa.';
     }
@@ -2244,8 +2289,12 @@ function _v4_construirSintesisTerritorial(v4, analisis) {
     // organizacional: la sostenibilidad del ciclo como condición de viabilidad, la madurez de
     // la red como variable, la cautela sobre ampliar compromisos sin resolver primero la capacidad.
     var _concl;
-    var _hayArrastreAlto = (_govArr !== null && _govArr >= 50);
-    var _hayEjecucionBaja = (_govEj === 'baja' || _govEj === 'parcial');
+    // [2026-05-21] Guard: 'sin_cierres_primer_ciclo' no activa conclusiones de capacidad limitada.
+    // El arrastre al 100% en primer ciclo es un artefacto de madurez longitudinal del sistema,
+    // no evidencia de baja capacidad institucional. Neutralizar ambos flags para este estado.
+    var _esPrimerCicloSinCierres = (_govEj === 'sin_cierres_primer_ciclo');
+    var _hayArrastreAlto = (!_esPrimerCicloSinCierres && _govArr !== null && _govArr >= 50);
+    var _hayEjecucionBaja = (!_esPrimerCicloSinCierres && (_govEj === 'baja' || _govEj === 'parcial'));
     if (_peso < 2) {
         _concl = 'La base de información es insuficiente para priorizar actuaciones con fundamento: completar las fuentes de evidencia directa es la primera acción metodológicamente justificada.';
     } else if (_nTens >= 2 && _nInequidad > 0) {
