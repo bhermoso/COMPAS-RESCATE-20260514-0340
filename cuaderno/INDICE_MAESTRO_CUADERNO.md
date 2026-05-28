@@ -83,7 +83,7 @@ FUNDACIONAL
 | CAP-004-R1                | CONGELABLE_CON_OBSERVACIONES | transición previa     |
 | APERTURA-CAP-005-AUDITADA | DELIMITACION_APROBADA        | rango validado        |
 | ESTRUCTURA-CAP-005-R1     | VIGENTE                      | cartografía multicapa |
-| CAP-005-R1                | PENDIENTE                    | no iniciado aún       |
+| CAP-005-R1                | CONGELABLE_CON_OBSERVACIONES | cartografía completa  |
 
 ---
 
@@ -91,12 +91,12 @@ FUNDACIONAL
 
 | Tipo | Último usado | Próximo disponible |
 | ---- | ------------ | ------------------ |
-| MR   | MR-066       | MR-067             |
-| ENT  | ENT-049      | ENT-050            |
-| REL  | REL-030      | REL-031            |
-| CON  | CON-028      | CON-029            |
-| GAP  | GAP-027      | GAP-028            |
-| DV   | DV-021       | DV-022             |
+| MR   | MR-081       | MR-082             |
+| ENT  | ENT-092      | ENT-093            |
+| REL  | REL-064      | REL-065            |
+| CON  | CON-044      | CON-045            |
+| GAP  | GAP-051      | GAP-052            |
+| DV   | DV-025       | DV-026             |
 
 ---
 
