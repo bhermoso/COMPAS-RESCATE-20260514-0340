@@ -30,3 +30,6 @@ BACKUPS_20260517/
 
 BACKUPS_20260518/
 *.backup_*
+_LOCAL_NO_TRACK_*/
+*.tmp
+*~
