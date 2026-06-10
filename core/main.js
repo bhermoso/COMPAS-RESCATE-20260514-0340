@@ -179,8 +179,35 @@ console.info('[COMPÁS modular] bootstrap completo | window.COMPAS.__modular ===
 // ITERACIÓN 6 — IA / Motor experto:
 //   import { MotorExperto }    from '../ia/MotorExperto.js';
 //
-// ITERACIÓN 7 — UI / Fases:
-//   import { Fase6Evaluacion } from '../ui/fases/Fase6_Evaluacion.js';
+// ITERACIÓN 7 — UI / Sala de Mando React
+(async () => {
+    try {
+        // 7a. Punto de montaje — crea el div si no existe
+        if (!document.getElementById('sala-react-root')) {
+            const root = document.createElement('div');
+            root.id = 'sala-react-root';
+            document.body.appendChild(root);
+        }
+
+        // 7b. CSS — inyecta la hoja si no está ya cargada
+        const CSS_HREF = '../sala-mando-react/dist/sala.css';
+        const cssYaCargado = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+            .some(l => l.getAttribute('href') === CSS_HREF);
+        if (!cssYaCargado) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = CSS_HREF;
+            document.head.appendChild(link);
+        }
+
+        // 7c. Bundle JS — importación dinámica
+        await import('../sala-mando-react/dist/sala.js');
+
+        console.info('[COMPÁS] Sala React montada en #sala-react-root');
+    } catch (e) {
+        console.warn('[COMPÁS] Sala React no disponible — COMPÁS sigue operativo.', e.message);
+    }
+})();
 
 // ─── 9. EXPORTS ──────────────────────────────────────────────────────────────
 //
