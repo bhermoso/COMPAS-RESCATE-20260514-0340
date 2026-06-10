@@ -33,3 +33,8 @@ BACKUPS_20260518/
 _LOCAL_NO_TRACK_*/
 *.tmp
 *~
+
+# Artefactos de sesión y builds generados
+.claude/
+index_backup_*.html
+sala-mando-react/dist/
