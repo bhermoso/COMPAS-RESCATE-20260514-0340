@@ -4,7 +4,7 @@ export default function Header({ data, role, roleId, setRoleId, liveData }) {
   return (
     <header className="header">
       <div>
-        <p className="eyebrow">Sala de Mando COMPÁS</p>
+        <p className="eyebrow">Sala de Control Semántico COMPÁS</p>
         <h1>Sala de Control Semántico COMPÁS</h1>
       </div>
       <div className="header-meta">

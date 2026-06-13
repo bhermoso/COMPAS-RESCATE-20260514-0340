@@ -82,13 +82,13 @@ export const risks = [
 // ── OBJETOS RUNTIME (sin cambio — no existen en dataset estructural) ──────
 export const runtimeObjects = [
   { id: 'planLocalSalud', classification: 'HÍBRIDO / ACUMULADOR / EFÍMERO / PROYECCIÓN', authority: 'NO FUENTE DE VERDAD COMPLETA', persistence: 'Parcial y dependiente de cadenas observadas', rehydration: 'Parcial; no reconstruccion completa garantizada', risks: ['RT-005', 'GAP-PAE-001'], source: 'ESPECIFICACION-DE-SALA-DE-MANDO-N2.md:525-527' },
-  { id: 'ContextoIA', classification: 'PROYECCION / DERIVADO', authority: 'Consume representacion parcial del municipio', persistence: 'No aplica en prototipo', rehydration: 'Dependiente de fuentes observadas', risks: ['ZC-002'], source: 'Auditorias ContextoIA / Runtime' },
+  { id: 'ContextoIA', classification: 'PROYECCION / DERIVADO', authority: 'Consume representacion parcial del municipio', persistence: 'No aplica en la Sala de Control Semántico', rehydration: 'Dependiente de fuentes observadas', risks: ['ZC-002'], source: 'Auditorias ContextoIA / Runtime' },
   { id: 'accionesAgenda', classification: 'CACHE / ESTADO RUNTIME', authority: 'Agenda observable', persistence: 'Firebase agenda observado en corpus runtime', rehydration: 'Parcial', risks: ['GAP-PAE-001'], source: 'GRAFO-MAESTRO-PAN001-R2.md:1871' },
   { id: 'propuestaActual', classification: 'EFIMERO / DERIVADO', authority: 'No canonico por si mismo', persistence: 'No garantizada', rehydration: 'No reconstruida automaticamente segun auditorias', risks: ['ZC-002'], source: 'Auditorias de rehidratacion' },
-  { id: 'datosFusionPriorizacion', classification: 'DERIVADO', authority: 'Resultado de fusion de priorizacion', persistence: 'No gobernada por Sala R1', rehydration: 'Parcial/no observada en prototipo', risks: ['ZC-002'], source: 'Auditorias de priorizacion' },
-  { id: 'analisisActual', classification: 'DERIVADO / ESTADO RUNTIME', authority: 'Resultado de analisis actual', persistence: 'No gobernada por Sala R1', rehydration: 'Parcial', risks: ['ZC-002'], source: 'Auditorias de rehidratacion' },
-  { id: 'analisisActualV3', classification: 'DERIVADO / ESTADO RUNTIME', authority: 'No reconstruido automaticamente en rehidratacion completa', persistence: 'No gobernada por Sala R1', rehydration: 'No completa', risks: ['ZC-002'], source: 'Auditorias de rehidratacion R2' },
-  { id: 'window.COMPAS.state', classification: 'FUENTE RUNTIME DISTRIBUIDA / STATE CON RESERVAS', authority: 'Runtime, no documental', persistence: 'Fuera de prototipo', rehydration: 'Fuera de prototipo', risks: ['ZC-002'], source: 'Especificacion Capa Runtime' },
+  { id: 'datosFusionPriorizacion', classification: 'DERIVADO', authority: 'Resultado de fusion de priorizacion', persistence: 'No gobernada por la Sala', rehydration: 'Parcial/no observada en esta versión', risks: ['ZC-002'], source: 'Auditorias de priorizacion' },
+  { id: 'analisisActual', classification: 'DERIVADO / ESTADO RUNTIME', authority: 'Resultado de analisis actual', persistence: 'No gobernada por la Sala', rehydration: 'Parcial', risks: ['ZC-002'], source: 'Auditorias de rehidratacion' },
+  { id: 'analisisActualV3', classification: 'DERIVADO / ESTADO RUNTIME', authority: 'No reconstruido automaticamente en rehidratacion completa', persistence: 'No gobernada por la Sala', rehydration: 'No completa', risks: ['ZC-002'], source: 'Auditorias de rehidratacion R2' },
+  { id: 'window.COMPAS.state', classification: 'FUENTE RUNTIME DISTRIBUIDA / STATE CON RESERVAS', authority: 'Runtime, no documental', persistence: 'Fuera del alcance de la Sala', rehydration: 'Fuera del alcance de la Sala', risks: ['ZC-002'], source: 'Especificacion Capa Runtime' },
 ];
 
 // ── CADENAS — existentes + 7 subgrafos reales del dataset ─────────────────
@@ -113,9 +113,9 @@ export const roles = [
   { id: 'operador-sala', name: 'Operador/a de Sala', permissions: ['Leer', 'Auditar / marcar revisión'], limits: 'No decide autoridad documental.' },
   { id: 'auditor-documental', name: 'Auditor/a documental', permissions: ['Leer', 'Auditar / marcar revisión'], limits: 'No modifica Corpus ni Grafo.' },
   { id: 'responsable-gobierno', name: 'Responsable de gobierno', permissions: ['Leer', 'Auditar / marcar revisión', 'Decidir / autorizar'], limits: 'Autoriza decisiones humanas, no crea soberania documental.' },
-  { id: 'cartografo-compas', name: 'Cartógrafo/a COMPÁS', permissions: ['Leer', 'Auditar / marcar revisión'], limits: 'No recartografia desde este prototipo.' },
+  { id: 'cartografo-compas', name: 'Cartógrafo/a COMPÁS', permissions: ['Leer', 'Auditar / marcar revisión'], limits: 'No recartografía desde la Sala.' },
   { id: 'auditor-runtime', name: 'Auditor/a runtime', permissions: ['Leer', 'Auditar / marcar revisión'], limits: 'Observa runtime documentado, no runtime vivo.' },
-  { id: 'equipo-tecnico', name: 'Equipo técnico', permissions: ['Leer', 'Auditar / marcar revisión'], limits: 'No implementa desde la Sala R1.' },
+  { id: 'equipo-tecnico', name: 'Equipo técnico', permissions: ['Leer', 'Auditar / marcar revisión'], limits: 'No implementa desde la Sala de Control Semántico.' },
   { id: 'grupo-motor', name: 'Decisor institucional / Grupo Motor', permissions: ['Leer', 'Decidir / autorizar'], limits: 'No supera Corpus ni Grafo.' },
   { id: 'lector-externo', name: 'Lector/a externo o validador', permissions: ['Leer'], limits: 'Solo lectura.' },
 ];
@@ -426,7 +426,7 @@ export const panopticoNodes = [
     riskIds: ['LIMITE-CONTROL-TOTAL', 'ZC-002'],
     confirmed: [
       `${rawDataset.meta.n_nodos} ENT y ${rawDataset.meta.n_arcos} REL proceden del dataset R2.`,
-      'La Sala React declara modo solo lectura, sin integracion con COMPAS y sin gobierno runtime.',
+      'La Sala React está integrada en COMPÁS. Opera en modo solo lectura sin gobierno runtime.',
       'Firebase, ContextoIA, municipio activo y Documento PLS existen como workObjects.',
     ],
     inferred: [
@@ -471,7 +471,7 @@ export const panopticoNodes = [
       'El Plan Local de Salud operable en Sala V1 se entiende como acumulador runtime mas salida documental.',
     ],
     pending: [
-      'No hay gobierno runtime vivo ni persistencia completa del objeto desde este prototipo.',
+      'No hay gobierno runtime vivo ni persistencia completa del objeto desde la Sala.',
     ],
   }),
   buildPanopticoNode({
@@ -613,7 +613,7 @@ export const panopticoNodes = [
       'Firebase es la base de recuperacion del estado operativo documentado, con reservas runtime.',
     ],
     pending: [
-      'El prototipo no se integra con Firebase real.',
+      'La Sala de Control Semántico opera en modo solo lectura sobre Firebase.',
     ],
   }),
   buildPanopticoNode({

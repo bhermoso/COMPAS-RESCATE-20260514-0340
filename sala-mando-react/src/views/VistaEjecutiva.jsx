@@ -7,7 +7,7 @@ export default function VistaEjecutiva({ data, openItem }) {
     <section className="view-grid">
       <div className="band full">
         <h2>Estado ejecutivo</h2>
-        <p>Superficie documental-operacional para navegar Corpus R3, Grafo R2 y Sala N2 sin integracion con COMPAS.</p>
+        <p>Superficie documental-operacional. Integrada en COMPÁS — modo solo lectura, sin gobierno runtime.</p>
         <div className="metrics">
           <span><strong>{m.n_nodos}</strong> ENTs</span>
           <span><strong>{m.n_arcos}</strong> RELs</span>
