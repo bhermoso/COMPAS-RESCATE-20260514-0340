@@ -40,15 +40,17 @@ export const governanceChecklist = [
   p('gc-23', 'workObject', 'wo-firebase',           'requiere_ficha'),
   p('gc-24', 'workObject', 'wo-documento-pls',      'requiere_ficha'),
 
-  // ── panopticoNodes (9) ────────────────────────────────────────────────────
+  // ── panopticoNodes (10) ───────────────────────────────────────────────────
   p('gc-25', 'panopticoNode', 'pn-que-es-compas',             'pendiente_auditoria'),
   p('gc-26', 'panopticoNode', 'pn-documentos-proceso',        'pendiente_auditoria'),
   p('gc-27', 'panopticoNode', 'pn-plan-local-salud',          'requiere_ficha'),
   p('gc-28', 'panopticoNode', 'pn-agenda-anual',              'requiere_ficha'),
-  p('gc-30', 'panopticoNode', 'pn-estudios-complementarios',  'pendiente_auditoria'),
+  p('gc-29', 'panopticoNode', 'pn-priorizacion',             'requiere_ficha'),
+  p('gc-30', 'panopticoNode', 'pn-estudios-complementarios', 'pendiente_auditoria'),
   p('gc-31', 'panopticoNode', 'pn-firebase',                  'requiere_ficha'),
   p('gc-32', 'panopticoNode', 'pn-motores',                   'requiere_ficha'),
   p('gc-33', 'panopticoNode', 'pn-runtime',                   'requiere_ficha'),
+  p('gc-54', 'panopticoNode', 'pn-evaluacion',               'requiere_ficha'),
 
   // ── runtimeObjects (8) ───────────────────────────────────────────────────
   p('gc-34', 'runtimeObject', 'planLocalSalud',          'requiere_ficha'),
