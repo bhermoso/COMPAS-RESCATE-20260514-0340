@@ -190,14 +190,14 @@ export const workObjects = [
     risks:['ContextoIA puede ser parcial o del municipio anterior (silencioso)'] },
 
   { id:'wo-ibse', name:'IBSE', group:'DIAGNÓSTICO', criticality:3,
-    function:'Índice de Bienestar Socioemocional. Tres vías: formulario directo, CSV REDCap, Firebase. SuperMonitor 9 tabs. Componente CB del ISS (×0,25).',
+    function:'Índice de Bienestar Socioemocional. Tres vías: formulario directo, CSV REDCap, Firebase. Monitor IBSE de auditoría y trazabilidad. Componente CB del ISS (×0,25).',
     location:'FASE 2 / Panel IBSE / Modal IBSE v2', consumes:['Respuestas ciudadanas (formulario/CSV/Firebase)','escalas EAS P.57b/P.57c'],
     produces:['datosIBSE','score IBSE individual y agregado','window._ibse_v2_rawData'],
     engines:['calcularIBSE(d)','ibse_v2_calcularIBSE()','ibseSM_abrir()'],
     breaksIfFails:'ISS sin componente CB. ISS incalculable. Evaluación FASE 6 incompleta.',
     associatedEnt:['ENT-799','ENT-831'], associatedRel:['REL-116','REL-035','REL-039'],
     codeRefs:[{identifier:'calcularIBSE(d)',line:65531,file:'index.html'}],
-    risks:['Dos implementaciones paralelas (l.65525 e ibse_v2) con riesgo de divergencia de FIX'] },
+    risks:['Dos implementaciones paralelas (calcularIBSE(d) l.65531 e ibse_v2) con riesgo de divergencia de FIX'] },
 
   { id:'wo-sam', name:'SAM', group:'DIAGNÓSTICO', criticality:3,
     function:'Sistema de Ajuste Muestral. Ajusta estadísticamente los datos de participación ciudadana (RELAS, IBSE, HPC). 4 instancias en FASE 3.',
@@ -484,7 +484,7 @@ export const panopticoNodes = [
   buildPanopticoNode({
     id: 'pn-agenda-anual',
     name: 'Agenda anual',
-    summary: 'Ficha quirurgica completa — auditoria R2. Gestion de actuaciones por año/trimestre/entorno (Kanban). Ruptura Plan→Agenda documentada. Downstream: Evaluacion Fase 6 y Compilador PLS.',
+    summary: 'Nodo operativo de agenda anual, actuaciones, sincronización y evaluación Fase 6. Gestion de actuaciones por año/trimestre/entorno (Kanban). Ruptura Plan→Agenda documentada. Downstream: Evaluación Fase 6 y Compilador PLS.',
     workObjectIds: ['wo-agenda', 'wo-modal-accion'],
     runtimeObjectIds: ['accionesAgenda'],
     artifactIds: ['GRAFO-MAESTRO-PAN001-R2'],
@@ -663,7 +663,7 @@ export const panopticoNodes = [
   }),
   buildPanopticoNode({
     id: 'pn-priorizacion',
-    name: 'Priorizacion participativa',
+    name: 'Priorización participativa',
     summary: 'Nodo de priorizacion participativa. Agrupa la seleccion EPVSA, la votacion tematica VRELAS, el analisis ciudadano HPC y la fusion de priorizaciones.',
     workObjectIds: ['wo-epvsa', 'wo-vrelas', 'wo-hpc', 'wo-fusion'],
     runtimeObjectIds: ['propuestaActual', 'datosFusionPriorizacion'],
@@ -682,7 +682,7 @@ export const panopticoNodes = [
   }),
   buildPanopticoNode({
     id: 'pn-evaluacion',
-    name: 'Evaluacion y seguimiento',
+    name: 'Evaluación y seguimiento',
     summary: 'Nodo de evaluacion del ciclo de salud municipal. Agrupa la evaluacion de Fase 6, el ISS y el seguimiento longitudinal LONGI.',
     workObjectIds: ['wo-evaluacion', 'wo-iss', 'wo-longi'],
     runtimeObjectIds: [],
@@ -731,7 +731,7 @@ export const territoryData = {
     },
     {
       id: 'priorizacion',
-      label: 'Priorizacion / Planificacion',
+      label: 'Priorización / Planificación',
       subtitle: 'EPVSA, propuesta IA y seleccion',
       x: 690,
       y: 88,
@@ -770,7 +770,7 @@ export const territoryData = {
     },
     {
       id: 'evaluacion',
-      label: 'Evaluacion',
+      label: 'Evaluación',
       subtitle: 'ISS, seguimiento y resultado',
       x: 315,
       y: 468,
