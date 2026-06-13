@@ -101,7 +101,7 @@ function ObjectFicha({ object, activeTab }) {
       <section className="explorer-object-card empty">
         <p className="eyebrow">Objeto</p>
         <h2>Selecciona un objeto</h2>
-        <p>El flujo operativo es COMPAS -&gt; Tab -&gt; Objeto -&gt; Codigo.</p>
+        <p>Ruta: COMPÁS → Dominio → Nodo → WorkObject → Código / Runtime / Riesgos → Intervención → Verificación.</p>
       </section>
     );
   }
@@ -109,11 +109,11 @@ function ObjectFicha({ object, activeTab }) {
   return (
     <section className="explorer-object-card">
       <div className="explorer-flow">
-        <span>COMPAS</span>
+        <span>COMPÁS</span>
         <span>{activeTab.label}</span>
         <span>{object.name}</span>
-        <span>Codigo</span>
-        <span className="future">Reparacion futura</span>
+        <span>Código / Runtime / Riesgos</span>
+        <span className="future">Intervención · Verificación</span>
       </div>
 
       <p className="eyebrow">Objeto seleccionado</p>
@@ -217,7 +217,7 @@ export default function VistaExploradorSemantico({ data, selected, selectedItem,
         <div>
           <p className="eyebrow">COMPAS</p>
           <h2>Explorador semantico</h2>
-          <p>Ruta principal: COMPAS -&gt; Tab -&gt; Objeto -&gt; Codigo. El territorio queda como contexto relacional.</p>
+          <p>Ruta: COMPÁS → Dominio → Nodo → WorkObject → Código / Runtime / Riesgos → Intervención → Verificación.</p>
         </div>
         <div className="explorer-header-metrics">
           <span>{data.meta.n_nodos} ENT</span>
