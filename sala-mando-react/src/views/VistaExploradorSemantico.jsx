@@ -24,6 +24,16 @@ function getDomainForObject(data, objectId) {
   return data.territoryData?.domains.find((domain) => domain.workObjectIds?.includes(objectId)) ?? null;
 }
 
+function getNodesForDomainTab(data, tab) {
+  if (!tab.domainIds) return null;
+  const nodeIds = new Set(
+    data.territoryData.domains
+      .filter((domain) => tab.domainIds.includes(domain.id))
+      .flatMap((domain) => domain.panopticoNodeIds || []),
+  );
+  return data.panopticoNodes.filter((node) => nodeIds.has(node.id));
+}
+
 function getObjectsForTab(data, tab) {
   const byId = new Map(data.workObjects.map((item) => [item.id, item]));
   if (tab.priorityIds) return tab.priorityIds.map((id) => byId.get(id)).filter(Boolean);
@@ -76,9 +86,15 @@ function CodeRefsBlock({ refs }) {
   );
 }
 
-function ObjectList({ objects, activeId, openItem }) {
+function ObjectList({ objects, activeId, openItem, backLabel, onBack }) {
   return (
     <aside className="explorer-object-list" aria-label="Objetos visibles">
+      {onBack && (
+        <button type="button" onClick={onBack}>
+          <strong>← {backLabel}</strong>
+          <span>Volver a nodos</span>
+        </button>
+      )}
       <p className="eyebrow">Objetos visibles</p>
       {objects.map((obj) => (
         <button
@@ -95,7 +111,30 @@ function ObjectList({ objects, activeId, openItem }) {
   );
 }
 
-function ObjectFicha({ object, activeTab }) {
+function NodeList({ nodes, selectedNodeId, onSelectNode }) {
+  return (
+    <aside className="explorer-object-list" aria-label="Nodos semanticos del dominio">
+      <p className="eyebrow">Nodos semánticos</p>
+      {nodes.length === 0 ? (
+        <p className="muted">Sin nodos registrados para este dominio.</p>
+      ) : (
+        nodes.map((node) => (
+          <button
+            key={node.id}
+            type="button"
+            className={selectedNodeId === node.id ? 'active' : ''}
+            onClick={() => onSelectNode(node.id)}
+          >
+            <strong>{node.name}</strong>
+            <span>{node.workObjects.length} WorkObject{node.workObjects.length !== 1 ? 's' : ''}</span>
+          </button>
+        ))
+      )}
+    </aside>
+  );
+}
+
+function ObjectFicha({ object, activeTab, activeNode }) {
   if (!object) {
     return (
       <section className="explorer-object-card empty">
@@ -111,6 +150,7 @@ function ObjectFicha({ object, activeTab }) {
       <div className="explorer-flow">
         <span>COMPÁS</span>
         <span>{activeTab.label}</span>
+        {activeNode && <span>{activeNode.name}</span>}
         <span>{object.name}</span>
         <span>Código / Runtime / Riesgos</span>
         <span className="future">Intervención · Verificación</span>
@@ -206,10 +246,29 @@ function TerritoryContext({ data, activeObject }) {
 
 export default function VistaExploradorSemantico({ data, selected, selectedItem, openItem }) {
   const [activeTabId, setActiveTabId] = useState('home');
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+
   const activeTab = TAB_DEFS.find((tab) => tab.id === activeTabId) || TAB_DEFS[0];
-  const visibleObjects = useMemo(() => getObjectsForTab(data, activeTab), [data, activeTab]);
+  const domainNodes = useMemo(() => getNodesForDomainTab(data, activeTab), [data, activeTab]);
+  const isDomainTab = domainNodes !== null;
+
+  const activeNode = useMemo(
+    () => (isDomainTab && selectedNodeId ? data.panopticoNodes.find((n) => n.id === selectedNodeId) ?? null : null),
+    [isDomainTab, selectedNodeId, data.panopticoNodes],
+  );
+
+  const visibleObjects = useMemo(() => {
+    if (isDomainTab) return activeNode ? activeNode.workObjects : [];
+    return getObjectsForTab(data, activeTab);
+  }, [data, activeTab, isDomainTab, activeNode]);
+
   const selectedObject = selected.type === 'workObject' ? selectedItem : null;
   const activeObject = selectedObject && visibleObjects.some((item) => item.id === selectedObject.id) ? selectedObject : null;
+
+  function handleTabChange(tabId) {
+    setActiveTabId(tabId);
+    setSelectedNodeId(null);
+  }
 
   return (
     <section className="explorer" aria-label="Explorador semantico de COMPAS">
@@ -231,7 +290,7 @@ export default function VistaExploradorSemantico({ data, selected, selectedItem,
             key={tab.id}
             type="button"
             className={activeTab.id === tab.id ? 'active' : ''}
-            onClick={() => setActiveTabId(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
           >
             {tab.label}
           </button>
@@ -239,8 +298,22 @@ export default function VistaExploradorSemantico({ data, selected, selectedItem,
       </nav>
 
       <div className="explorer-body">
-        <ObjectList objects={visibleObjects} activeId={selectedObject?.id} openItem={openItem} />
-        <ObjectFicha object={activeObject} activeTab={activeTab} />
+        {isDomainTab ? (
+          activeNode ? (
+            <ObjectList
+              objects={visibleObjects}
+              activeId={selectedObject?.id}
+              openItem={openItem}
+              backLabel={activeNode.name}
+              onBack={() => setSelectedNodeId(null)}
+            />
+          ) : (
+            <NodeList nodes={domainNodes} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+          )
+        ) : (
+          <ObjectList objects={visibleObjects} activeId={selectedObject?.id} openItem={openItem} />
+        )}
+        <ObjectFicha object={activeObject} activeTab={activeTab} activeNode={activeNode} />
         <TerritoryContext data={data} activeObject={selectedObject} />
       </div>
     </section>
