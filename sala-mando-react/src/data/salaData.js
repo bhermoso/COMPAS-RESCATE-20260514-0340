@@ -252,7 +252,7 @@ export const workObjects = [
 
   { id:'wo-hpc', name:'HPC (Hábitos-Problemas-Colectivos)', group:'PRIORIZACIÓN', criticality:3,
     function:'Análisis ciudadano de hábitos de vida, problemas de salud y colectivos vulnerables vía encuesta RELAS. Rankings, cruces, triadas, señales de coherencia. Simulador de escenarios.',
-    location:'FASE 3 / RELAS / Motor HPC', consumes:['CSV RELAS (128 campos)','Demo 120 registros sintéticos','Firebase /relas_datos'],
+    location:'FASE 3 / RELAS / Motor HPC', consumes:['CSV RELAS (128 campos)','Firebase /relas_datos'],
     produces:['window.COMPAS.prioridades.relas','window.__COMPAS_HPC_OUTPUT (rankings/cruces/triadas/señales)'],
     engines:['relas_processData()','relas_computeFreq()','relas_scoreV2 ×10 intervenciones'],
     breaksIfFails:'Priorización sin eje comunitario. Árbol de priorizaciones sin fusión HPC.',
