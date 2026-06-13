@@ -1,0 +1,645 @@
+/* ── TOKENS COMPÁS — PALETA NORMATIVA PV-07 ─────────────────────────────── */
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --compas-azul:    #0074c8;
+  --compas-cyan:    #00acd9;
+  --compas-lima:    #94d40b;
+  --compas-alerta:  #ffb61b;
+  --compas-naranja: #ff6600;
+  --compas-rojo:    #dc143c;
+  --compas-fondo:   #fafbfc;
+  --compas-texto:   #334155;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, select, input { font: inherit; }
+button { cursor: pointer; }
+
+/* ── RAÍZ DE LA SALA ────────────────────────────────────────────────────── */
+.sala-app {
+  min-height: 100vh;
+  background: var(--compas-fondo);
+  color: var(--compas-texto);
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────────────── */
+.sala-app .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 28px;
+  background: #fff;
+  color: var(--compas-texto);
+  border-bottom: 4px solid transparent;
+  border-image: linear-gradient(90deg, #0074c8 0%, #00acd9 20%, #94d40b 40%, #ffb61b 60%, #ff6600 80%, #dc143c 100%) 1;
+}
+.sala-app .header h1,
+.sala-app .view-heading h1,
+.sala-app .band h2,
+.sala-app .inspector h2,
+.sala-app .sidebar h2 { margin: 0; letter-spacing: 0; }
+.sala-app .eyebrow {
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: #6e7780;
+  font-weight: 700;
+}
+.sala-app .header .eyebrow { color: #6e7780; }
+.sala-app .header-meta { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.sala-app .header-meta > div,
+.sala-app .role-select {
+  display: grid;
+  gap: 4px;
+  min-width: 110px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8f9fa;
+}
+.sala-app .header-meta span,
+.sala-app .role-select { font-size: 12px; }
+.sala-app .role-select select { min-width: 210px; padding: 6px; }
+.sala-app .role-summary { max-width: 280px; }
+
+/* ── LIVE BADGES ────────────────────────────────────────────────────────── */
+.sala-app .header-live,
+.sala-app .header-offline {
+  display: grid;
+  gap: 4px;
+  min-width: 110px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8f9fa;
+  font-size: 12px;
+}
+.sala-app .header-live { border-left: 3px solid var(--compas-lima); }
+.sala-app .header-offline { border-left: 3px solid #d6cec1; }
+.sala-app .header-live strong { color: var(--compas-azul); }
+.sala-app .source-badge {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid;
+  align-self: center;
+}
+.sala-app .badge-live  { background: #edfbee; border-color: var(--compas-lima);  color: #2d6a2d; }
+.sala-app .badge-static{ background: #f8f9fa;  border-color: #d6cec1;            color: #6e7780; }
+
+/* ── LIVE RUNTIME PANEL ─────────────────────────────────────────────────── */
+.sala-app .live-runtime-panel {
+  border: 1px solid var(--compas-lima);
+  border-left: 4px solid var(--compas-lima);
+  background: #f8fef8;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: grid;
+  gap: 10px;
+}
+.sala-app .live-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--compas-azul);
+}
+.sala-app .live-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+.sala-app .live-fields > div { display: grid; gap: 2px; }
+.sala-app .live-fields span { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6e7780; }
+.sala-app .live-fields strong { font-size: 13px; color: var(--compas-texto); }
+.sala-app .offline-note {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  background: #f8f9fa;
+  font-size: 12px;
+  color: #6e7780;
+  margin-bottom: 16px;
+}
+
+/* ── GUARDRAIL STRIP ────────────────────────────────────────────────────── */
+.sala-app .guardrail-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 28px;
+  background: #fffdf8;
+  border-bottom: 1px solid #d6cec1;
+}
+.sala-app .guardrail-strip span {
+  padding: 5px 8px;
+  border: 1px solid #c7bca9;
+  background: #f8f4ec;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── LAYOUT ─────────────────────────────────────────────────────────────── */
+.sala-app .sala-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr) 320px; min-height: calc(100vh - 122px); }
+.sala-app .sala-layout.territory-mode { grid-template-columns: 92px minmax(0, 1fr) 300px; }
+.sala-app .sidebar,
+.sala-app .inspector { background: #fffaf0; border-right: 1px solid #d6cec1; padding: 18px; }
+.sala-app .inspector { border-right: 0; border-left: 1px solid #d6cec1; overflow: auto; }
+.sala-app .sidebar { display: flex; flex-direction: column; gap: 8px; }
+
+/* ── INTERACTIVE BASE ───────────────────────────────────────────────────── */
+.sala-app .sidebar button,
+.sala-app .list-stack button,
+.sala-app .priority-actions button,
+.sala-app .tree-group button,
+.sala-app .table-like .row,
+.sala-app .risk-row,
+.sala-app .runtime-card,
+.sala-app .chain,
+.sala-app .search-results button,
+.sala-app .inline-action,
+.sala-app .linked-work-card,
+.sala-app .runtime-links button {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #cfc7b8;
+  background: #fffdf8;
+  color: #202326;
+  padding: 10px;
+}
+.sala-app .sidebar button.active,
+.sala-app .sidebar button:hover,
+.sala-app .list-stack button:hover,
+.sala-app .priority-actions button:hover,
+.sala-app .tree-group button:hover,
+.sala-app .table-like button.row:hover,
+.sala-app .risk-row:hover,
+.sala-app .runtime-card:hover,
+.sala-app .chain:hover,
+.sala-app .search-results button:hover,
+.sala-app .inline-action:hover {
+  border-color: var(--compas-azul);
+  background: #eef4f5;
+}
+
+/* ── MAIN PANEL ─────────────────────────────────────────────────────────── */
+.sala-app .main-panel { min-width: 0; padding: 22px; overflow: auto; }
+.sala-app .sala-layout.territory-mode .main-panel { padding: 10px 12px 12px; }
+.sala-app .view-heading { margin-bottom: 18px; }
+.sala-app .territory-heading { display: none; }
+.sala-app .view-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+/* ── BAND ───────────────────────────────────────────────────────────────── */
+.sala-app .band { background: #fffdf8; border: 1px solid #d6cec1; padding: 16px; }
+.sala-app .band.full { grid-column: 1 / -1; }
+
+/* ── DATA COMPONENTS ────────────────────────────────────────────────────── */
+.sala-app .metrics,
+.sala-app .priority-actions,
+.sala-app .list-stack,
+.sala-app .risk-list,
+.sala-app .chain-list,
+.sala-app .search-results { display: grid; gap: 10px; }
+.sala-app .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 14px; }
+.sala-app .metrics span { padding: 12px; border: 1px solid #d6cec1; background: var(--compas-fondo); font-weight: 700; }
+.sala-app .list-stack button,
+.sala-app .search-results button { display: grid; gap: 4px; }
+.sala-app .tree-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.sala-app .tree-group { display: grid; align-content: start; gap: 8px; }
+.sala-app .tree-group button { display: grid; gap: 4px; }
+.sala-app .tree-group span,
+.sala-app .list-stack span,
+.sala-app .search-results span,
+.sala-app .runtime-card span { color: #56616a; font-size: 13px; }
+
+/* ── TABLES ─────────────────────────────────────────────────────────────── */
+.sala-app .table-like { display: grid; gap: 6px; }
+.sala-app .table-like .row { display: grid; grid-template-columns: 120px 160px 160px minmax(0, 1fr); gap: 8px; align-items: start; }
+.sala-app .relations-table .row { grid-template-columns: 100px minmax(130px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(120px, 1fr); }
+.sala-app .table-like .head { cursor: default; background: var(--compas-azul); color: #fff; font-weight: 700; }
+.sala-app .table-like .head code { color: #fff; }
+
+/* ── RISK COMPONENTS ────────────────────────────────────────────────────── */
+.sala-app .risk-row { display: grid; grid-template-columns: 110px 100px 80px minmax(0, 1fr); align-items: center; gap: 10px; }
+.sala-app .risk-row p,
+.sala-app .chain p,
+.sala-app .runtime-card p,
+.sala-app .field p { margin: 0; }
+.sala-app .severity { display: inline-block; padding: 4px 6px; font-weight: 700; border: 1px solid #9f988d; }
+.sala-app .severity.critico   { background: #ffe8e1; border-color: var(--compas-rojo); }
+.sala-app .severity.importante{ background: #fff0cf; border-color: var(--compas-naranja); }
+.sala-app .severity.menor     { background: #edf3ed; border-color: var(--compas-lima); }
+
+/* ── RUNTIME GRID ───────────────────────────────────────────────────────── */
+.sala-app .runtime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.sala-app .runtime-card { min-height: 120px; display: grid; gap: 8px; align-content: start; }
+.sala-app .runtime-card.critical { border-left: 6px solid var(--compas-rojo); }
+
+/* ── CHAINS ─────────────────────────────────────────────────────────────── */
+.sala-app .chain { display: grid; gap: 10px; }
+.sala-app .chain-steps { display: flex; flex-wrap: wrap; gap: 8px; }
+.sala-app .chain-steps span { padding: 6px 8px; background: #eef4f5; border: 1px solid #cddadd; }
+
+/* ── SEARCH ─────────────────────────────────────────────────────────────── */
+.sala-app .search-box { display: grid; gap: 8px; margin-bottom: 14px; font-weight: 700; }
+.sala-app .search-box input { padding: 12px; border: 1px solid #9f988d; background: #fff; }
+
+/* ── INSPECTOR FIELD ────────────────────────────────────────────────────── */
+.sala-app .field { padding: 10px 0; border-bottom: 1px solid #e1d9cb; }
+.sala-app .field span { display: block; margin-bottom: 4px; color: #56616a; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.sala-app .critical-note { margin-top: 16px; padding: 12px; border: 1px solid var(--compas-rojo); background: #fff1ed; }
+.sala-app .inline-action { margin-top: 12px; }
+
+/* ── FILTER CHIPS ───────────────────────────────────────────────────────── */
+.sala-app .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.sala-app .chip { padding: 5px 12px; border: 1px solid #cfc7b8; background: #fffdf8; font-size: 13px; font-weight: 600; border-radius: 0; }
+.sala-app .chip:hover  { border-color: var(--compas-azul); background: #eef4f5; }
+.sala-app .chip.active { background: var(--compas-azul); color: #fff; border-color: var(--compas-azul); }
+.sala-app .filter-count { margin: 0 0 10px; font-size: 13px; color: #56616a; font-weight: 600; }
+.sala-app .nodo-table .row { grid-template-columns: minmax(200px, 1fr) 140px 180px minmax(0, 1fr); }
+
+/* ── WORK CARDS ─────────────────────────────────────────────────────────── */
+.sala-app .work-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-top: 12px; }
+.sala-app .work-card { padding: 14px; border: 1px solid #cfc7b8; background: #fffdf8; display: grid; gap: 8px; text-align: left; border-left: 5px solid #cfc7b8; }
+.sala-app .work-card:hover { border-color: var(--compas-azul); background: #eef4f5; }
+.sala-app .work-card.crit-5 { border-left-color: var(--compas-rojo); }
+.sala-app .work-card.crit-4 { border-left-color: var(--compas-naranja); }
+.sala-app .work-card.crit-3 { border-left-color: var(--compas-azul); }
+.sala-app .work-card.crit-2,
+.sala-app .work-card.crit-1 { border-left-color: var(--compas-lima); }
+.sala-app .work-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.sala-app .work-stars { color: var(--compas-cyan); font-size: 13px; white-space: nowrap; }
+.sala-app .work-group-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #56616a; letter-spacing: 0.05em; }
+.sala-app .work-card-fn { margin: 0; font-size: 12px; color: #56616a; line-height: 1.5; }
+.sala-app .work-card-meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #56616a; align-items: center; }
+.sala-app .work-risk-badge { background: #ffe8e1; border: 1px solid var(--compas-rojo); padding: 1px 6px; font-size: 11px; font-weight: 700; color: var(--compas-rojo); }
+.sala-app .work-card-refs { display: flex; flex-wrap: wrap; gap: 4px; }
+.sala-app .work-card-refs code { background: var(--compas-fondo); border: 1px solid #d6cec1; padding: 2px 5px; font-size: 10px; font-family: 'Courier New', monospace; color: #202326; }
+
+/* ── SIDEBAR EXTRAS ─────────────────────────────────────────────────────── */
+.sala-app .sidebar-subtitle { margin-top: 16px !important; padding-top: 14px; border-top: 1px solid #d6cec1; }
+.sala-app .semantic-tree { display: grid; gap: 8px; }
+.sala-app .semantic-node { display: grid; gap: 4px; border-left: 4px solid #cfc7b8 !important; }
+.sala-app .semantic-node.active { border-left-color: var(--compas-azul) !important; }
+.sala-app .semantic-node strong { font-size: 13px; }
+.sala-app .semantic-node span { color: #56616a; font-size: 11px; font-weight: 700; }
+.sala-app .sidebar-compact { padding: 10px 7px; overflow: hidden; }
+.sala-app .sidebar-compact h2,
+.sala-app .sidebar-compact .sidebar-subtitle,
+.sala-app .sidebar-compact .semantic-node span { display: none; }
+.sala-app .territory-rail-label {
+  margin: 0 0 8px;
+  color: var(--compas-azul);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+.sala-app .sidebar-compact .semantic-tree { gap: 6px; margin-bottom: 10px; }
+.sala-app .sidebar-compact .semantic-node {
+  min-height: 44px;
+  padding: 7px 4px;
+  border-left-width: 1px !important;
+  border-top: 3px solid #cfc7b8;
+  text-align: center;
+}
+.sala-app .sidebar-compact .semantic-node.active { border-top-color: var(--compas-azul); }
+.sala-app .sidebar-compact .semantic-node strong { font-size: 10px; line-height: 1.1; }
+.sala-app .sidebar-compact > button:not(.semantic-node) {
+  min-height: 32px;
+  padding: 6px 4px;
+  font-size: 10px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+/* ── PANOPTICO V1 ───────────────────────────────────────────────────────── */
+.sala-app .panoptico-v1 { min-height: 100%; }
+.sala-app .pan-ficha { background: #fffdf8; border: 1px solid #d6cec1; padding: 18px; display: grid; gap: 14px; }
+.sala-app .pan-ficha h2 { margin: 0; font-size: 26px; color: var(--compas-azul); }
+.sala-app .pan-summary { margin: 0; color: #384147; font-size: 15px; line-height: 1.6; max-width: 940px; }
+.sala-app .status-row,
+.sala-app .mini-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: #56616a; font-size: 12px; font-weight: 700; }
+.sala-app .status-chip { border: 1px solid #9f988d; padding: 4px 7px; text-transform: uppercase; font-size: 11px; }
+.sala-app .status-chip.confirmed { background: #edf3ed; border-color: var(--compas-lima); }
+.sala-app .evidence-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.sala-app .evidence-box { border: 1px solid #d6cec1; background: #fffaf0; padding: 12px; }
+.sala-app .evidence-box h3,
+.sala-app .pan-section h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; color: var(--compas-azul); }
+.sala-app .evidence-box ul { margin: 0; padding-left: 18px; color: #384147; font-size: 13px; line-height: 1.5; }
+.sala-app .evidence-box.confirmed { border-left: 5px solid var(--compas-lima); }
+.sala-app .evidence-box.inferred  { border-left: 5px solid var(--compas-naranja); }
+.sala-app .evidence-box.pending   { border-left: 5px solid var(--compas-rojo); }
+.sala-app .linked-work-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.sala-app .linked-work-card { display: grid; gap: 7px; border-left: 5px solid #cfc7b8; }
+.sala-app .linked-work-card.crit-5 { border-left-color: var(--compas-rojo); }
+.sala-app .linked-work-card.crit-4 { border-left-color: var(--compas-naranja); }
+.sala-app .linked-work-card.crit-3 { border-left-color: var(--compas-azul); }
+.sala-app .linked-work-card.crit-2,
+.sala-app .linked-work-card.crit-1 { border-left-color: var(--compas-lima); }
+.sala-app .linked-work-card span,
+.sala-app .linked-work-card p { margin: 0; color: #56616a; font-size: 12px; line-height: 1.45; }
+.sala-app .runtime-links { display: grid; gap: 8px; }
+.sala-app .runtime-links button { display: grid; gap: 3px; }
+.sala-app .runtime-links span { color: #56616a; font-size: 12px; }
+.sala-app .pan-field { border-top: 1px solid #e1d9cb; padding-top: 10px; }
+.sala-app .pan-field span { display: block; color: #56616a; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+.sala-app .pan-field p { margin: 0; line-height: 1.5; }
+.sala-app .code-ref-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.sala-app .code-ref-list code { background: var(--compas-fondo); border: 1px solid #d6cec1; padding: 4px 6px; font-size: 11px; }
+.sala-app .muted { color: #56616a; font-size: 13px; }
+
+/* ── PANOPTICO V2 / TERRITORY MAP ───────────────────────────────────────── */
+.sala-app .panoptico-v2 { display: grid; gap: 18px; }
+.sala-app .territory-shell {
+  background: #fffdf8;
+  border: 1px solid #d6cec1;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+.sala-app .territory-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+.sala-app .territory-toolbar h2 { margin: 0; color: var(--compas-azul); font-size: 22px; }
+.sala-app .territory-toolbar p  { margin: 4px 0 0; color: #56616a; font-size: 13px; }
+.sala-app .zoom-controls { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
+.sala-app .zoom-controls button {
+  border: 1px solid #cfc7b8;
+  background: #f8f4ec;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--compas-azul);
+}
+.sala-app .zoom-controls button.active { background: var(--compas-azul); border-color: var(--compas-azul); color: #fff; }
+.sala-app .territory-map-wrap { border: 1px solid #cfc7b8; background: #f7f3eb; overflow: hidden; }
+.sala-app .territory-map { display: block; width: 100%; min-height: 640px; }
+.sala-app .sala-layout.territory-mode .territory-map { min-height: calc(100vh - 238px); }
+
+/* ── SVG TERRITORY ──────────────────────────────────────────────────────── */
+.sala-app .map-ground { fill: #fffaf0; stroke: #d6cec1; stroke-width: 1.2; }
+.sala-app .runtime-zone { fill: #eef4f5; stroke: #95a9ad; stroke-width: 1.4; stroke-dasharray: 8 5; }
+.sala-app .runtime-zone-title { fill: var(--compas-azul); font-size: 13px; font-weight: 700; }
+.sala-app .territory-relation line { stroke: #7f8d91; stroke-width: 1.7; marker-end: url(#arrow-territory); }
+.sala-app .territory-relation.main-flow line { stroke: var(--compas-azul); stroke-width: 3.2; }
+.sala-app .relation-label-bg {
+  fill: rgba(255, 250, 240, 0.94);
+  stroke: rgba(199, 188, 169, 0.9);
+  stroke-width: 0.8;
+}
+.sala-app .territory-relation text {
+  fill: #56616a;
+  font-size: 11px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: #fffaf0;
+  stroke-width: 4px;
+}
+.sala-app .territory-relation.critical line { stroke: var(--compas-naranja); stroke-width: 2.3; }
+.sala-app .territory-relation.critical.main-flow line { stroke: var(--compas-naranja); stroke-width: 3.4; }
+.sala-app .territory-relation.dimmed { opacity: 0.25; }
+.sala-app .territory-relation.visible { opacity: 1; }
+.sala-app .root-node,
+.sala-app .territory-domain,
+.sala-app .semantic-object,
+.sala-app .risk-pin,
+.sala-app .bottom-band-node { cursor: pointer; }
+.sala-app .root-node circle { fill: var(--compas-azul); stroke: var(--compas-cyan); stroke-width: 4; }
+.sala-app .root-node text { fill: #fff; font-size: 22px; font-weight: 800; }
+.sala-app .root-node .root-metric { font-size: 12px; font-weight: 700; fill: #d8e0e3; }
+.sala-app .territory-domain rect { fill: #fffdf8; stroke: #cfc7b8; stroke-width: 1.4; }
+.sala-app .territory-domain.active rect { stroke: var(--compas-azul); stroke-width: 2.8; fill: #eef4f5; }
+.sala-app .territory-domain.muted-node { opacity: 0.32; }
+.sala-app .domain-halo {
+  fill: rgba(0, 172, 217, 0.08);
+  stroke: rgba(0, 172, 217, 0.38);
+  stroke-width: 2;
+}
+.sala-app .territory-domain .domain-title   { fill: var(--compas-azul); font-size: 14px; font-weight: 800; }
+.sala-app .territory-domain .domain-subtitle{ fill: #56616a; font-size: 10px; font-weight: 700; }
+.sala-app .risk-pin rect { fill: #fff0cf; stroke: var(--compas-naranja); stroke-width: 1.2; }
+.sala-app .risk-pin.critico rect { fill: #ffe8e1; stroke: var(--compas-rojo); }
+.sala-app .risk-pin text { fill: #683814; font-size: 10px; font-weight: 800; }
+.sala-app .semantic-object rect { fill: #fffdf8; stroke: #9f988d; stroke-width: 1.2; }
+.sala-app .semantic-object.kind-PAN rect { stroke: var(--compas-azul); fill: #eef4f5; }
+.sala-app .semantic-object.kind-OBJ rect { stroke: var(--compas-cyan); }
+.sala-app .semantic-object.kind-RT  rect { stroke: var(--compas-lima);  fill: #edf3ed; }
+.sala-app .semantic-object.kind-RISK rect{ stroke: var(--compas-rojo);  fill: #ffe8e1; }
+.sala-app .semantic-object text { fill: #202326; font-size: 10px; font-weight: 800; }
+.sala-app .semantic-object .object-kind { fill: #56616a; font-size: 8px; letter-spacing: 0; }
+.sala-app .subobject-node rect { fill: #f8f4ec; stroke: #c7bca9; stroke-width: 1.2; }
+.sala-app .subobject-node text { fill: #384147; font-size: 9px; font-weight: 700; }
+.sala-app .bottom-band-node rect { fill: #f8f4ec; stroke: #95a9ad; stroke-width: 1.3; stroke-dasharray: 5 4; }
+.sala-app .bottom-band-node text { fill: var(--compas-azul); font-size: 13px; font-weight: 800; }
+.sala-app .bottom-band-node .bottom-band-detail { fill: #56616a; font-size: 9px; font-weight: 700; }
+.sala-app .zoom-field {
+  fill: rgba(0, 116, 200, 0.05);
+  stroke: rgba(0, 116, 200, 0.22);
+  stroke-width: 1.4;
+  stroke-dasharray: 8 6;
+}
+.sala-app .zoom-field.depth-2 { fill: rgba(0, 172, 217, 0.06); stroke: rgba(0, 172, 217, 0.28); }
+.sala-app .zoom-field.depth-3 { fill: rgba(220, 20, 60, 0.05);  stroke: rgba(220, 20, 60, 0.28);  }
+.sala-app .territory-status { display: flex; gap: 8px; flex-wrap: wrap; }
+.sala-app .territory-status span {
+  border: 1px solid #d6cec1;
+  background: #f8f4ec;
+  color: #384147;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sala-app .contextual-compact { max-height: 440px; overflow: auto; }
+
+/* ── EXPLORER ───────────────────────────────────────────────────────────── */
+.sala-app .explorer { display: grid; gap: 14px; }
+.sala-app .explorer-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  background: #fffdf8;
+  border: 1px solid #d6cec1;
+  padding: 14px 16px;
+}
+.sala-app .explorer-header h2 { margin: 0; color: var(--compas-azul); font-size: 24px; }
+.sala-app .explorer-header p  { margin: 4px 0 0; color: #56616a; line-height: 1.45; }
+.sala-app .explorer-header-metrics { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.sala-app .explorer-header-metrics span {
+  border: 1px solid #cfc7b8;
+  background: #f8f4ec;
+  color: var(--compas-azul);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.sala-app .semantic-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.sala-app .semantic-tabs button {
+  border: 1px solid #cfc7b8;
+  background: #fffdf8;
+  color: var(--compas-azul);
+  padding: 9px 11px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.sala-app .semantic-tabs button.active,
+.sala-app .semantic-tabs button:hover {
+  background: var(--compas-azul);
+  border-color: var(--compas-azul);
+  color: #fff;
+}
+.sala-app .explorer-body {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  gap: 14px;
+  align-items: start;
+}
+.sala-app .explorer-object-list {
+  display: grid;
+  gap: 8px;
+  background: #fffaf0;
+  border: 1px solid #d6cec1;
+  padding: 12px;
+  max-height: calc(100vh - 260px);
+  overflow: auto;
+}
+.sala-app .explorer-object-list button {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #cfc7b8;
+  background: #fffdf8;
+  color: #202326;
+  padding: 10px;
+  text-align: left;
+}
+.sala-app .explorer-object-list button.active,
+.sala-app .explorer-object-list button:hover { border-color: var(--compas-azul); background: #eef4f5; }
+.sala-app .explorer-object-list strong { font-size: 13px; line-height: 1.25; }
+.sala-app .explorer-object-list span   { color: #56616a; font-size: 11px; font-weight: 700; }
+.sala-app .explorer-object-card { background: #fffdf8; border: 1px solid #d6cec1; padding: 16px; display: grid; gap: 14px; }
+.sala-app .explorer-object-card.empty  { min-height: 260px; align-content: center; }
+.sala-app .explorer-object-card h2     { margin: 0; color: var(--compas-azul); font-size: 24px; }
+.sala-app .explorer-flow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.sala-app .explorer-flow span {
+  border: 1px solid #d6cec1;
+  background: #f8f4ec;
+  padding: 5px 8px;
+  color: #384147;
+  font-size: 11px;
+  font-weight: 800;
+}
+.sala-app .explorer-flow span::after       { content: " ->"; color: #7a7064; }
+.sala-app .explorer-flow span:last-child::after { content: ""; }
+.sala-app .explorer-flow .future { border-color: #c7bca9; color: #7a7064; background: #fffaf0; }
+.sala-app .explorer-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.sala-app .explorer-field { border-top: 1px solid #e1d9cb; padding-top: 10px; display: grid; gap: 4px; }
+.sala-app .explorer-field span { color: #56616a; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.sala-app .explorer-field p    { margin: 0; color: #384147; font-size: 13px; line-height: 1.5; }
+.sala-app .explorer-code-block { border-top: 2px solid var(--compas-azul); padding-top: 12px; display: grid; gap: 8px; }
+.sala-app .explorer-code-block h3 { margin: 0; color: var(--compas-azul); font-size: 14px; text-transform: uppercase; }
+.sala-app .explorer-code-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.sala-app .explorer-code-list code {
+  background: var(--compas-fondo);
+  border: 1px solid #d6cec1;
+  color: var(--compas-azul);
+  padding: 5px 7px;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.sala-app .territory-context {
+  grid-column: auto;
+  background: #fffaf0;
+  border: 1px solid #d6cec1;
+  padding: 12px;
+  position: sticky;
+  top: 10px;
+}
+.sala-app .territory-context-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.sala-app .territory-context-head h3   { margin: 0; color: var(--compas-azul); font-size: 15px; }
+.sala-app .territory-context-head span {
+  border: 1px solid #cfc7b8;
+  background: #f8f4ec;
+  color: #56616a;
+  padding: 5px 7px;
+  font-size: 10px;
+  font-weight: 800;
+}
+.sala-app .territory-context svg { display: block; width: 100%; min-height: 210px; }
+.sala-app .tc-ground               { fill: #f8f4ec; stroke: #d6cec1; }
+.sala-app .tc-root circle          { fill: var(--compas-azul); stroke: var(--compas-cyan); stroke-width: 3; }
+.sala-app .tc-root text            { fill: #fff; font-size: 18px; font-weight: 800; }
+.sala-app .tc-relation             { stroke: #9aa7aa; stroke-width: 1.3; opacity: 0.22; }
+.sala-app .tc-relation.active      { stroke: var(--compas-naranja); stroke-width: 3; opacity: 1; }
+.sala-app .tc-domain rect          { fill: #fffdf8; stroke: #cfc7b8; stroke-width: 1.1; }
+.sala-app .tc-domain.active rect   { fill: #eef4f5; stroke: var(--compas-azul); stroke-width: 2.4; }
+.sala-app .tc-domain text          { fill: var(--compas-azul); font-size: 12px; font-weight: 800; }
+
+/* ── FICHA QUIRÚRGICA AGENDA ANUAL ──────────────────────────────────────── */
+.sala-app .sq-surgical { display: grid; gap: 18px; margin-top: 14px; border-top: 3px solid var(--compas-azul); padding-top: 18px; }
+.sala-app .sq-section-title { margin: 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--compas-azul); }
+.sala-app .sq-section { display: grid; gap: 8px; }
+.sala-app .sq-section h4 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; color: #384147; border-bottom: 1px solid #e1d9cb; padding-bottom: 4px; }
+.sala-app .sq-subsection-label { margin: 8px 0 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #56616a; }
+.sala-app .sq-table { display: grid; gap: 4px; font-size: 12px; }
+.sala-app .sq-row { display: grid; grid-template-columns: minmax(200px,1fr) minmax(180px,2fr) minmax(120px,1fr) auto; gap: 8px; align-items: start; padding: 6px 8px; border: 1px solid #e1d9cb; background: #fffaf0; }
+.sala-app .sq-row.sq-head { background: var(--compas-azul); color: #fff; font-weight: 700; }
+.sala-app .sq-row.sq-head code { color: #fff; }
+.sala-app .sq-row code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--compas-azul); word-break: break-all; }
+.sala-app .sq-muted { color: #56616a; font-size: 11px; }
+.sala-app .sq-evidence-badge { display: inline-block; padding: 2px 6px; font-size: 10px; font-weight: 700; border: 1px solid; text-transform: uppercase; white-space: nowrap; }
+.sala-app .sq-evidence-badge.confirmado { background: #edf3ed; border-color: var(--compas-lima);    color: #3a5c3a; }
+.sala-app .sq-evidence-badge.inferido   { background: #fff8e1; border-color: var(--compas-naranja); color: #7a5800; }
+.sala-app .sq-evidence-badge.pendiente  { background: #ffe8e1; border-color: var(--compas-rojo);    color: #8b2e18; }
+.sala-app .sq-runtime-card { border: 1px solid #d6cec1; background: #fffaf0; padding: 10px; display: grid; gap: 6px; }
+.sala-app .sq-runtime-header { display: flex; align-items: center; gap: 10px; }
+.sala-app .sq-runtime-header code { font-family: 'Courier New', monospace; font-size: 12px; font-weight: 700; color: var(--compas-azul); }
+.sala-app .sq-runtime-body { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 4px; font-size: 12px; }
+.sala-app .sq-fb-row { display: grid; grid-template-columns: minmax(140px,1fr) minmax(200px,2fr) auto; gap: 8px; align-items: start; padding: 5px 8px; border: 1px solid #e1d9cb; background: #fffaf0; font-size: 12px; }
+.sala-app .sq-fb-row code { font-family: 'Courier New', monospace; font-size: 11px; color: var(--compas-azul); }
+.sala-app .sq-reh-row { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; border-bottom: 1px solid #f0ece4; font-size: 12px; line-height: 1.5; }
+.sala-app .sq-dep-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; }
+.sala-app .sq-dep-row { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid #f0ece4; font-size: 12px; line-height: 1.5; }
+.sala-app .sq-dep-row > div { flex: 1; }
+.sala-app .sq-dep-row p { margin: 2px 0 4px; color: #56616a; }
+.sala-app .sq-risk-ref { display: inline-block; padding: 1px 5px; background: #ffe8e1; border: 1px solid var(--compas-rojo); font-size: 10px; font-weight: 700; color: #8b2e18; }
+.sala-app .sq-risk-card { border: 1px solid #d6cec1; padding: 10px; display: grid; gap: 5px; font-size: 12px; line-height: 1.5; }
+.sala-app .sq-risk-card.sev-importante { border-left: 5px solid var(--compas-naranja); }
+.sala-app .sq-risk-card.sev-critico    { border-left: 5px solid var(--compas-rojo); }
+.sala-app .sq-risk-card.sev-menor      { border-left: 5px solid var(--compas-lima); }
+.sala-app .sq-risk-header { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sala-app .sq-risk-header code { font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; color: var(--compas-azul); }
+.sala-app .sq-risk-card p { margin: 0; color: #384147; }
+
+/* ── RESPONSIVE ─────────────────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .sala-app .sala-layout { grid-template-columns: 210px minmax(0, 1fr); }
+  .sala-app .inspector { grid-column: 1 / -1; border-left: 0; border-top: 1px solid #d6cec1; }
+  .sala-app .metrics,
+  .sala-app .tree-columns,
+  .sala-app .runtime-grid,
+  .sala-app .view-grid,
+  .sala-app .evidence-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .sala-app .header,
+  .sala-app .sala-layout { display: block; }
+  .sala-app .sidebar { border-right: 0; border-bottom: 1px solid #d6cec1; }
+  .sala-app .table-like .row,
+  .sala-app .relations-table .row,
+  .sala-app .risk-row { grid-template-columns: 1fr; }
+}

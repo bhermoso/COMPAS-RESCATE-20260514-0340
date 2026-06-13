@@ -1,0 +1,18 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+
+# Logs
+*.log
+vite-*.log
+
+# Backups temporales
+*.bak
+*.bak_*
+*.bak-*
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
