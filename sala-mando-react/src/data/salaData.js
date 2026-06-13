@@ -176,7 +176,8 @@ export const workObjects = [
     engines:['at2_generar()','at2_actualizarFuentes()'],
     breaksIfFails:'Propuesta EPVSA sin base analítica. Motor 2 opera con analisisActual obsoleto.',
     associatedEnt:['ENT-041..ENT-092'], associatedRel:['REL-063','REL-064'],
-    codeRefs:[], risks:['analisisActualV3 efímero sin rehidratación automática entre sesiones'] },
+    codeRefs:[{identifier:'at2_actualizarFuentes()',line:96509,file:'index.html'},{identifier:'at2_generar()',line:96609,file:'index.html'}],
+    risks:['analisisActualV3 efímero sin rehidratación automática entre sesiones'] },
 
   { id:'wo-motor-sintesis', name:'Motor síntesis perfil (Motor 1)', group:'DIAGNÓSTICO', criticality:4,
     function:'Motor IA externo (motorSintesisPerfil.js) que genera análisis interpretativo del perfil de salud. Produce analisisActual como síntesis narrativa para el Motor de Plan.',
@@ -215,7 +216,8 @@ export const workObjects = [
     engines:['cargarDeterminantesCSV()','cargarIndicadoresCSV()','cargarEstudiosComplementarios()'],
     breaksIfFails:'Análisis territorial sin datos específicos del municipio.',
     associatedEnt:['ENT-050..ENT-092'], associatedRel:['REL-044','REL-045','REL-046','REL-047','REL-048','REL-049'],
-    codeRefs:[], risks:['Perfil incompleto si no se cargan estudios específicos del municipio'] },
+    codeRefs:[{identifier:'cargarDeterminantesCSV()',line:13573,file:'index.html'},{identifier:'cargarEstudiosComplementarios()',line:48721,file:'index.html'}],
+    risks:['Perfil incompleto si no se cargan estudios específicos del municipio'] },
 
   // PRIORIZACIÓN
   { id:'wo-motor-plan', name:'Motor propuesta IA (Motor 2)', group:'PRIORIZACIÓN', criticality:4,
@@ -245,7 +247,8 @@ export const workObjects = [
     engines:['vrelas_processData()','vrelas_listener (Firebase)','vrelas_importarCSV()'],
     breaksIfFails:'Priorización sin voz ciudadana. SAM sin datos temáticos que ajustar.',
     associatedEnt:['ENT-671..ENT-705'], associatedRel:['REL-071'],
-    codeRefs:[], risks:['_VRELAS_A_LE1 es deuda técnica activa con uso parcial — no eliminar'] },
+    codeRefs:[{identifier:'vrelas_importarCSV()',line:46696,file:'index.html'}],
+    risks:['_VRELAS_A_LE1 es deuda técnica activa con uso parcial — no eliminar'] },
 
   { id:'wo-hpc', name:'HPC (Hábitos-Problemas-Colectivos)', group:'PRIORIZACIÓN', criticality:3,
     function:'Análisis ciudadano de hábitos de vida, problemas de salud y colectivos vulnerables vía encuesta RELAS. Rankings, cruces, triadas, señales de coherencia. Simulador de escenarios.',
@@ -254,7 +257,8 @@ export const workObjects = [
     engines:['relas_processData()','relas_computeFreq()','relas_scoreV2 ×10 intervenciones'],
     breaksIfFails:'Priorización sin eje comunitario. Árbol de priorizaciones sin fusión HPC.',
     associatedEnt:['ENT-671..ENT-705'], associatedRel:['REL-066','REL-035'],
-    codeRefs:[], risks:['relas_lastSimResult no persiste automáticamente'] },
+    codeRefs:[{identifier:'relas_processData()',line:42824,file:'index.html'},{identifier:'relas_computeFreq()',line:42944,file:'index.html'}],
+    risks:['relas_lastSimResult no persiste automáticamente'] },
 
   { id:'wo-fusion', name:'Fusión de priorizaciones', group:'PRIORIZACIÓN', criticality:4,
     function:'Integra las tres priorizaciones (estratégica EPVSA, temática VRELAS, comunitaria HPC) en una decisión única. Produce datosFusionPriorizacion.',
@@ -263,7 +267,8 @@ export const workObjects = [
     engines:['confirmarPriorizacion()','relas_confirmarPriorizacionTriple()'],
     breaksIfFails:'Plan no refleja participación integrada. datosFusionPriorizacion se pierde al cambiar municipio.',
     associatedEnt:['ENT-093..ENT-223'], associatedRel:['REL-072','REL-074'],
-    codeRefs:[], risks:['datosFusionPriorizacion es HUÉRFANO — sin estructura formal ni rehidratación automática'] },
+    codeRefs:[{identifier:'confirmarPriorizacion()',line:38113,file:'index.html'},{identifier:'relas_confirmarPriorizacionTriple()',line:43889,file:'index.html'}],
+    risks:['datosFusionPriorizacion es HUÉRFANO — sin estructura formal ni rehidratación automática'] },
 
   // COMPILADOR
   { id:'wo-compilador', name:'Compilador PLS', group:'COMPILADOR', criticality:5,
@@ -335,7 +340,8 @@ export const workObjects = [
     engines:['eval_calcularISS()'],
     breaksIfFails:'Sin síntesis evaluativa del ciclo. Sin referencia para comparación longitudinal.',
     associatedEnt:['ENT-831'], associatedRel:[],
-    codeRefs:[], risks:['Pesos 0.40/0.35/0.25 hardcoded — cambio requiere modificar código directamente'] },
+    codeRefs:[{identifier:'eval_calcularISS()',line:72849,file:'index.html'}],
+    risks:['Pesos 0.40/0.35/0.25 hardcoded — cambio requiere modificar código directamente'] },
 
   { id:'wo-longi', name:'LONGI (evaluación longitudinal)', group:'EVALUACIÓN', criticality:3,
     function:'Framework de 11 capas de evaluación no-causal del proceso a lo largo del tiempo. Produce contexto longitudinal unificado del municipio.',
@@ -354,7 +360,8 @@ export const workObjects = [
     engines:['COMPAS_analizarV3()','Motor AT2 v2 interno'],
     breaksIfFails:'Tarjetas EPVSA sin FMC V4. Propuesta automática recae en v2 o propuesta local.',
     associatedEnt:['ENT-762..ENT-793'], associatedRel:['REL-478'],
-    codeRefs:[], risks:['DV-025/DV-026: coexistencia v1/v2/v3 — resultados mezclados silenciosos si versión no discriminada'] },
+    codeRefs:[{identifier:'COMPAS_analizarV3()',line:60367,file:'index.html'}],
+    risks:['DV-025/DV-026: coexistencia v1/v2/v3 — resultados mezclados silenciosos si versión no discriminada'] },
 
   // INFRAESTRUCTURA
   { id:'wo-contextoia', name:'ContextoIA', group:'INFRAESTRUCTURA', criticality:4,
@@ -364,7 +371,7 @@ export const workObjects = [
     engines:['crearContextoIA()','contextoDesdeGlobalesHeredados()'],
     breaksIfFails:'Todos los motores IA reciben contrato vacío o del municipio anterior.',
     associatedEnt:[], associatedRel:['REL-059','REL-464'],
-    codeRefs:[{identifier:'crearContextoIA()',line:null,file:'index.html'}],
+    codeRefs:[{identifier:'crearContextoIA()',line:128,file:'ia/contextoIA.js'}],
     risks:['seguimientoAnual AUSENTE por diseño declarado (motorEvaluacion.js l.30-34)','Si datosMunicipioActual es stale: outputs erróneos sin aviso'] },
 
   { id:'wo-firebase', name:'Firebase', group:'INFRAESTRUCTURA', criticality:5,
