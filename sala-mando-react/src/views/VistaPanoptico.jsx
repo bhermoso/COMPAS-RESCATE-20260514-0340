@@ -442,7 +442,6 @@ function TerritoryCanvas({ data, selected, selectedItem, openItem }) {
     if (!activeDomain || zoomLevel < 2) return [];
     const nodes = [
       ...(activeDomain.panopticoNodeIds || []).map((id) => ({ ...indexes.panopticoNode[id], kind: 'PAN', target: { type: 'panopticoNode', id } })),
-      ...(activeDomain.workObjectIds || []).map((id) => ({ ...indexes.workObject[id], kind: 'OBJ', target: { type: 'workObject', id } })),
       ...(activeDomain.runtimeIds || []).map((id) => ({ ...indexes.runtime[id], name: id, kind: 'RT', target: { type: 'runtime', id } })),
       ...(activeDomain.riskIds || []).map((id) => ({ ...indexes.risk[id], name: id, kind: 'RISK', target: { type: 'risk', id } })),
     ];
