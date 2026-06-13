@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 
 const ASSESSMENTS = [
   { id: 'pendiente_auditoria', label: 'Pendiente auditoria' },
@@ -46,7 +46,7 @@ const TYPE_LABEL = {
 };
 
 const FILTERS = [
-  { id: 'all',           label: 'Todos (53)' },
+  { id: 'all',           label: 'Todos' },
   { id: 'workObject',    label: 'workObjects' },
   { id: 'panopticoNode', label: 'Nodos' },
   { id: 'runtimeObject', label: 'Runtime' },
@@ -75,14 +75,33 @@ function resolveCrit(item, data) {
   return null;
 }
 
+function exportGobierno(items, reviewer) {
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    reviewer,
+    items,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `compas-gobierno-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 const TH = { padding: '7px 10px', color: '#64748b', fontWeight: 600, fontSize: '.78rem', textTransform: 'uppercase', letterSpacing: '.05em', borderBottom: '2px solid #e2e8f0', textAlign: 'left', whiteSpace: 'nowrap' };
 const TD = { padding: '7px 10px', verticalAlign: 'middle', borderBottom: '1px solid #f1f5f9' };
 
-// Estado de datos (checklistItems, onUpdate) vive en App.jsx — sobrevive al cambio de vista.
+// Estado de datos (checklistItems, reviewer) vive en App.jsx — persiste en localStorage y sobrevive al cambio de vista.
 // Estado de UI (filter, expandedId) es local — se resetea al navegar (comportamiento correcto).
-export default function VistaChecklistGobierno({ data, checklistItems, onUpdate }) {
+export default function VistaChecklistGobierno({ data, checklistItems, onUpdate, onReplace, reviewer, setReviewer }) {
   const [filter, setFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
+  const importInputRef = useRef(null);
 
   const visible = useMemo(
     () => filter === 'all' ? checklistItems : checklistItems.filter(i => i.sourceType === filter),
@@ -98,20 +117,89 @@ export default function VistaChecklistGobierno({ data, checklistItems, onUpdate 
     setExpandedId(prev => prev === id ? null : id);
   }
 
+  function handleImport(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (parsed.version !== 1) {
+          alert(`Versión del fichero no compatible (v${parsed.version}). Se esperaba v1.`);
+          return;
+        }
+        const incoming = Array.isArray(parsed.items) ? parsed.items : [];
+        onReplace(incoming);
+        if (parsed.reviewer?.displayName) {
+          setReviewer(r => ({ ...r, ...parsed.reviewer }));
+        }
+      } catch {
+        alert('El fichero JSON no es válido o está corrupto.');
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  }
+
   return (
     <section className="band full">
       <h2>Checklist de gobierno</h2>
-      <p style={{ color: '#64748b', fontSize: '.88rem', marginBottom: 4 }}>
-        Valoración humana de objetos gobernables. Estado local — no persiste todavía.
-      </p>
-      <p style={{ color: '#0074c8', fontWeight: 600, fontSize: '.88rem', marginBottom: 16 }}>
-        {reviewed} / {checklistItems.length} valorados{' '}
-        {reviewed > 0 && (
-          <span style={{ fontWeight: 400, color: '#64748b' }}>
-            ({checklistItems.length - reviewed} pendientes)
-          </span>
+
+      {/* Identificación del revisor */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: 8, flexWrap: 'wrap' }}>
+        <label style={{ fontSize: '.82rem', color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap' }}>
+          Revisor:
+        </label>
+        <input
+          type="text"
+          value={reviewer.displayName}
+          placeholder="Nombre o iniciales del revisor"
+          onChange={e => setReviewer(r => ({ ...r, displayName: e.target.value }))}
+          style={{ border: '1px solid #e2e8f0', borderRadius: 5, padding: '4px 9px', fontSize: '.82rem', color: '#1e293b', fontFamily: 'inherit', minWidth: 180 }}
+        />
+        {reviewer.displayName && (
+          <span style={{ fontSize: '.76rem', color: '#16a34a', fontWeight: 600 }}>✓ activo</span>
         )}
+      </div>
+
+      <p style={{ color: '#64748b', fontSize: '.88rem', marginBottom: 4 }}>
+        Valoración humana de objetos gobernables. Estado persistido en navegador.
       </p>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: 16, flexWrap: 'wrap' }}>
+        <p style={{ color: '#0074c8', fontWeight: 600, fontSize: '.88rem', margin: 0 }}>
+          {reviewed} / {checklistItems.length} valorados{' '}
+          {reviewed > 0 && (
+            <span style={{ fontWeight: 400, color: '#64748b' }}>
+              ({checklistItems.length - reviewed} pendientes)
+            </span>
+          )}
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
+          <button
+            type="button"
+            onClick={() => exportGobierno(checklistItems, reviewer)}
+            style={{ padding: '4px 10px', fontSize: '.78rem', background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', borderRadius: 5, cursor: 'pointer', fontWeight: 600 }}
+          >
+            Exportar estado de gobierno
+          </button>
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            style={{ padding: '4px 10px', fontSize: '.78rem', background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', borderRadius: 5, cursor: 'pointer', fontWeight: 600 }}
+          >
+            Importar estado
+          </button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={handleImport}
+            style={{ display: 'none' }}
+          />
+        </div>
+      </div>
 
       <div className="filter-chips" style={{ marginBottom: 16 }}>
         {FILTERS.map(f => (
@@ -166,6 +254,12 @@ export default function VistaChecklistGobierno({ data, checklistItems, onUpdate 
                         <code style={{ fontSize: '.75rem', color: '#64748b', background: '#f1f5f9', padding: '2px 5px', borderRadius: 3 }}>
                           {item.sourceId}
                         </code>
+                        {item.reviewedBy && (
+                          <div style={{ marginTop: 4, fontSize: '.72rem', color: '#64748b' }}>
+                            Revisado por <strong>{item.reviewedBy}</strong>
+                            {item.reviewedAt && <> · {new Date(item.reviewedAt).toLocaleDateString('es-ES')}</>}
+                          </div>
+                        )}
                         <div style={{ marginTop: 6 }}>
                           <label style={{ fontSize: '.75rem', color: '#94a3b8', display: 'block', marginBottom: 3 }}>
                             Etiquetas (separadas por coma)
@@ -212,13 +306,14 @@ export default function VistaChecklistGobierno({ data, checklistItems, onUpdate 
                     </span>
                   </td>
 
-                  {/* Valoración */}
+                  {/* Valoración — escribe reviewedBy y reviewedAt automáticamente */}
                   <td style={TD}>
                     <select
                       value={item.assessment}
                       onChange={e => onUpdate(item.id, {
                         assessment: e.target.value,
                         reviewedAt: new Date().toISOString(),
+                        reviewedBy: reviewer.displayName || null,
                       })}
                       style={{
                         border: '1px solid #e2e8f0',
