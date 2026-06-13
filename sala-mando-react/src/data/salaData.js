@@ -196,7 +196,7 @@ export const workObjects = [
     engines:['calcularIBSE(d)','ibse_v2_calcularIBSE()','ibseSM_abrir()'],
     breaksIfFails:'ISS sin componente CB. ISS incalculable. Evaluación FASE 6 incompleta.',
     associatedEnt:['ENT-799','ENT-831'], associatedRel:['REL-116','REL-035','REL-039'],
-    codeRefs:[{identifier:'calcularIBSE(d)',line:65525,file:'index.html'}],
+    codeRefs:[{identifier:'calcularIBSE(d)',line:65531,file:'index.html'}],
     risks:['Dos implementaciones paralelas (l.65525 e ibse_v2) con riesgo de divergencia de FIX'] },
 
   { id:'wo-sam', name:'SAM', group:'DIAGNÓSTICO', criticality:3,
