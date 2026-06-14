@@ -37,7 +37,7 @@ _LOCAL_NO_TRACK_*/
 # Artefactos de sesión y builds generados
 .claude/
 index_backup_*.html
-sala-mando-react/dist/
+sala-mando-react/dist/index.html
 
 # Inventarios y snapshots de sesión
 _inventarios/
