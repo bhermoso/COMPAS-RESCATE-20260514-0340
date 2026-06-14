@@ -189,18 +189,22 @@ console.info('[COMPÁS modular] bootstrap completo | window.COMPAS.__modular ===
             document.body.appendChild(root);
         }
 
-        // 7b. CSS — inyecta la hoja si no está ya cargada
+        // 7b. CSS — inyecta la hoja y espera su carga antes de montar React
         const CSS_HREF = '../sala-mando-react/dist/sala.css';
         const cssYaCargado = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
             .some(l => l.getAttribute('href') === CSS_HREF);
         if (!cssYaCargado) {
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = CSS_HREF;
-            document.head.appendChild(link);
+            await new Promise((resolve, reject) => {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = CSS_HREF;
+                link.onload = resolve;
+                link.onerror = reject;
+                document.head.appendChild(link);
+            });
         }
 
-        // 7c. Bundle JS — importación dinámica
+        // 7c. Bundle JS — importación dinámica (CSS ya aplicado)
         await import('../sala-mando-react/dist/sala.js');
 
         console.info('[COMPÁS] Sala React montada en #sala-react-root');

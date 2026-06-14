@@ -1,8 +1,8 @@
 # Dependencias
 node_modules/
 
-# Build
-dist/
+# Build — solo excluir index.html (sala.js y sala.css se publican en GitHub Pages)
+dist/index.html
 
 # Logs
 *.log
