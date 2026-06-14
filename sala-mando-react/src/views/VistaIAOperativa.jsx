@@ -14,6 +14,16 @@ const EJEMPLOS = [
   'Prepárame un prompt.',
 ];
 
+const INTENT_LABELS = {
+  comprension:  'Comprensión',
+  intervencion: 'Intervención',
+  impacto:      'Análisis de impacto',
+  localizacion: 'Localización',
+  prompt:       'Generación de prompt',
+  analisis:     'Análisis',
+  baja_confianza: 'Baja confianza',
+};
+
 function selectedToWorkObjectIds(selected, selectedItem, data) {
   if (!selected) return [];
   if (selected.type === 'workObject') return [selected.id];
@@ -45,6 +55,22 @@ function Acordeon({ title, count, isOpen, onToggle, children }) {
 }
 
 // ── Contenidos de acordeones ──────────────────────────────────────────────
+
+function CandidatosPanel({ candidatos, alternativeIds = [] }) {
+  if (!candidatos?.length) return <p className="ai-muted">Sin candidatos detectados para esta consulta.</p>;
+  const altSet = new Set(alternativeIds);
+  return (
+    <ul className="ai-code-list">
+      {candidatos.map((c) => (
+        <li key={c.id}>
+          {altSet.has(c.id) && <span className="ai-risk-sev" style={{ marginRight: 4 }}>alt</span>}
+          <strong>{c.name}</strong>
+          <span className="ai-muted"> — {c.group} — {c.score} pts</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function ContextoPanel({ cou }) {
   const Row = ({ label, items }) =>
@@ -153,8 +179,9 @@ function ResponseCard({ expediente, onOpenInSala }) {
   const {
     declaracion, diagnostico, riesgoPrincipal, planActuacion, proximoPaso,
     estadoSistema, objetoNucleo, promptGenerado, perspective,
+    seccionesAdicionales, mostrarEstadoSistema,
   } = respuesta;
-  const isPrompt = perspective === 'preparacion_de_prompt';
+  const isPrompt = perspective === 'prompt';
 
   return (
     <section className="ai-response-card">
@@ -162,8 +189,8 @@ function ResponseCard({ expediente, onOpenInSala }) {
       {/* 1. Declaración de apertura — primera persona, dirigida al operador */}
       <p className="ai-declaracion">{declaracion}</p>
 
-      {/* 2. Estado del sistema */}
-      {estadoSistema?.some((s) => s.active) && (
+      {/* 2. Estado del sistema — oculto para comprensión y localización */}
+      {mostrarEstadoSistema !== false && estadoSistema?.some((s) => s.active) && (
         <div className="ai-estado-sistema">
           <span className="eyebrow">Estado del sistema</span>
           <ul className="ai-estado-lista">
@@ -184,13 +211,21 @@ function ResponseCard({ expediente, onOpenInSala }) {
           : <p className="ai-texto">{diagnostico}</p>}
       </div>
 
-      {/* 4. Riesgo principal */}
+      {/* 4. Riesgo principal — se omite para comprensión y localización */}
       {!isPrompt && riesgoPrincipal && (
         <div className="ai-seccion ai-seccion--riesgo">
           <span className="eyebrow">Riesgo principal</span>
           <p className="ai-texto">{riesgoPrincipal}</p>
         </div>
       )}
+
+      {/* 4.5. Secciones adicionales orientadas por intención */}
+      {seccionesAdicionales?.map((s, i) => (
+        <div key={i} className="ai-seccion">
+          <span className="eyebrow">{s.titulo}</span>
+          <p className="ai-texto" style={{ whiteSpace: 'pre-line' }}>{s.contenido}</p>
+        </div>
+      ))}
 
       {/* 5. Plan de actuación */}
       {planActuacion?.length > 0 && (
@@ -222,6 +257,19 @@ function ResponseCard({ expediente, onOpenInSala }) {
 
       {/* 7. Acordeones — todo lo técnico colapsado */}
       <div className="ai-acordeones">
+        {(perspective === 'baja_confianza' || respuesta.ambiguous) && (
+          <Acordeon
+            title={respuesta.ambiguous ? 'Ambigüedad — candidatos' : 'Candidatos detectados'}
+            count={contexto.relevance?.candidatos?.length ?? 0}
+            isOpen={open.cand ?? true}
+            onToggle={() => toggle('cand')}
+          >
+            <CandidatosPanel
+              candidatos={contexto.relevance?.candidatos}
+              alternativeIds={respuesta.alternativeIds ?? []}
+            />
+          </Acordeon>
+        )}
         <Acordeon title="Contexto" count={contexto.workObjects.length} isOpen={open.ctx} onToggle={() => toggle('ctx')}>
           <ContextoPanel cou={contexto} />
         </Acordeon>
@@ -333,7 +381,7 @@ export default function VistaIAOperativa({ data, selected, selectedItem, openIte
                     onClick={() => setActiveId(exp.id)}
                   >
                     <strong>{exp.objetivo}</strong>
-                    <span>{exp.respuesta.perspective.replace(/_/g, ' ')}</span>
+                    <span>{INTENT_LABELS[exp.respuesta.perspective] ?? exp.respuesta.perspective}</span>
                   </button>
                 ))}
               </div>

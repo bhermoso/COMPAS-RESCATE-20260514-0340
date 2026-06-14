@@ -15,6 +15,7 @@ import VistaOperativa from './views/VistaOperativa.jsx';
 import VistaPanoptico from './views/VistaPanoptico.jsx';
 import VistaExploradorSemantico from './views/VistaExploradorSemantico.jsx';
 import VistaChecklistGobierno from './views/VistaChecklistGobierno.jsx';
+import VistaIAOperativa from './views/VistaIAOperativa.jsx';
 
 // ── Gobierno semántico — claves y helpers ────────────────────────────────
 const LS_CHECKLIST = 'compas-governance-checklist';
@@ -104,6 +105,7 @@ export default function App() {
     busqueda: <VistaBusqueda {...commonProps} query={query} setQuery={setQuery} results={results} />,
     operativa: <VistaOperativa {...commonProps} />,
     checklist: <VistaChecklistGobierno {...commonProps} checklistItems={checklistItems} onUpdate={updateChecklistItem} onReplace={replaceChecklistItems} reviewer={reviewer} setReviewer={setReviewer} />,
+    ia: <VistaIAOperativa {...commonProps} checklistItems={checklistItems} liveData={liveData} />,
   }[view];
 
   return (

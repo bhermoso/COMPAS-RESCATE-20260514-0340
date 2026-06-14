@@ -134,6 +134,7 @@ export const views = [
   { id: 'busqueda', label: 'Busqueda' },
   { id: 'operativa', label: 'Vista Operativa' },
   { id: 'checklist', label: 'Checklist gobierno' },
+  { id: 'ia', label: 'IA Operativa' },
 ];
 
 // ── WORK OBJECTS — 24 objetos de gobierno humano ─────────────────────────
