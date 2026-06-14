@@ -340,47 +340,108 @@ function inferPerspective(instruction) {
   return 'analisis_operativo';
 }
 
+// ── Estado del sistema (semáforo operativo desde el COU) ─────────────────
+
+function computeEstadoSistema(cou) {
+  const hasCritico = cou.risks.some((r) => r.severity === 'CRITICO');
+  const hasRuntime = cou.runtimeObjects.length > 0;
+  const hasPersistencia = cou.runtimeObjects.some(
+    (r) => r.persistence && r.persistence !== 'No aplica' && r.persistence !== 'No gobernada por la Sala',
+  );
+  const hasRehidratacion = cou.runtimeObjects.some(
+    (r) => r.rehydration && !r.rehydration.toLowerCase().startsWith('no'),
+  );
+  const hasConsumidores = cou.relations.length > 0;
+  return [
+    { id: 'riesgo_critico',  label: 'Riesgo crítico detectado',            active: hasCritico },
+    { id: 'persistencia',    label: 'Persistencia afectada',               active: hasPersistencia },
+    { id: 'runtime',         label: 'Runtime implicado',                   active: hasRuntime },
+    { id: 'rehidratacion',   label: 'Rehidratación implicada',             active: hasRehidratacion },
+    { id: 'consumidores',    label: 'Consumidores potencialmente afectados', active: hasConsumidores },
+  ];
+}
+
 // ── Constructores de respuesta diferenciada por perspectiva ─────────────
+
+function buildPlanActuacion(cou, coreObj, perspective) {
+  const plan = [];
+  if (coreObj) {
+    plan.push(`Abrir la ficha de "${coreObj.name}" en la Vista Nodo y revisar su estado actual.`);
+  }
+  if (perspective === 'preparacion_de_intervencion') {
+    const mainRef = cou.codeRefs[0];
+    if (mainRef) {
+      plan.push(`Verificar ${mainRef.identifier}${mainRef.line ? ` en ${mainRef.file}:${mainRef.line}` : ''} antes de modificar.`);
+    }
+    const hasFirebase = cou.runtimeObjects.some((r) =>
+      (r.persistence ?? '').toLowerCase().includes('firebase') ||
+      (r.classification ?? '').toLowerCase().includes('firebase'),
+    );
+    if (hasFirebase) {
+      plan.push('Comprobar el estado de Firebase antes y después de cualquier cambio.');
+    }
+    const mainRisk = cou.risks[0];
+    if (mainRisk) {
+      plan.push(`Validar que el riesgo "${mainRisk.id}" queda mitigado tras la intervención.`);
+    }
+    const directNames = (cou.relevance?.direct ?? []).map((i) => i.name).filter(Boolean);
+    if (directNames.length) {
+      plan.push(`Verificar regresiones en: ${directNames.join(', ')}.`);
+    }
+  } else if (perspective === 'comprension_operativa') {
+    const consumes = (coreObj?.consumes ?? []).slice(0, 3).join(', ');
+    const produces = (coreObj?.produces ?? []).slice(0, 3).join(', ');
+    if (consumes) plan.push(`Consume: ${consumes}.`);
+    if (produces) plan.push(`Produce: ${produces}.`);
+    plan.push('Consultar las relaciones ENT asociadas en la Vista Nodo para profundizar.');
+  } else if (perspective === 'preparacion_de_prompt') {
+    plan.push('Copiar el prompt del bloque a continuación.');
+    plan.push('Pegarlo en Claude Code como instrucción directa.');
+    plan.push('Revisar la propuesta antes de ejecutar cualquier intervención.');
+  } else {
+    plan.push('Revisar el Checklist de gobierno para ver la valoración actual.');
+    plan.push('Decidir si procede intervención, documentación o cierre.');
+  }
+  return plan;
+}
 
 function buildRespuestaIntervencion(cou) {
   const coreObj = cou.relevance?.core?.[0] ?? cou.workObjects[0];
+  const coreName = coreObj?.name ?? 'el componente';
   const mainRisk = cou.risks[0];
-  const riskLine = mainRisk
-    ? mainRisk.title
-    : (cou.riskNotes[0] ?? 'No se han detectado riesgos normalizados en el COU.');
-  const cadena = [
-    ...(coreObj?.consumes ?? []).slice(0, 2),
-    ...(coreObj?.produces ?? []).slice(0, 2),
-  ].filter(Boolean).join(' → ');
+  const riskLine = mainRisk?.title ?? cou.riskNotes[0] ?? 'No se detectaron riesgos normalizados.';
+  const plan = buildPlanActuacion(cou, coreObj, 'preparacion_de_intervencion');
   return {
-    declaracion: 'He localizado el componente responsable.',
-    desarrollo: riskLine + (cadena ? ` Cadena implicada: ${cadena}.` : ''),
-    accion: `Auditar ${coreObj?.name ?? 'el componente'} y sus dependencias directas antes de modificar código.`,
+    declaracion: `He identificado que el problema afecta principalmente a ${coreName} y he localizado el componente responsable.`,
+    diagnostico: `${coreName} ${coreObj?.function?.split('.')[0] ?? 'es un componente operativo de COMPÁS'}.`,
+    riesgoPrincipal: riskLine,
+    planActuacion: plan,
+    proximoPaso: `Abre la ficha de ${coreName} en la Sala y revisa el estado de Firebase antes de cualquier intervención.`,
   };
 }
 
 function buildRespuestaComprension(cou) {
   const coreObj = cou.relevance?.core?.[0] ?? cou.workObjects[0];
-  const funcResumen = coreObj?.function?.split('.')[0] ?? `${coreObj?.name ?? 'El objeto'} es un componente de COMPÁS.`;
-  const consumes = (coreObj?.consumes ?? []).slice(0, 3).join(', ');
-  const produces = (coreObj?.produces ?? []).slice(0, 3).join(', ');
+  const coreName = coreObj?.name ?? 'el objeto';
+  const domain = cou.domains[0]?.label ?? coreObj?.group ?? 'COMPÁS';
+  const plan = buildPlanActuacion(cou, coreObj, 'comprension_operativa');
   return {
-    declaracion: funcResumen,
-    desarrollo: [
-      consumes ? `Consume: ${consumes}.` : '',
-      produces ? `Produce: ${produces}.` : '',
-    ].filter(Boolean).join(' '),
-    accion: coreObj?.breaksIfFails ?? 'Consulta las relaciones asociadas en la Vista Nodo para profundizar.',
+    declaracion: `He encontrado ${coreName} en el dominio ${domain}. Te explico qué hace y cómo encaja en el sistema.`,
+    diagnostico: coreObj?.function ?? `${coreName} es un componente de COMPÁS sin descripción detallada disponible.`,
+    riesgoPrincipal: coreObj?.breaksIfFails ?? 'Sin información de fallo documentada en el COU.',
+    planActuacion: plan,
+    proximoPaso: `Para profundizar, abre ${coreName} en la Vista Nodo y revisa las relaciones ENT asociadas.`,
   };
 }
 
 function buildRespuestaPrompt(encargo, cou) {
+  const coreObj = cou.relevance?.core?.[0] ?? cou.workObjects[0];
   const coreNames = (cou.relevance?.core ?? []).map((i) => i.name).join(', ') || 'el contexto activo';
   const riskSummary = cou.risks.slice(0, 2).map((r) => r.title).join('; ');
   const codePoints = cou.codeRefs.slice(0, 4)
     .map((r) => `${r.identifier}${r.line ? ` (l.${r.line})` : ''}`)
     .join(', ');
-  const prompt = [
+  const promptText = [
     'Actúa como auditor técnico experto en COMPÁS (Sistema de Planificación Local en Salud).',
     '',
     `Objeto de análisis: ${coreNames}.`,
@@ -393,19 +454,26 @@ function buildRespuestaPrompt(encargo, cou) {
     '(3) verificaciones antes y después.',
     'Basa tu respuesta exclusivamente en las evidencias del contexto. No inventes dependencias.',
   ].filter((s) => s !== undefined).join('\n');
+  const plan = buildPlanActuacion(cou, coreObj, 'preparacion_de_prompt');
   return {
-    declaracion: 'Prompt generado basado en el contexto operativo.',
-    desarrollo: prompt,
-    accion: 'Copia este prompt y úsalo con Claude Code para ejecutar la intervención.',
+    declaracion: `He generado un prompt operativo basado en el contexto de ${coreNames}.`,
+    diagnostico: promptText,
+    riesgoPrincipal: 'El prompt usa evidencias del COU. Si el contexto es insuficiente, el resultado puede ser parcial.',
+    planActuacion: plan,
+    proximoPaso: 'Copia el prompt y usa Claude Code para ejecutar la intervención.',
   };
 }
 
 function buildRespuestaAnalisis(cou) {
   const coreObj = cou.relevance?.core?.[0] ?? cou.workObjects[0];
+  const coreName = coreObj?.name ?? 'componente activo';
+  const plan = buildPlanActuacion(cou, coreObj, 'analisis_operativo');
   return {
-    declaracion: `Análisis de estado: ${coreObj?.name ?? 'componente activo'}.`,
-    desarrollo: coreObj?.function ?? 'Objeto identificado. Consulta el contexto técnico para más detalle.',
-    accion: 'Revisa el expediente y decide si procede una intervención, ficha quirúrgica o estudio adicional.',
+    declaracion: `He analizado el estado de ${coreName} en el sistema.`,
+    diagnostico: coreObj?.function ?? 'Objeto identificado. Consulta el contexto técnico para más detalle.',
+    riesgoPrincipal: cou.risks[0]?.title ?? cou.riskNotes[0] ?? 'No se detectaron riesgos críticos en el COU actual.',
+    planActuacion: plan,
+    proximoPaso: `Abre el expediente de ${coreName}, revisa los riesgos y decide la próxima acción.`,
   };
 }
 
@@ -413,57 +481,54 @@ export function buildSimulatedResponse(encargo, cou) {
   const perspective = inferPerspective(encargo.instruccionOriginal);
   const coreObj = cou.relevance?.core?.[0] ?? cou.workObjects[0] ?? null;
 
-  let respuestaPrincipal;
-  let promptGenerado = null;
+  let respuesta;
+  if (perspective === 'preparacion_de_intervencion') respuesta = buildRespuestaIntervencion(cou);
+  else if (perspective === 'comprension_operativa')  respuesta = buildRespuestaComprension(cou);
+  else if (perspective === 'preparacion_de_prompt')  respuesta = buildRespuestaPrompt(encargo, cou);
+  else                                               respuesta = buildRespuestaAnalisis(cou);
 
-  if (perspective === 'preparacion_de_intervencion') {
-    respuestaPrincipal = buildRespuestaIntervencion(cou);
-  } else if (perspective === 'comprension_operativa') {
-    respuestaPrincipal = buildRespuestaComprension(cou);
-  } else if (perspective === 'preparacion_de_prompt') {
-    respuestaPrincipal = buildRespuestaPrompt(encargo, cou);
-    promptGenerado = respuestaPrincipal.desarrollo;
-  } else {
-    respuestaPrincipal = buildRespuestaAnalisis(cou);
-  }
-
+  const isPrompt = perspective === 'preparacion_de_prompt';
   const codigoRelevante = cou.codeRefs.slice(0, 6).map(
     (r) => `${r.identifier}${r.line ? ` · ${r.file}:${r.line}` : ` · ${r.file}`}`,
   );
-
   const productos = [
     'Expediente IA local creado en memoria de sesión.',
     'COU ensamblado sin duplicar objetos base.',
     'Respuesta operativa generada según perspectiva.',
-    ...(perspective === 'preparacion_de_prompt' ? ['Prompt base generado y disponible en el expediente.'] : []),
+    ...(isPrompt ? ['Prompt base generado y disponible en el expediente.'] : []),
   ];
 
   return {
     provider: 'SIMULADO_LOCAL_V0',
     perspective,
+    // Respuesta estructurada
+    declaracion:      respuesta.declaracion,
+    diagnostico:      respuesta.diagnostico,
+    riesgoPrincipal:  respuesta.riesgoPrincipal,
+    planActuacion:    respuesta.planActuacion,
+    proximoPaso:      respuesta.proximoPaso,
+    estadoSistema:    computeEstadoSistema(cou),
+    // Objeto núcleo para navegación
     objetoNucleo: coreObj ? {
-      name: coreObj.name,
-      group: coreObj.group,
-      criticality: coreObj.criticality ?? null,
-      workObjectId: coreObj.id,
+      name: coreObj.name, group: coreObj.group,
+      criticality: coreObj.criticality ?? null, workObjectId: coreObj.id,
     } : null,
-    respuestaPrincipal,
     codigoRelevante,
-    promptGenerado,
-    // Campos retrocompatibles para createExpediente
-    resumen: respuestaPrincipal.declaracion,
+    promptGenerado: isPrompt ? respuesta.diagnostico : null,
+    // Retrocompatibles
+    resumen: respuesta.declaracion,
     evidencias: [
       `${cou.workObjects.length} workObject(s) en COU`,
       `relevancia: ${cou.relevance?.core?.length ?? 0} core / ${cou.relevance?.direct?.length ?? 0} direct`,
-      `${cou.codeRefs.length} codeRef(s) disponibles`,
-      `${cou.risks.length} riesgo(s) normalizados`,
+      `${cou.codeRefs.length} codeRef(s)`,
+      `${cou.risks.length} riesgo(s)`,
     ],
     riesgos: [
       ...cou.risks.map((r) => `${r.id}: ${r.title}`),
       ...cou.riskNotes.map((n) => `Nota: ${n}`),
     ],
     productos,
-    siguienteAccionHumana: respuestaPrincipal.accion,
+    siguienteAccionHumana: respuesta.proximoPaso,
   };
 }
 
@@ -471,25 +536,23 @@ export function createExpediente(encargo, cou, simulatedResponse) {
   return {
     id: encargo.expedienteId,
     objetivo: encargo.titulo,
+    estado: EXPEDIENTE_ESTADOS.simulado,
+    // Unidad de trabajo enriquecida
+    hipotesis: simulatedResponse.diagnostico ?? simulatedResponse.declaracion,
+    planIntervencion: simulatedResponse.planActuacion ?? [],
+    verificacionesPendientes: [],
+    verificacionesCompletadas: [],
+    riesgosIdentificados: cou.risks.map((r) => ({ id: r.id, title: r.title, severity: r.severity })),
+    decisionesTomadas: [],
+    // Datos de soporte
     contexto: cou,
     evidencias: simulatedResponse.evidencias,
     riesgos: simulatedResponse.riesgos,
     productosGenerados: simulatedResponse.productos,
     historial: [
-      {
-        at: encargo.fecha,
-        actor: 'operador',
-        event: 'encargo_creado',
-        text: encargo.instruccionOriginal,
-      },
-      {
-        at: new Date().toISOString(),
-        actor: 'ia-operativa-v0',
-        event: 'respuesta_simulada',
-        text: simulatedResponse.resumen,
-      },
+      { at: encargo.fecha, actor: 'operador', event: 'encargo_creado', text: encargo.instruccionOriginal },
+      { at: new Date().toISOString(), actor: 'ia-operativa-v0', event: 'respuesta_generada', text: simulatedResponse.declaracion },
     ],
-    estado: EXPEDIENTE_ESTADOS.simulado,
     respuesta: simulatedResponse,
   };
 }

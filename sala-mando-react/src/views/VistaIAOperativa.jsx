@@ -44,17 +44,11 @@ function Acordeon({ title, count, isOpen, onToggle, children }) {
   );
 }
 
-// ── Contenidos de los acordeones ──────────────────────────────────────────
+// ── Contenidos de acordeones ──────────────────────────────────────────────
 
 function ContextoPanel({ cou }) {
-  const core = cou.relevance?.core ?? [];
-  const direct = cou.relevance?.direct ?? [];
-  const extended = cou.relevance?.extended ?? [];
-  const domains = cou.domains ?? [];
-  const runtime = cou.runtimeObjects ?? [];
-
   const Row = ({ label, items }) =>
-    items.length ? (
+    items?.length ? (
       <div className="ai-ctx-row">
         <span className="ai-ctx-label">{label}</span>
         <div className="ai-ctx-chips">
@@ -65,11 +59,11 @@ function ContextoPanel({ cou }) {
 
   return (
     <div className="ai-ctx-panel">
-      <Row label="Núcleo" items={core} />
-      <Row label="Apoyo directo" items={direct} />
-      <Row label="Contexto ampliado" items={extended} />
-      <Row label="Dominio" items={domains} />
-      <Row label="Runtime" items={runtime} />
+      <Row label="Núcleo"         items={cou.relevance?.core ?? []} />
+      <Row label="Apoyo directo"  items={cou.relevance?.direct ?? []} />
+      <Row label="Ampliado"       items={cou.relevance?.extended ?? []} />
+      <Row label="Dominio"        items={cou.domains ?? []} />
+      <Row label="Runtime"        items={cou.runtimeObjects ?? []} />
     </div>
   );
 }
@@ -102,9 +96,7 @@ function RiesgosPanel({ risks, riskNotes }) {
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="ai-muted">Sin riesgos normalizados en este contexto.</p>
-      )}
+      ) : <p className="ai-muted">Sin riesgos normalizados en este contexto.</p>}
       {riskNotes?.length > 0 && (
         <ul className="ai-risk-list" style={{ marginTop: 8 }}>
           {riskNotes.map((n, i) => <li key={i} className="ai-muted">{n}</li>)}
@@ -130,18 +122,21 @@ function ChecklistGobiernoPanel({ items }) {
   );
 }
 
-function CouCompletoPanel({ cou }) {
+function ModoAvanzadoPanel({ cou }) {
   return (
     <div className="ai-cou-raw">
+      <p className="ai-muted" style={{ marginBottom: 4, fontStyle: 'italic' }}>
+        Este panel muestra el COU en bruto. Solo para ingeniería y debug.
+      </p>
       <p className="ai-muted">{cou.source}</p>
       <p className="ai-muted">Generado: {new Date(cou.generatedAt).toLocaleString('es-ES')}</p>
       <ul style={{ margin: '8px 0 0', paddingLeft: 16, display: 'grid', gap: 4 }}>
         <li className="ai-muted">{cou.workObjects.length} workObject(s)</li>
         <li className="ai-muted">{cou.codeRefs.length} codeRef(s)</li>
         <li className="ai-muted">{cou.relations.length} relación(es)</li>
-        <li className="ai-muted">{cou.risks.length} riesgo(s) normalizados + {cou.riskNotes.length} nota(s)</li>
+        <li className="ai-muted">{cou.risks.length} riesgo(s) + {cou.riskNotes.length} nota(s)</li>
         <li className="ai-muted">{cou.runtimeObjects.length} runtime object(s)</li>
-        <li className="ai-muted">{cou.checklist.length} entrada(s) de checklist</li>
+        <li className="ai-muted">{cou.checklist.length} entrada(s) checklist</li>
         <li className="ai-muted">LiveData: {cou.liveData.estado}</li>
       </ul>
     </div>
@@ -155,103 +150,92 @@ function ResponseCard({ expediente, onOpenInSala }) {
   const toggle = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const { respuesta, contexto } = expediente;
-  const { objetoNucleo, respuestaPrincipal, codigoRelevante, promptGenerado, perspective } = respuesta;
-  const isPrepIntervencion = perspective === 'preparacion_de_intervencion';
+  const {
+    declaracion, diagnostico, riesgoPrincipal, planActuacion, proximoPaso,
+    estadoSistema, objetoNucleo, promptGenerado, perspective,
+  } = respuesta;
   const isPrompt = perspective === 'preparacion_de_prompt';
 
   return (
     <section className="ai-response-card">
 
-      {/* Objeto núcleo */}
-      {objetoNucleo && (
-        <div className="ai-objeto-nucleo">
-          <div>
-            <strong>{objetoNucleo.name}</strong>
-            <span>
-              {objetoNucleo.group}
-              {objetoNucleo.criticality != null ? ` · Criticidad ${objetoNucleo.criticality}/5` : ''}
-            </span>
-          </div>
-          <button
-            type="button"
-            className="ai-chip-link"
-            onClick={() => onOpenInSala('workObject', objetoNucleo.workObjectId)}
-          >
-            Ir a la Sala →
-          </button>
+      {/* 1. Declaración de apertura — primera persona, dirigida al operador */}
+      <p className="ai-declaracion">{declaracion}</p>
+
+      {/* 2. Estado del sistema */}
+      {estadoSistema?.some((s) => s.active) && (
+        <div className="ai-estado-sistema">
+          <span className="eyebrow">Estado del sistema</span>
+          <ul className="ai-estado-lista">
+            {estadoSistema.map((s) => (
+              <li key={s.id} className={s.active ? 'ai-estado-activo' : 'ai-estado-inactivo'}>
+                <span aria-hidden="true">{s.active ? '●' : '○'}</span>{s.label}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
-      {/* Respuesta principal */}
-      <div className="ai-respuesta-body">
-        <p className="ai-declaracion">{respuestaPrincipal?.declaracion}</p>
-
-        {isPrompt ? (
-          <pre className="ai-prompt-text">{promptGenerado}</pre>
-        ) : (
-          respuestaPrincipal?.desarrollo && (
-            <p className="ai-desarrollo">{respuestaPrincipal.desarrollo}</p>
-          )
-        )}
-
-        {isPrepIntervencion && codigoRelevante?.length > 0 && (
-          <ul className="ai-codigo-inline">
-            {codigoRelevante.map((ref, i) => <li key={i}><code>{ref}</code></li>)}
-          </ul>
-        )}
-
-        {respuestaPrincipal?.accion && (
-          <div className="ai-accion-bloque">
-            <span className="eyebrow">Siguiente paso</span>
-            <p>{respuestaPrincipal.accion}</p>
-          </div>
-        )}
+      {/* 3. Diagnóstico */}
+      <div className="ai-seccion">
+        <span className="eyebrow">Diagnóstico</span>
+        {isPrompt
+          ? <pre className="ai-prompt-text">{promptGenerado}</pre>
+          : <p className="ai-texto">{diagnostico}</p>}
       </div>
 
-      {/* Acordeones */}
+      {/* 4. Riesgo principal */}
+      {!isPrompt && riesgoPrincipal && (
+        <div className="ai-seccion ai-seccion--riesgo">
+          <span className="eyebrow">Riesgo principal</span>
+          <p className="ai-texto">{riesgoPrincipal}</p>
+        </div>
+      )}
+
+      {/* 5. Plan de actuación */}
+      {planActuacion?.length > 0 && (
+        <div className="ai-seccion">
+          <span className="eyebrow">Plan de actuación recomendado</span>
+          <ol className="ai-plan-lista">
+            {planActuacion.map((paso, i) => <li key={i}>{paso}</li>)}
+          </ol>
+        </div>
+      )}
+
+      {/* 6. Próximo paso */}
+      {proximoPaso && (
+        <div className="ai-accion-bloque">
+          <span className="eyebrow">Próximo paso</span>
+          <p>{proximoPaso}</p>
+          {objetoNucleo && (
+            <button
+              type="button"
+              className="ai-chip-link"
+              style={{ marginTop: 8 }}
+              onClick={() => onOpenInSala('workObject', objetoNucleo.workObjectId)}
+            >
+              Abrir {objetoNucleo.name} en la Sala →
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 7. Acordeones — todo lo técnico colapsado */}
       <div className="ai-acordeones">
-        <Acordeon
-          title="Contexto"
-          count={contexto.workObjects.length}
-          isOpen={open.ctx}
-          onToggle={() => toggle('ctx')}
-        >
+        <Acordeon title="Contexto" count={contexto.workObjects.length} isOpen={open.ctx} onToggle={() => toggle('ctx')}>
           <ContextoPanel cou={contexto} />
         </Acordeon>
-
-        <Acordeon
-          title="Código"
-          count={contexto.codeRefs.length}
-          isOpen={open.cod}
-          onToggle={() => toggle('cod')}
-        >
+        <Acordeon title="Código" count={contexto.codeRefs.length} isOpen={open.cod} onToggle={() => toggle('cod')}>
           <CodigoPanel codeRefs={contexto.codeRefs} />
         </Acordeon>
-
-        <Acordeon
-          title="Riesgos"
-          count={contexto.risks.length + contexto.riskNotes.length}
-          isOpen={open.rie}
-          onToggle={() => toggle('rie')}
-        >
+        <Acordeon title="Riesgos" count={contexto.risks.length + contexto.riskNotes.length} isOpen={open.rie} onToggle={() => toggle('rie')}>
           <RiesgosPanel risks={contexto.risks} riskNotes={contexto.riskNotes} />
         </Acordeon>
-
-        <Acordeon
-          title="Valoración de gobierno"
-          count={contexto.checklist.length}
-          isOpen={open.gov}
-          onToggle={() => toggle('gov')}
-        >
+        <Acordeon title="Valoración de gobierno" count={contexto.checklist.length} isOpen={open.gov} onToggle={() => toggle('gov')}>
           <ChecklistGobiernoPanel items={contexto.checklist} />
         </Acordeon>
-
-        <Acordeon
-          title="COU completo"
-          isOpen={open.cou}
-          onToggle={() => toggle('cou')}
-        >
-          <CouCompletoPanel cou={contexto} />
+        <Acordeon title="Modo avanzado / Ingeniería" isOpen={open.cou} onToggle={() => toggle('cou')}>
+          <ModoAvanzadoPanel cou={contexto} />
         </Acordeon>
       </div>
 
@@ -276,7 +260,6 @@ export default function VistaIAOperativa({ data, selected, selectedItem, openIte
     [selected, selectedItem, data],
   );
 
-  // COU del contexto activo (usado en el sidebar solo para el contador)
   const currentCou = useMemo(
     () => resolveContext(currentWorkObjectIds, { data, checklistItems, liveData, selected }),
     [currentWorkObjectIds, data, checklistItems, liveData, selected],
@@ -288,7 +271,6 @@ export default function VistaIAOperativa({ data, selected, selectedItem, openIte
     e.preventDefault();
     const text = instruction.trim();
     if (!text) return;
-
     const workObjectIds = detectWorkObjectIds(text, data, selected);
     const encargo = createEncargo(text, workObjectIds);
     const cou = resolveContext(workObjectIds, { data, checklistItems, liveData, instruction: text, selected });
@@ -310,21 +292,16 @@ export default function VistaIAOperativa({ data, selected, selectedItem, openIte
 
         {/* ── Sidebar ── */}
         <section className="ai-command-panel">
-
-          {/* Contexto activo */}
           <div className="ai-context-bar">
             <span className="eyebrow">Contexto activo</span>
             <strong style={{ color: '#1e293b', fontSize: 13 }}>
               {selectedItem?.name ?? selectedItem?.id ?? 'Sin selección'}
             </strong>
             {currentCou.workObjects.length > 0 && (
-              <span className="ai-muted">
-                {currentCou.workObjects.length} objeto(s) en COU
-              </span>
+              <span className="ai-muted">{currentCou.workObjects.length} objeto(s) en COU</span>
             )}
           </div>
 
-          {/* Encargo */}
           <form onSubmit={handleSubmit}>
             <label htmlFor="ai-instruction">Encargo</label>
             <textarea
@@ -336,9 +313,7 @@ export default function VistaIAOperativa({ data, selected, selectedItem, openIte
             />
             <div className="ai-examples" aria-label="Ejemplos de encargo">
               {EJEMPLOS.map((ex) => (
-                <button key={ex} type="button" onClick={() => setInstruction(ex)}>
-                  {ex}
-                </button>
+                <button key={ex} type="button" onClick={() => setInstruction(ex)}>{ex}</button>
               ))}
             </div>
             <button className="primary-action" type="submit" disabled={isRunning}>
@@ -346,7 +321,6 @@ export default function VistaIAOperativa({ data, selected, selectedItem, openIte
             </button>
           </form>
 
-          {/* Historial de encargos */}
           {expedientes.length > 0 && (
             <section className="ai-card">
               <h3>Encargos de la sesión</h3>
@@ -376,12 +350,11 @@ export default function VistaIAOperativa({ data, selected, selectedItem, openIte
               <p className="eyebrow">IA de COMPÁS · infraestructura cognitiva</p>
               <h2>Escribe un encargo</h2>
               <p>
-                La IA analiza tu petición, identifica los componentes relevantes de COMPÁS
-                y responde según la intención: explicar, localizar, diagnosticar o preparar una intervención.
+                La IA interpreta tu petición, identifica los componentes relevantes y responde
+                con un diagnóstico, el riesgo principal y un plan de actuación recomendado.
               </p>
               <p className="ai-muted" style={{ marginTop: 8 }}>
                 Todo el detalle técnico queda disponible en acordeones desplegables.
-                La pantalla muestra primero la respuesta al encargo.
               </p>
             </section>
           )}
