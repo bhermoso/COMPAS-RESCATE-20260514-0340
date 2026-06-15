@@ -845,3 +845,46 @@ button { cursor: pointer; }
   .sala-app .ai-two-cols { grid-template-columns: 1fr; }
   .sala-app .ai-command-panel { position: static; }
 }
+
+/* ── Expediente Técnico COMPÁS ───────────────────────────────────────────── */
+
+.sala-app .ai-expediente { padding: 0; border: 1px solid #e2e8f0; }
+
+/* Cabecera */
+.sala-app .exp-header  { display: flex; align-items: baseline; gap: 10px; padding: 14px 16px 10px; border-bottom: 1px solid #f1f5f9; }
+.sala-app .exp-title   { margin: 0; font-size: 14px; font-weight: 700; color: #1e293b; letter-spacing: -0.01em; }
+.sala-app .exp-badge   { font-size: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 6px; }
+
+/* Bloques A–G */
+.sala-app .exp-bloque         { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; display: grid; gap: 5px; }
+.sala-app .exp-bloque-title   { font-size: 10px; letter-spacing: .06em; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+
+/* Filas clave-valor */
+.sala-app .exp-row   { display: grid; grid-template-columns: 140px 1fr; gap: 8px; align-items: baseline; font-size: 13px; }
+.sala-app .exp-label { color: #64748b; font-size: 11px; font-weight: 600; padding-top: 2px; }
+.sala-app .exp-value { color: #1e293b; line-height: 1.5; }
+.sala-app .exp-na    { font-style: italic; font-size: 11px; }
+
+/* Listas internas */
+.sala-app .exp-list           { margin: 2px 0 0; padding-left: 16px; display: grid; gap: 3px; font-size: 12px; }
+.sala-app .exp-list li        { color: #334155; line-height: 1.45; }
+.sala-app .exp-risk-list      { list-style: none; padding-left: 0; }
+.sala-app .exp-risk-list li   { display: flex; align-items: baseline; gap: 5px; }
+.sala-app .exp-checklist      { list-style: decimal; }
+.sala-app .exp-checklist li   { color: #334155; }
+
+/* Tags / badges inline */
+.sala-app .exp-tag            { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-right: 4px; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; }
+.sala-app .exp-tag--ok        { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+.sala-app .exp-tag--warn      { background: #fef9c3; border-color: #fde047; color: #854d0e; }
+.sala-app .exp-tag--off       { background: #f8fafc; border-color: #cbd5e1; color: #94a3b8; }
+.sala-app .exp-tag--inf       { background: #f0f7ff; border-color: #bae6fd; color: #0c4a6e; font-style: italic; }
+
+/* Botones de acción */
+.sala-app .exp-actions        { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-top: 1px solid #f1f5f9; margin-top: 4px; }
+.sala-app .exp-actions .ai-chip-link { font-size: 12px; padding: 5px 10px; }
+
+@media (max-width: 1180px) {
+  .sala-app .exp-row { grid-template-columns: 1fr; gap: 2px; }
+  .sala-app .exp-label { font-size: 10px; }
+}
