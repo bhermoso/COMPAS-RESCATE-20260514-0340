@@ -190,7 +190,7 @@ console.info('[COMPÁS modular] bootstrap completo | window.COMPAS.__modular ===
         }
 
         // 7b. CSS — inyecta la hoja y espera su carga antes de montar React
-        const CSS_HREF = '../sala-mando-react/dist/sala.css';
+        const CSS_HREF = new URL('../sala-mando-react/dist/sala.css', import.meta.url).href;
         const cssYaCargado = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
             .some(l => l.getAttribute('href') === CSS_HREF);
         if (!cssYaCargado) {
